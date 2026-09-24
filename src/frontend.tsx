@@ -195,8 +195,8 @@ export default function App() {
   return (
     <div className="wordcloud-container">
       <div className="wordcloud-header">
-        <h1>Housing Word Cloud</h1>
-        <p>Key reflections & themes</p>
+        <h1>WordCloud from Our Experiences of Housing, What Housing Does, and Sense of Being “At Home”</h1>
+        <p>September 2026</p>
       </div>
 
       <div className="wordcloud">

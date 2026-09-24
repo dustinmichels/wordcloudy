@@ -185,11 +185,49 @@ export interface TokenizeOptions {
   includeNumbers?: boolean;
 }
 
+export interface BigramOptions extends TokenizeOptions {
+  additionalStopWords?: Iterable<string>;
+  stopWords?: Readonly<Record<string, true>>;
+  minBigramCount?: number;
+  allowStopWords?: boolean;
+  minPmi?: number;
+}
+
+export interface TrigramOptions extends TokenizeOptions {
+  additionalStopWords?: Iterable<string>;
+  stopWords?: Readonly<Record<string, true>>;
+  minTrigramCount?: number;
+  allowInteriorStopWords?: boolean;
+}
+
+export interface Collocation {
+  text: string;
+  w1: string;
+  w2: string;
+  count: number;
+  pmi: number;
+  npmi: number;
+}
+
+export interface CollocationOptions extends TokenizeOptions {
+  additionalStopWords?: Iterable<string>;
+  stopWords?: Readonly<Record<string, true>>;
+  minCount?: number;
+  minPmi?: number;
+  minNpmi?: number;
+  allowStopWords?: boolean;
+}
+
 export interface FrequencyOptions extends TokenizeOptions {
   additionalStopWords?: Iterable<string>;
   stopWords?: Readonly<Record<string, true>>;
   includeBigrams?: boolean;
   minBigramCount?: number;
+  allowBigramStopWords?: boolean;
+  minBigramPmi?: number;
+  includeTrigrams?: boolean;
+  minTrigramCount?: number;
+  allowInteriorStopWords?: boolean;
 }
 
 export interface WordFrequency {
@@ -242,22 +280,118 @@ export function tokenize(text: string, options: TokenizeOptions = {}): string[] 
 }
 
 /**
- * Extracts bigrams that do not contain stop words and appear at least minBigramCount times (default: 2).
+ * Computes Pointwise Mutual Information (PMI) and Normalized PMI (NPMI) for bigrams.
+ * Measures whether two words co-occur significantly more than expected by chance.
  */
-export function getBigramFrequencies(
+export function getCollocations(
   text: string,
-  options: FrequencyOptions = {},
-): WordFrequency[] {
+  options: CollocationOptions = {},
+): Collocation[] {
   const {
     additionalStopWords,
     stopWords = DEFAULT_STOP_WORDS,
-    minBigramCount = 2,
+    minCount = 2,
+    minPmi,
+    minNpmi,
+    allowStopWords = true,
     ...tokenizeOpts
   } = options;
 
   const lookup = buildStopWordLookup(stopWords, additionalStopWords);
   const cleaned = cleanText(text);
-  // Split on clause/sentence boundaries and newlines so bigrams don't span across them
+  const segments = cleaned.split(/[.?!;:,/()\[\]"“”\n\r]+/);
+
+  const unigramCounts: Record<string, number> = Object.create(null);
+  const bigramCounts: Record<string, number> = Object.create(null);
+  let totalUnigrams = 0;
+  let totalBigrams = 0;
+
+  for (const seg of segments) {
+    const tokens = tokenize(seg, tokenizeOpts);
+    for (const t of tokens) {
+      unigramCounts[t] = (unigramCounts[t] ?? 0) + 1;
+      totalUnigrams++;
+    }
+    for (let i = 0; i < tokens.length - 1; i++) {
+      const w1 = tokens[i];
+      const w2 = tokens[i + 1];
+      if (!w1 || !w2) continue;
+      if (!allowStopWords && (lookup[w1] || lookup[w2])) continue;
+
+      const bg = `${w1}-${w2}`;
+      bigramCounts[bg] = (bigramCounts[bg] ?? 0) + 1;
+      totalBigrams++;
+    }
+  }
+
+  if (totalBigrams === 0 || totalUnigrams === 0) return [];
+
+  const results: Collocation[] = [];
+
+  for (const [bg, count] of Object.entries(bigramCounts)) {
+    if (count < minCount) continue;
+    const [w1, w2] = bg.split("-");
+    const countW1 = unigramCounts[w1] ?? 0;
+    const countW2 = unigramCounts[w2] ?? 0;
+    if (!countW1 || !countW2) continue;
+
+    const p_w1 = countW1 / totalUnigrams;
+    const p_w2 = countW2 / totalUnigrams;
+    const p_bg = count / totalBigrams;
+
+    // PMI = log2(P(w1, w2) / (P(w1) * P(w2)))
+    const pmi = Math.log2(p_bg / (p_w1 * p_w2));
+    // NPMI = PMI / -log2(P(w1, w2))
+    const negLogPbg = -Math.log2(p_bg);
+    const npmi = negLogPbg === 0 ? 1 : pmi / negLogPbg;
+
+    if (minPmi !== undefined && pmi < minPmi) continue;
+    if (minNpmi !== undefined && npmi < minNpmi) continue;
+
+    results.push({
+      text: bg,
+      w1,
+      w2,
+      count,
+      pmi: Math.round(pmi * 100) / 100,
+      npmi: Math.round(npmi * 100) / 100,
+    });
+  }
+
+  return results.sort((a, b) => b.pmi - a.pmi || b.count - a.count || a.text.localeCompare(b.text));
+}
+
+/**
+ * Extracts bigrams. By default, ignores bigrams containing stop words.
+ * Set allowStopWords: true to permit them, optionally filtered by minPmi.
+ */
+export function getBigramFrequencies(
+  text: string,
+  options: BigramOptions = {},
+): WordFrequency[] {
+  const {
+    additionalStopWords,
+    stopWords = DEFAULT_STOP_WORDS,
+    minBigramCount = 2,
+    allowStopWords = false,
+    minPmi,
+    ...tokenizeOpts
+  } = options;
+
+  if (minPmi !== undefined) {
+    const collocations = getCollocations(text, {
+      ...tokenizeOpts,
+      additionalStopWords,
+      stopWords,
+      minCount: minBigramCount,
+      minPmi,
+      allowStopWords,
+    });
+    return collocations.map((c) => ({ text: c.text, value: c.count }));
+  }
+
+  const lookup = buildStopWordLookup(stopWords, additionalStopWords);
+  const cleaned = cleanText(text);
   const segments = cleaned.split(/[.?!;:,/()\[\]"“”\n\r]+/);
   const bigramCounts: Record<string, number> = Object.create(null);
 
@@ -266,7 +400,7 @@ export function getBigramFrequencies(
     for (let i = 0; i < tokens.length - 1; i++) {
       const w1 = tokens[i];
       const w2 = tokens[i + 1];
-      if (w1 && w2 && !lookup[w1] && !lookup[w2]) {
+      if (w1 && w2 && (allowStopWords || (!lookup[w1] && !lookup[w2]))) {
         const bg = `${w1}-${w2}`;
         bigramCounts[bg] = (bigramCounts[bg] ?? 0) + 1;
       }
@@ -280,8 +414,55 @@ export function getBigramFrequencies(
 }
 
 /**
+ * Extracts trigrams. By default, requires non-stop words at the edges (w1 and w3)
+ * but allows an interior stop word (w2) to capture phrases like "cost of housing"
+ * or "sense of uncertainty".
+ */
+export function getTrigramFrequencies(
+  text: string,
+  options: TrigramOptions = {},
+): WordFrequency[] {
+  const {
+    additionalStopWords,
+    stopWords = DEFAULT_STOP_WORDS,
+    minTrigramCount = 2,
+    allowInteriorStopWords = true,
+    ...tokenizeOpts
+  } = options;
+
+  const lookup = buildStopWordLookup(stopWords, additionalStopWords);
+  const cleaned = cleanText(text);
+  const segments = cleaned.split(/[.?!;:,/()\[\]"“”\n\r]+/);
+  const trigramCounts: Record<string, number> = Object.create(null);
+
+  for (const seg of segments) {
+    const tokens = tokenize(seg, tokenizeOpts);
+    for (let i = 0; i < tokens.length - 2; i++) {
+      const w1 = tokens[i];
+      const w2 = tokens[i + 1];
+      const w3 = tokens[i + 2];
+      if (!w1 || !w2 || !w3) continue;
+
+      // Edge words must not be stop words
+      if (lookup[w1] || lookup[w3]) continue;
+
+      // Interior word: if interior stop words disallowed, w2 cannot be stop word
+      if (!allowInteriorStopWords && lookup[w2]) continue;
+
+      const tg = `${w1}-${w2}-${w3}`;
+      trigramCounts[tg] = (trigramCounts[tg] ?? 0) + 1;
+    }
+  }
+
+  return Object.entries(trigramCounts)
+    .filter(([_, count]) => count >= minTrigramCount)
+    .map(([text, value]) => ({ text, value }))
+    .sort((a, b) => b.value - a.value || a.text.localeCompare(b.text));
+}
+
+/**
  * Parses markdown text, strips stop words, and tallies frequency counts sorted descending.
- * Also includes bigrams (which do not contain stop words and appear more than once) by default.
+ * Also includes bigrams and trigrams (with interior stop words allowed) by default.
  */
 export function getWordFrequencies(text: string, options: FrequencyOptions = {}): WordFrequency[] {
   const {
@@ -289,6 +470,11 @@ export function getWordFrequencies(text: string, options: FrequencyOptions = {})
     stopWords = DEFAULT_STOP_WORDS,
     includeBigrams = true,
     minBigramCount = 2,
+    allowBigramStopWords = false,
+    minBigramPmi,
+    includeTrigrams = true,
+    minTrigramCount = 2,
+    allowInteriorStopWords = true,
     ...tokenizeOpts
   } = options;
 
@@ -303,13 +489,28 @@ export function getWordFrequencies(text: string, options: FrequencyOptions = {})
 
   if (includeBigrams) {
     const bigrams = getBigramFrequencies(text, {
-      ...options,
+      ...tokenizeOpts,
       stopWords,
       additionalStopWords,
       minBigramCount,
+      allowStopWords: allowBigramStopWords,
+      minPmi: minBigramPmi,
     });
     for (const { text: bgText, value: bgValue } of bigrams) {
       frequencies[bgText] = bgValue;
+    }
+  }
+
+  if (includeTrigrams) {
+    const trigrams = getTrigramFrequencies(text, {
+      ...tokenizeOpts,
+      stopWords,
+      additionalStopWords,
+      minTrigramCount,
+      allowInteriorStopWords,
+    });
+    for (const { text: tgText, value: tgValue } of trigrams) {
+      frequencies[tgText] = tgValue;
     }
   }
 

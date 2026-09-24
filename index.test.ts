@@ -1,5 +1,11 @@
 import { test, expect } from "bun:test";
-import { tokenize, getWordFrequencies, getBigramFrequencies } from "./src/stopwords";
+import {
+  tokenize,
+  getWordFrequencies,
+  getBigramFrequencies,
+  getTrigramFrequencies,
+  getCollocations,
+} from "./src/stopwords";
 
 test("tokenize cleans markdown and extracts tokens", () => {
   const text = "**Housing** is expensive! Check [this](https://example.com) -- now.";
@@ -90,6 +96,110 @@ test("getWordFrequencies filters bigrams when additionalStopWords are provided",
   const freqs = getWordFrequencies(text, { additionalStopWords: ["public"] });
   expect(freqs.find((f) => f.text === "public-transit")).toBeUndefined();
   expect(freqs.find((f) => f.text === "public")).toBeUndefined();
+});
+
+test("getTrigramFrequencies captures trigrams with interior stop words appearing more than once", () => {
+  const text =
+    "We study the cost of housing. Rising cost of housing impacts everyone. Families need affordable living.";
+  const trigrams = getTrigramFrequencies(text);
+
+  expect(trigrams).toEqual([{ text: "cost-of-housing", value: 2 }]);
+});
+
+test("getTrigramFrequencies ignores trigrams appearing only once", () => {
+  const text = "We study the cost of housing and sense of community.";
+  const trigrams = getTrigramFrequencies(text);
+  expect(trigrams).toEqual([]);
+});
+
+test("getTrigramFrequencies excludes trigrams where edge words are stop words", () => {
+  const text = "What are the questions? What are the benefits? What are the answers?";
+  const trigrams = getTrigramFrequencies(text);
+  // 'what', 'are', 'the' are all stop words, so 'what-are-the' cannot be an edge-content trigram
+  expect(trigrams.find((t) => t.text === "what-are-the")).toBeUndefined();
+});
+
+test("getTrigramFrequencies respects allowInteriorStopWords: false", () => {
+  const text =
+    "We study the cost of housing. Rising cost of housing impacts everyone. We need dense urban housing and dense urban housing.";
+  const trigramsWithStop = getTrigramFrequencies(text, { allowInteriorStopWords: true });
+  expect(trigramsWithStop.map((t) => t.text)).toContain("cost-of-housing");
+  expect(trigramsWithStop.map((t) => t.text)).toContain("dense-urban-housing");
+
+  const trigramsStrict = getTrigramFrequencies(text, { allowInteriorStopWords: false });
+  expect(trigramsStrict.map((t) => t.text)).not.toContain("cost-of-housing");
+  expect(trigramsStrict.map((t) => t.text)).toContain("dense-urban-housing");
+});
+
+test("getTrigramFrequencies does not span across punctuation boundaries", () => {
+  const text = "High cost. Of housing they spoke. High cost. Of housing they spoke.";
+  const trigrams = getTrigramFrequencies(text);
+  expect(trigrams.find((t) => t.text.includes("cost-of-housing"))).toBeUndefined();
+});
+
+test("getCollocations calculates PMI and NPMI scores", () => {
+  const text =
+    "Public transit works. Public transit is fast. Public transit reduces traffic and supports city life.";
+  const collocations = getCollocations(text, { minCount: 2 });
+  const pt = collocations.find((c) => c.text === "public-transit");
+
+  expect(pt).toBeDefined();
+  expect(pt?.count).toBe(3);
+  expect(pt?.pmi).toBeGreaterThan(0);
+  expect(pt?.npmi).toBeGreaterThan(0);
+});
+
+test("getCollocations ranks content-rich pairs higher than generic glue pairs", () => {
+  const text = `
+    What are the questions? What are the benefits? What are the options? What are the theories?
+    How does the system work? What are we doing?
+    Desired outcomes matter. Desired outcomes guide policy. Desired outcomes shape progress.
+  `;
+  const collocations = getCollocations(text, { minCount: 2, allowStopWords: true });
+
+  const desiredOutcomes = collocations.find((c) => c.text === "desired-outcomes");
+  const whatAre = collocations.find((c) => c.text === "what-are");
+
+  expect(desiredOutcomes).toBeDefined();
+  expect(whatAre).toBeDefined();
+  // Desired outcomes co-occur specifically, while 'what' and 'are' are widely spread function words
+  expect(desiredOutcomes!.pmi).toBeGreaterThan(whatAre!.pmi);
+});
+
+test("getBigramFrequencies supports allowStopWords with minPmi filtering", () => {
+  const text = `
+    What are the questions? What are the benefits? What are the options? What are the theories?
+    How does the system work? What are we doing?
+    Desired outcomes matter. Desired outcomes guide policy. Desired outcomes shape progress.
+  `;
+  // With allowStopWords: true and no PMI filter, 'what-are' is returned
+  const allBigrams = getBigramFrequencies(text, { allowStopWords: true });
+  expect(allBigrams.map((b) => b.text)).toContain("what-are");
+
+  // With minPmi set to 3.5, generic stop-word pair 'what-are' (PMI ~3.26) is filtered out while 'desired-outcomes' (PMI 4.0) remains
+  const filteredBigrams = getBigramFrequencies(text, {
+    allowStopWords: true,
+    minPmi: 3.5,
+  });
+  expect(filteredBigrams.map((b) => b.text)).toContain("desired-outcomes");
+  expect(filteredBigrams.map((b) => b.text)).not.toContain("what-are");
+});
+
+test("getWordFrequencies includes qualifying trigrams alongside unigrams and bigrams", () => {
+  const text =
+    "Cost of housing is high. We track the cost of housing closely. Public transit connects everyone.";
+  const freqs = getWordFrequencies(text, { minTrigramCount: 2 });
+  expect(freqs.find((f) => f.text === "cost-of-housing")).toEqual({
+    text: "cost-of-housing",
+    value: 2,
+  });
+});
+
+test("getWordFrequencies respects includeTrigrams: false", () => {
+  const text =
+    "Cost of housing is high. We track the cost of housing closely. Public transit connects everyone.";
+  const freqs = getWordFrequencies(text, { minTrigramCount: 2, includeTrigrams: false });
+  expect(freqs.find((f) => f.text === "cost-of-housing")).toBeUndefined();
 });
 import { parseDocSections, getDocumentWordData } from "./src/sections";
 
