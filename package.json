@@ -4,9 +4,23 @@
   "type": "module",
   "private": true,
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/d3": "^7.4.3",
+    "@types/d3-cloud": "^1.2.9"
   },
   "peerDependencies": {
     "typescript": "^7"
+  },
+  "dependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@visx/responsive": "^4.0.0",
+    "@visx/scale": "^4.0.0",
+    "@visx/text": "^4.0.0",
+    "@visx/wordcloud": "^4.0.0",
+    "d3": "^7.9.0",
+    "d3-cloud": "^1.2.9",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   }
 }
