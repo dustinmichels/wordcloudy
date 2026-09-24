@@ -48,13 +48,14 @@ Allowing stop words indiscriminately into bigrams causes high-frequency function
 
 Running unrestricted bigram extraction against `doc.md` demonstrates the issue:
 
-| Approach | Top Bigrams | Count | Word Cloud Impact |
-| :--- | :--- | :---: | :--- |
-| **Edge-Filtered Bigrams** (Default) | `desired-outcomes`<br>`underlying-theories`<br>`least-effective` | 2<br>2<br>2 | High topical signal; captures key domain concepts. |
-| **Unrestricted Bigrams** (Any stop words allowed) | `what-are`<br>`are-the`<br>`and-other`<br>`how-does`<br>`to-live` | 12<br>9<br>5<br>5<br>4 | Function-word pairs dominate. In the cloud, `what-are` (12) and `are-the` (9) rival the top content words (`housing` x14, `power` x6, `costs` x5). |
-| **Partial Filtering** (At least one content word) | `to-live`<br>`costs-of`<br>`housing-is`<br>`the-costs`<br>`cost-of` | 4<br>3<br>3<br>3<br>2 | Eliminates `what-are`, but produces dangling fragments cut off mid-phrase. |
+| Approach                                          | Top Bigrams                                                         |         Count          | Word Cloud Impact                                                                                                                                  |
+| :------------------------------------------------ | :------------------------------------------------------------------ | :--------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Edge-Filtered Bigrams** (Default)               | `desired-outcomes`<br>`underlying-theories`<br>`least-effective`    |      2<br>2<br>2       | High topical signal; captures key domain concepts.                                                                                                 |
+| **Unrestricted Bigrams** (Any stop words allowed) | `what-are`<br>`are-the`<br>`and-other`<br>`how-does`<br>`to-live`   | 12<br>9<br>5<br>5<br>4 | Function-word pairs dominate. In the cloud, `what-are` (12) and `are-the` (9) rival the top content words (`housing` x14, `power` x6, `costs` x5). |
+| **Partial Filtering** (At least one content word) | `to-live`<br>`costs-of`<br>`housing-is`<br>`the-costs`<br>`cost-of` | 4<br>3<br>3<br>3<br>2  | Eliminates `what-are`, but produces dangling fragments cut off mid-phrase.                                                                         |
 
 The core challenges with unrestricted stop words are:
+
 1. **Pure Stop Pairs (`[stop] + [stop]`)**: High raw frequencies, zero topic information (e.g. `what are`, `are the`, `and what`).
 2. **Dangling Prepositions / Articles (`[content] + [stop]` or `[stop] + [content]`)**: Phrases like `cost of`, `of housing`, or `sense of` are incomplete syntactical fragments. The true semantic unit is typically a **trigram** bridging two content words across a preposition (e.g., `cost of housing`, `sense of uncertainty`).
 
@@ -67,10 +68,12 @@ To resolve these challenges while capturing natural multi-word phrases, the foll
 ### 1. Trigrams with Interior Stop Words (`[content] + [stop] + [content]`)
 
 Instead of allowing stop words at phrase boundaries, `getTrigramFrequencies` enforces:
+
 - **Edge words ($w_1$ and $w_3$) must be content words** (non-stop words).
 - **The interior word ($w_2$) may be a stop word** (e.g. `of`, `to`, `and`, `for`).
 
 This captures clean, complete keyphrases such as:
+
 - `cost-of-housing`
 - `move-to-neighborhoods`
 - `sense-of-uncertainty`
@@ -108,6 +111,7 @@ const collocations = getCollocations(text, {
 ```
 
 In `doc.md`:
+
 - `desired-outcomes`: PMI **8.69** (NPMI 1.06)
 - `least-effective`: PMI **8.10** (NPMI 0.99)
 - `what-are`: PMI **4.63** (NPMI 0.82)
@@ -136,6 +140,7 @@ const bigrams = getBigramFrequencies(text, {
 Parses markdown text, removes stop words, and tallies frequency counts sorted in descending order. By default, includes both qualifying bigrams and trigrams.
 
 **Options:**
+
 - `includeBigrams?: boolean` (default: `true`)
 - `minBigramCount?: number` (default: `2`)
 - `allowBigramStopWords?: boolean` (default: `false`)
@@ -152,6 +157,7 @@ Parses markdown text, removes stop words, and tallies frequency counts sorted in
 Extracts 2-word sequences appearing $\ge$ `minBigramCount` times without crossing clause or sentence punctuation boundaries.
 
 **Options:**
+
 - `minBigramCount?: number` (default: `2`)
 - `allowStopWords?: boolean` (default: `false`)
 - `minPmi?: number` (filters bigrams below this PMI threshold)
@@ -161,6 +167,7 @@ Extracts 2-word sequences appearing $\ge$ `minBigramCount` times without crossin
 Extracts 3-word sequences appearing $\ge$ `minTrigramCount` times. By default, requires non-stop words at the edges ($w_1, w_3$) and permits stop words in the interior position ($w_2$).
 
 **Options:**
+
 - `minTrigramCount?: number` (default: `2`)
 - `allowInteriorStopWords?: boolean` (default: `true`)
 
@@ -169,6 +176,7 @@ Extracts 3-word sequences appearing $\ge$ `minTrigramCount` times. By default, r
 Computes PMI and NPMI scores for bigrams, measuring statistical association strength.
 
 **Returns:**
+
 ```ts
 Array<{
   text: string;
@@ -177,5 +185,5 @@ Array<{
   count: number;
   pmi: number;
   npmi: number;
-}>
+}>;
 ```

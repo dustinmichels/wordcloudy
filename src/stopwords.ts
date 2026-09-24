@@ -283,10 +283,7 @@ export function tokenize(text: string, options: TokenizeOptions = {}): string[] 
  * Computes Pointwise Mutual Information (PMI) and Normalized PMI (NPMI) for bigrams.
  * Measures whether two words co-occur significantly more than expected by chance.
  */
-export function getCollocations(
-  text: string,
-  options: CollocationOptions = {},
-): Collocation[] {
+export function getCollocations(text: string, options: CollocationOptions = {}): Collocation[] {
   const {
     additionalStopWords,
     stopWords = DEFAULT_STOP_WORDS,
@@ -365,10 +362,7 @@ export function getCollocations(
  * Extracts bigrams. By default, ignores bigrams containing stop words.
  * Set allowStopWords: true to permit them, optionally filtered by minPmi.
  */
-export function getBigramFrequencies(
-  text: string,
-  options: BigramOptions = {},
-): WordFrequency[] {
+export function getBigramFrequencies(text: string, options: BigramOptions = {}): WordFrequency[] {
   const {
     additionalStopWords,
     stopWords = DEFAULT_STOP_WORDS,
@@ -418,10 +412,7 @@ export function getBigramFrequencies(
  * but allows an interior stop word (w2) to capture phrases like "cost of housing"
  * or "sense of uncertainty".
  */
-export function getTrigramFrequencies(
-  text: string,
-  options: TrigramOptions = {},
-): WordFrequency[] {
+export function getTrigramFrequencies(text: string, options: TrigramOptions = {}): WordFrequency[] {
   const {
     additionalStopWords,
     stopWords = DEFAULT_STOP_WORDS,

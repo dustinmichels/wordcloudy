@@ -50,7 +50,7 @@ async function build() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WordCloud from Our Experiences of Housing, What Housing Does, and Sense of Being “At Home”</title>
+  <title>WordCloud of "Our Experiences of Housing, What Housing Does, and Sense of Being 'At Home'"</title>
   <style>
 ${css}
   </style>

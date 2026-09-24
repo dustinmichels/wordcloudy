@@ -56,7 +56,10 @@ function HighlightedText({ text, term }: { text: string; term: string }) {
 
     while ((match = rx.exec(text)) !== null) {
       if (match.index > lastIndex) {
-        result.push({ text: text.slice(lastIndex, match.index), isMatch: false });
+        result.push({
+          text: text.slice(lastIndex, match.index),
+          isMatch: false,
+        });
       }
       result.push({ text: match[0], isMatch: true });
       lastIndex = match.index + match[0].length;
@@ -144,7 +147,11 @@ function CloudView({
               transform={`translate(${item.x}, ${item.y}) rotate(${item.rotate})`}
               fontSize={item.size}
               fontFamily={item.font}
-              title={item.value ? `${displayWord} (${item.value}x — click to view sentences)` : displayWord}
+              title={
+                item.value
+                  ? `${displayWord} (${item.value}x — click to view sentences)`
+                  : displayWord
+              }
               style={{
                 cursor: "pointer",
                 userSelect: "none",
@@ -270,7 +277,9 @@ export default function App() {
       clone.setAttribute("height", String(height));
 
       const svgData = new XMLSerializer().serializeToString(clone);
-      const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+      const svgBlob = new Blob([svgData], {
+        type: "image/svg+xml;charset=utf-8",
+      });
       const url = URL.createObjectURL(svgBlob);
 
       const img = new Image();
@@ -315,7 +324,7 @@ export default function App() {
     <div className="wordcloud-container">
       <div className="wordcloud-header">
         <h1>
-          WordCloud from Our Experiences of Housing, What Housing Does, and Sense of Being “At Home”
+          WordCloud of "Our Experiences of Housing, What Housing Does, and Sense of Being 'At Home'"
         </h1>
         <p>September 2026</p>
       </div>
