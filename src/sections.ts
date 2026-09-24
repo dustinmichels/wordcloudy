@@ -10,6 +10,7 @@ export interface SectionWordData {
   id: string;
   title: string;
   words: WordFrequency[];
+  sentences: string[];
 }
 
 export interface ParsedDocumentData {
@@ -22,6 +23,68 @@ function slugify(text: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Cleans markdown formatting (bullet prefixes, bold/italic, backslash escapes) from a line.
+ */
+export function cleanMarkdownFormatting(text: string): string {
+  return text
+    .trim()
+    .replace(/^[-•*]\s+/, "")
+    .replace(/\\([!#*_\-[\]])/g, "$1")
+    .replace(/_([^_]+)_/g, "$1")
+    .replace(/\*{1,2}([^*]+)\*{1,2}/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Extracts clean, individual sentences from markdown content.
+ * Filters out subheadings (e.g. `### `), removes bullet/markdown syntax,
+ * and splits multiple sentences on punctuation boundaries.
+ */
+export function extractSentences(markdown: string): string[] {
+  const lines = markdown.split("\n");
+  const sentences: string[] = [];
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    // Skip empty lines or markdown headings
+    if (!line || line.startsWith("#")) continue;
+
+    const cleaned = cleanMarkdownFormatting(line);
+    if (!cleaned) continue;
+
+    // Split on sentence-ending punctuation (. ? !) followed by a space and a capital/quote/opening bracket,
+    // avoiding incorrect splits on abbreviations like "e.g.", "c.f.", "etc."
+    const splitSentences = cleaned
+      .split(/(?<=[.?!])\s+(?=[A-Z0-9“"‘'(\[])/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (splitSentences.length > 0) {
+      sentences.push(...splitSentences);
+    } else {
+      sentences.push(cleaned);
+    }
+  }
+
+  return sentences;
+}
+
+/**
+ * Builds a case-insensitive regular expression to match a word, bigram, or trigram in text.
+ * Handles hyphenated bigrams/trigrams (e.g. "desired-outcomes") against either spaces or hyphens in text.
+ */
+export function buildTermRegex(term: string, global = false): RegExp {
+  const escaped = term
+    .trim()
+    .split(/[-\s]+/)
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("[\\s\\-]+");
+  return new RegExp(`\\b${escaped}\\b`, global ? "gi" : "i");
 }
 
 /**
@@ -82,6 +145,7 @@ export function getDocumentWordData(markdown: string, topWordsLimit = 100): Pars
     id: sec.id,
     title: sec.title,
     words: getWordFrequencies(sec.content).slice(0, topWordsLimit),
+    sentences: extractSentences(sec.content),
   }));
 
   return {

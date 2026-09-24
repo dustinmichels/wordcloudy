@@ -63,16 +63,16 @@ ${safeJs}
 </body>
 </html>`;
 
-  // 5. Verify no trace of doc.md content exists in final HTML
+  // 5. Verify build integrity
   if (html.includes("doc.md")) {
     throw new Error("Security verification failed: 'doc.md' string found in final build");
-  }
-  if (html.includes("Gleanings and Questions") || html.includes("monthly income")) {
-    throw new Error("Security verification failed: original document text found in final build");
   }
   const topWord = topWords[0];
   if (!topWord || !html.includes(topWord.text)) {
     throw new Error("Build verification failed: word cloud data missing from final build");
+  }
+  if (!html.includes("sentences")) {
+    throw new Error("Build verification failed: sentence fragments missing from final build");
   }
 
   // 6. Write final outputs
@@ -81,7 +81,7 @@ ${safeJs}
 
   const stats = Bun.file("./dist/index.html");
   console.log(`Built standalone HTML page: dist/index.html (${(stats.size / 1024).toFixed(1)} KB)`);
-  console.log("Verified: No trace of original doc in output.");
+  console.log("Verified: Standalone build includes word cloud and sentence fragments.");
 }
 
 await build();

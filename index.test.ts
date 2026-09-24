@@ -201,8 +201,13 @@ test("getWordFrequencies respects includeTrigrams: false", () => {
   const freqs = getWordFrequencies(text, { minTrigramCount: 2, includeTrigrams: false });
   expect(freqs.find((f) => f.text === "cost-of-housing")).toBeUndefined();
 });
-import { parseDocSections, getDocumentWordData } from "./src/sections";
-
+import {
+  parseDocSections,
+  getDocumentWordData,
+  extractSentences,
+  cleanMarkdownFormatting,
+  buildTermRegex,
+} from "./src/sections";
 test("parseDocSections extracts the four main aggregate sections in exact order", async () => {
   const content = await Bun.file("./doc.md").text();
   const sections = parseDocSections(content);
@@ -252,7 +257,7 @@ test("parseDocSections dynamically turns any new H2 into a section and aggregate
   expect(sections[1]?.content).toContain("### Nested Detail B");
 });
 
-test("getDocumentWordData computes overall and section-specific frequencies", async () => {
+test("getDocumentWordData computes overall and section-specific frequencies and sentences", async () => {
   const content = await Bun.file("./doc.md").text();
   const data = getDocumentWordData(content);
 
@@ -264,10 +269,60 @@ test("getDocumentWordData computes overall and section-specific frequencies", as
   expect(senseOfHome).toBeDefined();
   expect(senseOfHome?.words[0]?.text).toBe("power");
   expect(senseOfHome?.words[0]?.value).toBe(4);
+  expect(senseOfHome?.sentences.length).toBeGreaterThan(0);
 
   const costOfHousing = data.sections.find(
     (s) => s.id === "cost-of-housing-and-implications-for-costs-of-living",
   );
   expect(costOfHousing).toBeDefined();
   expect(costOfHousing?.words[0]?.text).toBe("housing");
+  expect(costOfHousing?.sentences.length).toBeGreaterThan(0);
+});
+
+test("cleanMarkdownFormatting strips markdown syntax and escapes", () => {
+  expect(cleanMarkdownFormatting("- Housing is expensive\\!")).toBe("Housing is expensive!");
+  expect(cleanMarkdownFormatting("• What does _choice_ mean to us?")).toBe(
+    "What does choice mean to us?",
+  );
+  expect(cleanMarkdownFormatting("- Diverse communities \\-- with respect to income")).toBe(
+    "Diverse communities -- with respect to income",
+  );
+  expect(cleanMarkdownFormatting("  - **Bold topic** and *italic* note  ")).toBe(
+    "Bold topic and italic note",
+  );
+});
+
+test("extractSentences skips headings, cleans bullets, and splits compound sentences", () => {
+  const markdown = `
+### Subsection Title
+- Housing is expensive! When housing costs rise, families struggle.
+- What are the benefits? What does choice mean?
+### Another Header
+• One final observation.
+`;
+  const sentences = extractSentences(markdown);
+  expect(sentences).toEqual([
+    "Housing is expensive!",
+    "When housing costs rise, families struggle.",
+    "What are the benefits?",
+    "What does choice mean?",
+    "One final observation.",
+  ]);
+});
+
+test("buildTermRegex correctly matches unigrams, bigrams, and trigrams", () => {
+  const unigramRx = buildTermRegex("housing");
+  expect(unigramRx.test("Housing is expensive!")).toBe(true);
+  expect(unigramRx.test("dense housing stock")).toBe(true);
+  expect(unigramRx.test("warehousing products")).toBe(false); // boundary check
+
+  const bigramRx = buildTermRegex("desired-outcomes");
+  expect(bigramRx.test("What are the desired outcomes of such programs?")).toBe(true);
+  expect(bigramRx.test("Examining desired-outcomes here.")).toBe(true);
+  expect(bigramRx.test("undesired outcomes")).toBe(false);
+
+  const trigramRx = buildTermRegex("move-to-neighborhoods");
+  expect(trigramRx.test("Families choose to move to neighborhoods with good schools.")).toBe(true);
+  expect(trigramRx.test("move to neighborhoods")).toBe(true);
+  expect(trigramRx.test("relocate to neighborhoods")).toBe(false);
 });
