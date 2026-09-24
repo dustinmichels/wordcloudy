@@ -1,6 +1,4 @@
-**Gleanings and Questions from Our Experiences of Housing, What Housing Does, and Sense of Being “At Home”**
-
-**Cost of Housing and Implications for Costs of Living**
+## Cost of Housing and Implications for Costs of Living
 
 - Housing is expensive\!
 - When housing takes a large percentage of our monthly income, less remains for other living expenses: food; heating and cooling and other utilities; transportation; family care; education and professional development; etc.
@@ -15,7 +13,7 @@
 - Intergenerational wealth allows greater access to housing, including for those with lower personal or household income.
 - Where you live can signal class/wealth/income status to others.
 
-**Finding a Place to Live**
+## Finding a Place to Live
 
 - How does the constant sense of uncertainty and instability affect your emotional state? How does that state impact your everyday life?
 - What are the benefits to housing stability/staying put? What are the benefits of the freedom to relocate and size new opportunities that allows?
@@ -28,7 +26,7 @@
 - What are the desired outcomes and what are their underlying theories of programs/policies that aim to cultivate mixed-income or other diversity?
 - For whom are they most and least effective? And in what ways?
 
-**Location \-- Getting There and Being There**
+## Location -- Getting There and Being There
 
 - How do we build a system with less emissions, less car dependency
 - Dense housing near transit hubs and corridors promotes walkability and a higher quality and healthier lifestyle and more connected community.
@@ -47,16 +45,16 @@
 - What resources are impacted by the ownership of land?
 - Who bears the costs of mitigating contamination?
 
-**Sense of “Being At Home”**
+## Sense of “Being At Home”
 
-**We feel “at home” when….**
+### We feel “at home” when….
 
 - When we move towards abundance.
 - What happens to people without inter-generational wealth, especially in a system that is changing?
 - How does the tenant body influence power? Being an educated tenant matters.
 - How does market power affect the power of “consumers”? Supply scarcity feeds landlords’ power. So does the state that is embedded and shapes how the market operates.
 
-**Ways to cultivate “homefulness”**
+### Ways to cultivate “homefulness”
 
 - What feelings does having housing produce when it is working well?
 - What is the importance and what are the impacts of feeling “homeful”

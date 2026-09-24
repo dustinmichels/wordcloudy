@@ -5,12 +5,23 @@ import { scaleLog } from "@visx/scale";
 import { Wordcloud } from "@visx/wordcloud";
 import { ParentSize } from "@visx/responsive";
 
-declare const __WORD_DATA__: WordData[] | undefined;
+declare const __DOCUMENT_DATA__: ParsedDocumentData | undefined;
+
 export interface WordData {
   text: string;
   value: number;
 }
 
+export interface SectionWordData {
+  id: string;
+  title: string;
+  words: WordData[];
+}
+
+export interface ParsedDocumentData {
+  all: WordData[];
+  sections: SectionWordData[];
+}
 type SpiralType = "archimedean" | "rectangular";
 
 const colors = ["#143059", "#2F6B9A", "#82a6c2"];
@@ -84,31 +95,42 @@ function CloudView({ words, width, height, spiralType, withRotation }: CloudProp
 }
 
 export default function App() {
-  const initialWords: WordData[] =
-    typeof __WORD_DATA__ !== "undefined" && Array.isArray(__WORD_DATA__) ? __WORD_DATA__ : [];
+  const initialDocData: ParsedDocumentData | null =
+    typeof __DOCUMENT_DATA__ !== "undefined" && __DOCUMENT_DATA__?.all ? __DOCUMENT_DATA__ : null;
 
-  const [words, setWords] = useState<WordData[]>(initialWords);
+  const [docData, setDocData] = useState<ParsedDocumentData | null>(initialDocData);
+  const [selectedSection, setSelectedSection] = useState<string>("all");
   const [spiralType, setSpiralType] = useState<SpiralType>("archimedean");
   const [withRotation, setWithRotation] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(initialWords.length === 0);
+  const [loading, setLoading] = useState<boolean>(!initialDocData);
   const [saving, setSaving] = useState<boolean>(false);
   const stageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (initialWords.length > 0) return;
-    fetch("/api/words")
-      .then((res) => res.json())
-      .then((data: WordData[]) => {
-        // Top 80-100 words matching the visx demo balance
-        setWords(data.slice(0, 100));
+    if (initialDocData) return;
+    fetch("/api/sections")
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        return res.json();
+      })
+      .then((data: ParsedDocumentData) => {
+        setDocData(data);
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Error fetching word frequencies:", err);
+        console.error("Error fetching sections:", err);
         setLoading(false);
       });
-  }, [initialWords.length]);
+  }, [initialDocData]);
 
+  const activeWords = useMemo(() => {
+    if (!docData) return [];
+    if (selectedSection === "all") {
+      return docData.all.slice(0, 100);
+    }
+    const section = docData.sections.find((s) => s.id === selectedSection);
+    return section ? section.words.slice(0, 100) : [];
+  }, [docData, selectedSection]);
   const handleSavePng = useCallback(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -180,7 +202,7 @@ export default function App() {
       <div className="wordcloud">
         {loading ? (
           <div className="wordcloud-message">Loading word cloud...</div>
-        ) : words.length === 0 ? (
+        ) : activeWords.length === 0 ? (
           <div className="wordcloud-message">No words found.</div>
         ) : (
           <div className="wordcloud-stage" ref={stageRef}>
@@ -188,7 +210,7 @@ export default function App() {
               {({ width, height }) =>
                 width > 0 && height > 0 ? (
                   <CloudView
-                    words={words}
+                    words={activeWords}
                     width={width}
                     height={height}
                     spiralType={spiralType}
@@ -201,6 +223,21 @@ export default function App() {
         )}
 
         <div className="controls">
+          <label>
+            Section &nbsp;
+            <select
+              value={selectedSection}
+              onChange={(e) => setSelectedSection(e.target.value)}
+              disabled={loading || !docData}
+            >
+              <option value="all">ALL</option>
+              {docData?.sections.map((sec) => (
+                <option key={sec.id} value={sec.id}>
+                  {sec.title}
+                </option>
+              ))}
+            </select>
+          </label>
           <label>
             Spiral type &nbsp;
             <select
@@ -223,7 +260,7 @@ export default function App() {
             type="button"
             className="save-btn"
             onClick={handleSavePng}
-            disabled={saving || loading || words.length === 0}
+            disabled={saving || loading || activeWords.length === 0}
           >
             {saving ? "Saving..." : "Save as PNG"}
           </button>
@@ -232,7 +269,6 @@ export default function App() {
     </div>
   );
 }
-
 const rootElement = document.getElementById("root");
 if (rootElement) {
   createRoot(rootElement).render(<App />);

@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { getWordFrequencies } from "./src/stopwords";
+import { getDocumentWordData } from "./src/sections";
 
 async function build() {
   console.log("Building Housing Word Cloud...");
@@ -10,21 +10,20 @@ async function build() {
     throw new Error("doc.md not found");
   }
   const content = await docFile.text();
-  const allFrequencies = getWordFrequencies(content);
-  // Match visx demo balance: top 100 words
-  const topWords = allFrequencies.slice(0, 100);
+  const docData = getDocumentWordData(content);
+  const topWords = docData.all;
 
   console.log(
-    `Extracted ${topWords.length} key word frequencies (top: "${topWords[0]?.text}" x${topWords[0]?.value})`,
+    `Extracted ${topWords.length} key word frequencies (top: "${topWords[0]?.text}" x${topWords[0]?.value}) across ${docData.sections.length} sections`,
   );
 
-  // 2. Bundle frontend with the pre-calculated word frequencies
+  // 2. Bundle frontend with the pre-calculated word frequencies and section data
   const buildResult = await Bun.build({
     entrypoints: ["./src/frontend.tsx"],
     minify: true,
     target: "browser",
     define: {
-      __WORD_DATA__: JSON.stringify(topWords),
+      __DOCUMENT_DATA__: JSON.stringify(docData),
     },
   });
 

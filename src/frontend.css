@@ -110,7 +110,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1.25rem;
   margin-top: 1.25rem;
   padding: 0.75rem 1.5rem;
   background: var(--bg-secondary);
@@ -128,6 +129,7 @@ body {
 }
 
 .controls select {
+  max-width: 320px;
   padding: 0.35rem 0.65rem;
   border-radius: 4px;
   border: 1px solid var(--border-color);
@@ -137,6 +139,7 @@ body {
   cursor: pointer;
   outline: none;
   transition: border-color 0.15s ease;
+  text-overflow: ellipsis;
 }
 
 .controls select:focus {

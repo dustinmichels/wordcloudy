@@ -1,16 +1,16 @@
 import index from "./index.html";
-import { getWordFrequencies } from "./src/stopwords";
+import { getDocumentWordData } from "./src/sections";
 
 const docFile = Bun.file("./doc.md");
 const content = await docFile.text();
-const frequencies = getWordFrequencies(content);
+const docData = getDocumentWordData(content);
 
 const server = Bun.serve({
   port: 3000,
   routes: {
-    "/api/words": {
+    "/api/sections": {
       GET: () => {
-        return Response.json(frequencies);
+        return Response.json(docData);
       },
     },
     "/*": index,

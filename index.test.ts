@@ -91,3 +91,73 @@ test("getWordFrequencies filters bigrams when additionalStopWords are provided",
   expect(freqs.find((f) => f.text === "public-transit")).toBeUndefined();
   expect(freqs.find((f) => f.text === "public")).toBeUndefined();
 });
+import { parseDocSections, getDocumentWordData } from "./src/sections";
+
+test("parseDocSections extracts the four main aggregate sections in exact order", async () => {
+  const content = await Bun.file("./doc.md").text();
+  const sections = parseDocSections(content);
+
+  expect(sections.map((s) => s.id)).toEqual([
+    "cost-of-housing-and-implications-for-costs-of-living",
+    "finding-a-place-to-live",
+    "location-getting-there-and-being-there",
+    "sense-of-being-at-home",
+  ]);
+
+  expect(sections.map((s) => s.title)).toEqual([
+    "Cost of Housing and Implications for Costs of Living",
+    "Finding a Place to Live",
+    "Location -- Getting There and Being There",
+    "Sense of “Being At Home”",
+  ]);
+
+  // Verify the 4th section aggregates its sub-prompts
+  const senseOfHome = sections.find((s) => s.id === "sense-of-being-at-home");
+  expect(senseOfHome).toBeDefined();
+  expect(senseOfHome?.content).toContain("### We feel “at home” when….");
+  expect(senseOfHome?.content).toContain("### Ways to cultivate “homefulness”");
+  expect(senseOfHome?.content).toContain("move towards abundance");
+  expect(senseOfHome?.content).toContain("shape policy");
+});
+
+test("parseDocSections dynamically turns any new H2 into a section and aggregates subheadings", () => {
+  const markdown = `
+## First Topic
+- Topic one details
+
+## Second Topic
+### Nested Detail A
+- Detail A content
+### Nested Detail B
+- Detail B content
+
+## Third Topic
+- Topic three details
+`;
+
+  const sections = parseDocSections(markdown);
+  expect(sections.map((s) => s.id)).toEqual(["first-topic", "second-topic", "third-topic"]);
+  expect(sections.map((s) => s.title)).toEqual(["First Topic", "Second Topic", "Third Topic"]);
+  expect(sections[1]?.content).toContain("### Nested Detail A");
+  expect(sections[1]?.content).toContain("### Nested Detail B");
+});
+
+test("getDocumentWordData computes overall and section-specific frequencies", async () => {
+  const content = await Bun.file("./doc.md").text();
+  const data = getDocumentWordData(content);
+
+  expect(data.all.length).toBeGreaterThan(0);
+  expect(data.all[0]?.text).toBe("housing");
+  expect(data.sections.length).toBe(4);
+
+  const senseOfHome = data.sections.find((s) => s.id === "sense-of-being-at-home");
+  expect(senseOfHome).toBeDefined();
+  expect(senseOfHome?.words[0]?.text).toBe("power");
+  expect(senseOfHome?.words[0]?.value).toBe(4);
+
+  const costOfHousing = data.sections.find(
+    (s) => s.id === "cost-of-housing-and-implications-for-costs-of-living",
+  );
+  expect(costOfHousing).toBeDefined();
+  expect(costOfHousing?.words[0]?.text).toBe("housing");
+});
