@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { Text } from "@visx/text";
 import { scaleLog } from "@visx/scale";
 import { Wordcloud } from "@visx/wordcloud";
 import { ParentSize } from "@visx/responsive";
 
+declare const __WORD_DATA__: WordData[] | undefined;
 export interface WordData {
   text: string;
   value: number;
@@ -47,10 +48,7 @@ function CloudView({ words, width, height, spiralType, withRotation }: CloudProp
     });
   }, [words, w, h]);
 
-  const fontSizeSetter = useCallback(
-    (datum: WordData) => fontScale(datum.value),
-    [fontScale]
-  );
+  const fontSizeSetter = useCallback((datum: WordData) => fontScale(datum.value), [fontScale]);
 
   // Fresh word copies for d3-cloud layout
   const wordsCopy = useMemo(() => words.map((d) => ({ ...d })), [words]);
@@ -86,12 +84,18 @@ function CloudView({ words, width, height, spiralType, withRotation }: CloudProp
 }
 
 export default function App() {
-  const [words, setWords] = useState<WordData[]>([]);
+  const initialWords: WordData[] =
+    typeof __WORD_DATA__ !== "undefined" && Array.isArray(__WORD_DATA__) ? __WORD_DATA__ : [];
+
+  const [words, setWords] = useState<WordData[]>(initialWords);
   const [spiralType, setSpiralType] = useState<SpiralType>("archimedean");
   const [withRotation, setWithRotation] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(initialWords.length === 0);
+  const [saving, setSaving] = useState<boolean>(false);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (initialWords.length > 0) return;
     fetch("/api/words")
       .then((res) => res.json())
       .then((data: WordData[]) => {
@@ -103,13 +107,74 @@ export default function App() {
         console.error("Error fetching word frequencies:", err);
         setLoading(false);
       });
-  }, []);
+  }, [initialWords.length]);
 
+  const handleSavePng = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const svgElement = stage.querySelector("svg");
+    if (!svgElement) return;
+
+    setSaving(true);
+
+    try {
+      const rect = svgElement.getBoundingClientRect();
+      const width = rect.width || 800;
+      const height = rect.height || 520;
+      const pixelRatio = window.devicePixelRatio || 2;
+
+      const clone = svgElement.cloneNode(true) as SVGSVGElement;
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      clone.setAttribute("width", String(width));
+      clone.setAttribute("height", String(height));
+
+      const svgData = new XMLSerializer().serializeToString(clone);
+      const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = width * pixelRatio;
+        canvas.height = height * pixelRatio;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          URL.revokeObjectURL(url);
+          setSaving(false);
+          return;
+        }
+
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.scale(pixelRatio, pixelRatio);
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+
+        const pngUrl = canvas.toDataURL("image/png");
+        const downloadLink = document.createElement("a");
+        downloadLink.download = "housing-wordcloud.png";
+        downloadLink.href = pngUrl;
+        downloadLink.click();
+        setSaving(false);
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        setSaving(false);
+      };
+
+      img.src = url;
+    } catch (e) {
+      console.error("Failed to export PNG:", e);
+      setSaving(false);
+    }
+  }, []);
   return (
     <div className="wordcloud-container">
       <div className="wordcloud-header">
         <h1>Housing Word Cloud</h1>
-        <p>Key reflections & themes from <code>doc.md</code></p>
+        <p>Key reflections & themes</p>
       </div>
 
       <div className="wordcloud">
@@ -118,7 +183,7 @@ export default function App() {
         ) : words.length === 0 ? (
           <div className="wordcloud-message">No words found.</div>
         ) : (
-          <div className="wordcloud-stage">
+          <div className="wordcloud-stage" ref={stageRef}>
             <ParentSize debounceTime={60}>
               {({ width, height }) =>
                 width > 0 && height > 0 ? (
@@ -154,6 +219,14 @@ export default function App() {
               onChange={(e) => setWithRotation(e.target.checked)}
             />
           </label>
+          <button
+            type="button"
+            className="save-btn"
+            onClick={handleSavePng}
+            disabled={saving || loading || words.length === 0}
+          >
+            {saving ? "Saving..." : "Save as PNG"}
+          </button>
         </div>
       </div>
     </div>
