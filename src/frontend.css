@@ -1917,6 +1917,28 @@ mark.highlighted-term {
   color: #b91c1c;
   background-color: #fee2e2;
   border: 1px solid #fca5a5;
+  transition: all 0.15s ease;
+}
+
+button.url-status-icon {
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+button.url-status-icon:focus-visible {
+  outline: 2px solid var(--accent-color, #2f6b9a);
+  outline-offset: 1px;
+}
+
+button.url-status-icon.url-status-error:hover {
+  background-color: #fecaca;
+  border-color: #f87171;
+  color: #991b1b;
+}
+
+button.url-status-icon.url-status-error:active {
+  background-color: #fca5a5;
 }
 
 .url-status-icon.url-external-link {

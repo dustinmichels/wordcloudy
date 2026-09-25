@@ -1387,7 +1387,7 @@ test("LoadRecentView renders 'Load Document' modal with Constitution sample", ()
   expect(html).toContain("September 1787");
 });
 
-test("RecentDocumentsList keeps sample above other docs and has sample-doc-item class", () => {
+test("RecentDocumentsList puts local docs first and samples at bottom", () => {
   const React = require("react");
   const { renderToString } = require("react-dom/server");
   const { RecentDocumentsList } = require("./src/frontend");
@@ -1406,14 +1406,41 @@ test("RecentDocumentsList keeps sample above other docs and has sample-doc-item 
   expect(html).toContain("sample-doc-item");
   expect(html).toContain("The Constitution of the United States");
   expect(html).toContain("My Custom Doc");
+  expect(html).not.toContain("recent-docs-divider");
 
-  const sampleIndex = html.indexOf("sample-doc-item");
   const otherDocIndex = html.indexOf("My Custom Doc");
-  expect(sampleIndex).toBeGreaterThan(-1);
+  const sampleIndex = html.indexOf("sample-doc-item");
   expect(otherDocIndex).toBeGreaterThan(-1);
-  // Sample is kept above other docs in the list
-  expect(sampleIndex).toBeLessThan(otherDocIndex);
+  expect(sampleIndex).toBeGreaterThan(-1);
+  // Local docs are first, then sample at bottom
+  expect(otherDocIndex).toBeLessThan(sampleIndex);
   clearRecentDocuments();
+});
+
+test("RecentDocumentsList shows empty state and sample when no local docs exist", () => {
+  const React = require("react");
+  const { renderToString } = require("react-dom/server");
+  const { RecentDocumentsList } = require("./src/frontend");
+  const { clearRecentDocuments } = require("./src/storage");
+
+  clearRecentDocuments();
+
+  const html = renderToString(
+    React.createElement(RecentDocumentsList, {
+      onCreate: () => {},
+      onLoadSample: () => {},
+    }),
+  );
+
+  expect(html).toContain("recent-docs-empty");
+  expect(html).toContain("No recent documents");
+  expect(html).not.toContain("recent-docs-divider");
+  expect(html).toContain("sample-doc-item");
+  expect(html).toContain("The Constitution of the United States");
+
+  const emptyIndex = html.indexOf("recent-docs-empty");
+  const sampleIndex = html.indexOf("sample-doc-item");
+  expect(emptyIndex).toBeLessThan(sampleIndex);
 });
 
 test("sample-doc-item in frontend.css has subtle yellow pastel background", async () => {
@@ -1639,4 +1666,60 @@ test("standalone build includes URL input styling, checkmark, red X, and live st
   expect(distHtml).toContain(".form-input-error");
   expect(distHtml).toContain(".form-input-success");
   expect(distHtml).toContain(".url-feedback");
+});
+
+test("CreateCloudView renders red X clear button and displays invalid link error only once", () => {
+  const React = require("react");
+  const { renderToString } = require("react-dom/server");
+  const { CreateCloudView } = require("./src/frontend");
+
+  const invalidMsg =
+    "Link does not look like a valid Google Doc or Sheet link. Please paste a link like https://docs.google.com/document/d/... or a Google Doc ID.";
+  const html = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "gdoc",
+      initialGdocUrl: "https://example.com/not-a-google-doc",
+      initialErrorMessage: invalidMsg,
+    }),
+  );
+
+  // 1. Red X clear button is rendered as an interactive button with accessible label
+  expect(html).toContain("url-status-error");
+  expect(html).toContain('aria-label="Clear link"');
+  expect(html).toMatch(
+    /<button[^>]*class="[^"]*url-status-error[^"]*"[^>]*aria-label="Clear link"/,
+  );
+
+  // 2. The error message is rendered inline under the URL input
+  expect(html).toContain("url-feedback-error");
+
+  // 3. The error message is NOT duplicated at the bottom banner
+  expect(html).not.toContain("create-error-banner");
+
+  // 4. The error message appears exactly ONCE in the entire output
+  const count = (html.match(/Link does not look like a valid Google Doc or Sheet link/g) || [])
+    .length;
+  expect(count).toBe(1);
+});
+
+test("CreateCloudView renders bottom error banner when not displaying inline error", () => {
+  const React = require("react");
+  const { renderToString } = require("react-dom/server");
+  const { CreateCloudView } = require("./src/frontend");
+
+  const emptyMsg = "Please enter a Google Doc link or document ID.";
+  const html = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "gdoc",
+      initialGdocUrl: "",
+      initialErrorMessage: emptyMsg,
+    }),
+  );
+
+  expect(html).toContain("create-error-banner");
+  expect(html).not.toContain("url-feedback-error");
+  const count = (html.match(/Please enter a Google Doc link or document ID/g) || []).length;
+  expect(count).toBe(1);
 });

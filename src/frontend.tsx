@@ -270,6 +270,7 @@ export interface CreateCloudViewProps {
   initialAttribution?: string;
   initialDate?: string;
   initialLoading?: boolean;
+  initialErrorMessage?: string;
   isEdit?: boolean;
 }
 
@@ -283,6 +284,7 @@ export function CreateCloudView({
   initialAttribution = "",
   initialDate = "",
   initialLoading = false,
+  initialErrorMessage = undefined,
   isEdit = false,
 }: CreateCloudViewProps) {
   const initialExternalLink = useMemo(() => {
@@ -296,14 +298,20 @@ export function CreateCloudView({
   const [attribution, setAttribution] = useState(initialAttribution);
   const [date, setDate] = useState(initialDate);
   const [isLoading, setIsLoading] = useState(initialLoading);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
+  const [errorMessage, setErrorMessage] = useState<string | null>(initialErrorMessage ?? null);
   // Live URL validation and loading states
   const [isUrlLoading, setIsUrlLoading] = useState(false);
   const [urlLoadSuccess, setUrlLoadSuccess] = useState(Boolean(initialExternalLink));
   const [urlExternalLink, setUrlExternalLink] = useState<string | null>(initialExternalLink);
   const [preloadedData, setPreloadedData] = useState<ParsedDocumentData | null>(null);
 
+  const urlInputRef = useRef<HTMLInputElement>(null);
+
+  const handleClearUrl = () => {
+    setGdocUrl("");
+    setErrorMessage(null);
+    urlInputRef.current?.focus();
+  };
   const hasUserEditedTitle = useRef(Boolean(initialCustomTitle));
   const activeUrlRef = useRef(gdocUrl);
   activeUrlRef.current = gdocUrl;
@@ -565,6 +573,7 @@ export function CreateCloudView({
                 </label>
                 <div className="url-input-container">
                   <input
+                    ref={urlInputRef}
                     id="gdoc-url-input"
                     type="text"
                     className={`form-input ${
@@ -610,13 +619,15 @@ export function CreateCloudView({
                       </>
                     )}
                     {!isUrlLoading && errorMessage && gdocUrl.trim().length > 0 && (
-                      <span
+                      <button
+                        type="button"
                         className="url-status-icon url-status-error"
-                        title={errorMessage}
-                        aria-label={errorMessage}
+                        title="Clear link"
+                        aria-label="Clear link"
+                        onClick={handleClearUrl}
                       >
                         <X size={18} aria-hidden="true" />
-                      </span>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -771,14 +782,15 @@ export function CreateCloudView({
             </div>
           )}
 
-          {errorMessage && (
-            <div className="create-error-banner" role="alert">
-              <AlertCircle size={18} aria-hidden="true" />
-              <div className="create-error-text">
-                <strong>Error:</strong> {errorMessage}
+          {errorMessage &&
+            !(sourceMode === "gdoc" && !isUrlLoading && gdocUrl.trim().length > 0) && (
+              <div className="create-error-banner" role="alert">
+                <AlertCircle size={18} aria-hidden="true" />
+                <div className="create-error-text">
+                  <strong>Error:</strong> {errorMessage}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {isLoading && (
             <div className="create-loading-banner" role="status" aria-live="polite">
@@ -850,8 +862,99 @@ export function RecentDocumentsList({
         </div>
       )}
 
-      <ul className="recent-docs-list" aria-label="Recent documents">
-        {/* Sample document item */}
+      {/* Local stored documents first */}
+      {recentDocs.filter((doc) => doc.id !== SAMPLE_DOC_ID).length > 0 ? (
+        <ul className="recent-docs-list" aria-label="Recent documents">
+          {recentDocs
+            .filter((doc) => doc.id !== SAMPLE_DOC_ID)
+            .map((doc) => (
+              <li key={doc.id} className="recent-doc-item">
+                <button
+                  type="button"
+                  className="recent-doc-select-btn"
+                  onClick={async () => {
+                    setRecentError(null);
+                    setLoadingRecentId(doc.id);
+                    try {
+                      const data = await fetchAndParseGoogleDoc(
+                        doc.id,
+                        doc.title,
+                        doc.attribution,
+                        doc.date,
+                      );
+                      const updated = saveRecentDocument({
+                        id: doc.id,
+                        url: doc.url,
+                        title: data.customTitle || data.title,
+                        attribution: data.attribution,
+                        date: data.date,
+                      });
+                      setRecentDocs(updated);
+                      onCreate(data);
+                    } catch (err) {
+                      setRecentError(
+                        err instanceof Error
+                          ? err.message
+                          : "Failed to load document from Google Docs.",
+                      );
+                    } finally {
+                      setLoadingRecentId(null);
+                    }
+                  }}
+                  disabled={loadingRecentId === doc.id}
+                  title={`Load "${doc.title}"`}
+                >
+                  <div className="recent-doc-main">
+                    <span className="recent-doc-title">{doc.title}</span>
+                    {(doc.attribution || doc.date) && (
+                      <span className="recent-doc-meta">
+                        {doc.attribution && <span>{doc.attribution}</span>}
+                        {doc.attribution && doc.date && <span className="meta-dot">•</span>}
+                        {doc.date && <span>{doc.date}</span>}
+                      </span>
+                    )}
+                  </div>
+                  {loadingRecentId === doc.id && (
+                    <Loader2 className="recent-doc-spinner spin" size={16} aria-hidden="true" />
+                  )}
+                </button>
+                <div className="recent-doc-actions">
+                  <a
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="recent-doc-ext-link"
+                    title="Open Google Doc in new tab"
+                    aria-label={`Open ${doc.title} Google Doc in new tab`}
+                  >
+                    <ExternalLink size={14} aria-hidden="true" />
+                  </a>
+                  <button
+                    type="button"
+                    className="recent-doc-remove-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const updated = removeRecentDocument(doc.id);
+                      setRecentDocs(updated);
+                    }}
+                    title="Remove from recent documents"
+                    aria-label={`Remove ${doc.title} from recent documents`}
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              </li>
+            ))}
+        </ul>
+      ) : (
+        <div className="recent-docs-empty">
+          <p>No recent documents</p>
+          <span className="recent-docs-hint">Documents you analyze will appear here.</span>
+        </div>
+      )}
+
+      {/* Sample document at the bottom */}
+      <ul className="recent-docs-list sample-docs-list" aria-label="Sample documents">
         <li key="sample-constitution" className="recent-doc-item sample-doc-item">
           <button
             type="button"
@@ -876,88 +979,6 @@ export function RecentDocumentsList({
             )}
           </button>
         </li>
-
-        {/* Stored recent documents */}
-        {recentDocs
-          .filter((doc) => doc.id !== SAMPLE_DOC_ID)
-          .map((doc) => (
-            <li key={doc.id} className="recent-doc-item">
-              <button
-                type="button"
-                className="recent-doc-select-btn"
-                onClick={async () => {
-                  setRecentError(null);
-                  setLoadingRecentId(doc.id);
-                  try {
-                    const data = await fetchAndParseGoogleDoc(
-                      doc.id,
-                      doc.title,
-                      doc.attribution,
-                      doc.date,
-                    );
-                    const updated = saveRecentDocument({
-                      id: doc.id,
-                      url: doc.url,
-                      title: data.customTitle || data.title,
-                      attribution: data.attribution,
-                      date: data.date,
-                    });
-                    setRecentDocs(updated);
-                    onCreate(data);
-                  } catch (err) {
-                    setRecentError(
-                      err instanceof Error
-                        ? err.message
-                        : "Failed to load document from Google Docs.",
-                    );
-                  } finally {
-                    setLoadingRecentId(null);
-                  }
-                }}
-                disabled={loadingRecentId === doc.id}
-                title={`Load "${doc.title}"`}
-              >
-                <div className="recent-doc-main">
-                  <span className="recent-doc-title">{doc.title}</span>
-                  {(doc.attribution || doc.date) && (
-                    <span className="recent-doc-meta">
-                      {doc.attribution && <span>{doc.attribution}</span>}
-                      {doc.attribution && doc.date && <span className="meta-dot">•</span>}
-                      {doc.date && <span>{doc.date}</span>}
-                    </span>
-                  )}
-                </div>
-                {loadingRecentId === doc.id && (
-                  <Loader2 className="recent-doc-spinner spin" size={16} aria-hidden="true" />
-                )}
-              </button>
-              <div className="recent-doc-actions">
-                <a
-                  href={doc.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="recent-doc-ext-link"
-                  title="Open Google Doc in new tab"
-                  aria-label={`Open ${doc.title} Google Doc in new tab`}
-                >
-                  <ExternalLink size={14} aria-hidden="true" />
-                </a>
-                <button
-                  type="button"
-                  className="recent-doc-remove-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const updated = removeRecentDocument(doc.id);
-                    setRecentDocs(updated);
-                  }}
-                  title="Remove from recent documents"
-                  aria-label={`Remove ${doc.title} from recent documents`}
-                >
-                  <Trash2 size={14} aria-hidden="true" />
-                </button>
-              </div>
-            </li>
-          ))}
       </ul>
     </div>
   );
