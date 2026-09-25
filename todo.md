@@ -150,7 +150,7 @@ This document outlines the step-by-step procedure to migrate the WordCloudy proj
       - `withRotation`: boolean
       - URL query handling: parse `?doc=` / `#doc=` for shared Google Docs.
     - Header and metadata:
-      - Document title defaults to `WordCloud of "${docData.title}"` or fallback `WordCloud of "The Constitution of the United States"`.
+      - Document title defaults to `"${docData.title}"` or fallback `"The Constitution of the United States"`.
       - Subtitle displays `"Custom Document"` or `"September 1787"` for default document.
       - Reset action title: `"Return to the default document"`.
     - Implement export buttons:

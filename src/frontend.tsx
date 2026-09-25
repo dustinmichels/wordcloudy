@@ -480,10 +480,10 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
   );
 }
 
-export default function App() {
-  const initialDocData: ParsedDocumentData | null =
-    typeof __DOCUMENT_DATA__ !== "undefined" && __DOCUMENT_DATA__?.all ? __DOCUMENT_DATA__ : null;
+const initialDocData: ParsedDocumentData | null =
+  typeof __DOCUMENT_DATA__ !== "undefined" && __DOCUMENT_DATA__?.all ? __DOCUMENT_DATA__ : null;
 
+export default function App() {
   const [currentPage, setCurrentPage] = useState<"view" | "create">("view");
   const defaultDocDataRef = useRef<ParsedDocumentData | null>(initialDocData);
   const [isCustomDoc, setIsCustomDoc] = useState(false);
@@ -554,7 +554,7 @@ export default function App() {
         console.error("Error fetching sections:", err);
         setLoading(false);
       });
-  }, [initialDocData]);
+  }, []);
   const handleResetToDefault = useCallback(() => {
     if (typeof window !== "undefined" && window.location.search) {
       window.history.replaceState({}, "", window.location.pathname);
@@ -891,11 +891,7 @@ export default function App() {
             </div>
           )}
           <div className="wordcloud-header">
-            <h1>
-              {docData?.title
-                ? `WordCloud of "${docData.title}"`
-                : `WordCloud of "The Constitution of the United States"`}
-            </h1>
+            <h1>{docData?.title || "The Constitution of the United States"}</h1>
             <div className="wordcloud-header-meta">
               <span>{isCustomDoc ? "Custom Document" : "September 1787"}</span>
               <span className="meta-separator" aria-hidden="true">
