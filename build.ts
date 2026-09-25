@@ -92,7 +92,8 @@ ${safeJs}
   // 6. Write final outputs
   await mkdir("./dist", { recursive: true });
   await Bun.write("./dist/index.html", html);
-
+  await Bun.write("./dist/404.html", html);
+  await Bun.write("./dist/.nojekyll", "");
   const stats = Bun.file("./dist/index.html");
   console.log(`Built standalone HTML page: dist/index.html (${(stats.size / 1024).toFixed(1)} KB)`);
   console.log("Verified: Standalone build includes word cloud and sentence fragments.");

@@ -182,6 +182,17 @@ function parseH1Sections(markdown: string): Section[] {
 }
 
 /**
+ * Strips markdown heading lines (lines starting with `#`) from text,
+ * ensuring headers and subheaders are excluded from word frequency counts.
+ */
+export function stripMarkdownHeadings(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("#"))
+    .join("\n");
+}
+
+/**
  * Computes word frequencies for the whole document (ALL) and each individual section.
  */
 export function getDocumentWordData(
@@ -189,7 +200,10 @@ export function getDocumentWordData(
   topWordsLimit = 100,
   title?: string,
 ): ParsedDocumentData {
-  const allFrequencies = getWordFrequencies(markdown).slice(0, topWordsLimit);
+  const allFrequencies = getWordFrequencies(stripMarkdownHeadings(markdown)).slice(
+    0,
+    topWordsLimit,
+  );
   let parsedSections = parseDocSections(markdown);
 
   if (parsedSections.length === 0 && markdown.trim().length > 0) {
@@ -210,7 +224,7 @@ export function getDocumentWordData(
   const sections: SectionWordData[] = parsedSections.map((sec) => ({
     id: sec.id,
     title: sec.title,
-    words: getWordFrequencies(sec.content).slice(0, topWordsLimit),
+    words: getWordFrequencies(stripMarkdownHeadings(sec.content)).slice(0, topWordsLimit),
     sentences: extractSentences(sec.content),
   }));
 
@@ -259,11 +273,27 @@ export function extractGoogleDocId(input: string): string | null {
  * Parses exported Google Doc HTML into clean markdown and document title.
  */
 export function parseGoogleDocHtml(html: string): { title?: string; markdown: string } {
-  const boldClasses = new Set<string>();
-  const classRegex = /\.([a-zA-Z0-9_-]+)\s*\{[^}]*font-weight:\s*(?:700|bold)[^}]*\}/gi;
-  let match: RegExpExecArray | null;
-  while ((match = classRegex.exec(html)) !== null) {
-    if (match[1]) boldClasses.add(match[1]);
+  const classStyles = new Map<string, { fontSize?: number; isBold?: boolean }>();
+  const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+  let sm: RegExpExecArray | null;
+  while ((sm = styleRegex.exec(html)) !== null) {
+    const css = sm[1];
+    const ruleRegex = /\.([a-zA-Z0-9_-]+)\s*\{([^}]+)\}/g;
+    let rm: RegExpExecArray | null;
+    while ((rm = ruleRegex.exec(css)) !== null) {
+      const className = rm[1];
+      const declarations = rm[2];
+      const fsMatch = declarations.match(/font-size:\s*([\d.]+)pt/i);
+      const fwMatch = declarations.match(/font-weight:\s*(\d+|bold)/i);
+      const fsVal = fsMatch ? parseFloat(fsMatch[1]) : undefined;
+      const isBold = fwMatch ? fwMatch[1] === "bold" || parseInt(fwMatch[1], 10) >= 700 : false;
+
+      const existing = classStyles.get(className) || {};
+      classStyles.set(className, {
+        fontSize: fsVal ?? existing.fontSize,
+        isBold: isBold || existing.isBold || false,
+      });
+    }
   }
 
   const titleMatch = html.match(/<title>([^<]*)<\/title>/i);
@@ -271,8 +301,21 @@ export function parseGoogleDocHtml(html: string): { title?: string; markdown: st
 
   const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
   const content = bodyMatch && bodyMatch[1] ? bodyMatch[1] : html;
+  const hasHtmlHeadings = /<h[1-6]\b/i.test(content);
+
   const blockRegex = /<(h[1-6]|p|li)([^>]*)>([\s\S]*?)<\/\1>/gi;
-  const blocks: { tag: string; text: string; isHeading: boolean; isList: boolean }[] = [];
+  let match: RegExpExecArray | null;
+  interface ParsedBlock {
+    tag: string;
+    text: string;
+    isHeading: boolean;
+    headingLevel: number;
+    fontSize: number;
+    isBold: boolean;
+    isList: boolean;
+    markdownLevel?: number;
+  }
+  const blocks: ParsedBlock[] = [];
 
   while ((match = blockRegex.exec(content)) !== null) {
     const [, tag, rawAttrs, innerHtml] = match;
@@ -282,36 +325,118 @@ export function parseGoogleDocHtml(html: string): { title?: string; markdown: st
       .trim();
     if (!text) continue;
 
+    const lowerTag = tag.toLowerCase();
+    const isList = lowerTag === "li";
+
     const classMatch = (rawAttrs || "").match(/class=["']([^"']*)["']/i);
-    const classes = classMatch && classMatch[1] ? classMatch[1].split(/\s+/) : [];
-    const isTagH = /^h[1-6]$/i.test(tag);
-    const hasBoldClass = classes.some((c) => boldClasses.has(c));
-    const hasBoldSpan = [...innerHtml.matchAll(/<span[^>]*class="?([^">]*)"?[^>]*>/gi)].some(
-      (sm) => {
-        const spanClasses = sm[1] ? sm[1].split(/\s+/) : [];
-        return spanClasses.some((c) => boldClasses.has(c));
-      },
+    const tagClasses = classMatch && classMatch[1] ? classMatch[1].split(/\s+/) : [];
+    const spanClasses = [...innerHtml.matchAll(/class=["']([^"']*)["']/gi)].flatMap((m) =>
+      m[1] ? m[1].split(/\s+/) : [],
     );
-    const hasStrong = /<(strong|b)\b/i.test(innerHtml);
-    const isBold = hasBoldClass || hasBoldSpan || hasStrong;
+    const classes = [...new Set([...tagClasses, ...spanClasses])];
+
+    const fontSizes = classes
+      .map((c) => classStyles.get(c)?.fontSize)
+      .filter((s): s is number => s !== undefined);
+    const maxFontSize = fontSizes.length > 0 ? Math.max(...fontSizes) : 11;
+    const isBold =
+      classes.some((c) => classStyles.get(c)?.isBold) || /<(strong|b)\b/i.test(innerHtml);
+
+    const hMatch = lowerTag.match(/^h([1-6])$/);
+    let isHeading = false;
+    let headingLevel = 99;
+
+    if (hasHtmlHeadings) {
+      if (hMatch) {
+        isHeading = true;
+        headingLevel = parseInt(hMatch[1], 10);
+      }
+    } else {
+      if (!isList && isBold && text.length < 150) {
+        isHeading = true;
+        headingLevel = -maxFontSize;
+      }
+    }
 
     blocks.push({
-      tag: tag.toLowerCase(),
+      tag: lowerTag,
       text,
-      isHeading: isTagH || (tag.toLowerCase() === "p" && isBold && text.length < 120),
-      isList: tag.toLowerCase() === "li",
+      isHeading,
+      headingLevel,
+      fontSize: maxFontSize,
+      isBold,
+      isList,
     });
   }
 
   if (!docTitle && blocks.length > 0 && blocks[0]?.isHeading) {
     docTitle = blocks[0].text;
     blocks.shift();
+  } else if (
+    docTitle &&
+    blocks.length > 0 &&
+    blocks[0]?.isHeading &&
+    blocks[0].text.toLowerCase() === docTitle.toLowerCase()
+  ) {
+    blocks.shift();
+  }
+
+  if (hasHtmlHeadings) {
+    const headingLevels = blocks.filter((b) => b.isHeading).map((b) => b.headingLevel);
+    const minLevel = headingLevels.length > 0 ? Math.min(...headingLevels) : 2;
+    for (const b of blocks) {
+      if (b.isHeading) {
+        b.markdownLevel = b.headingLevel === minLevel ? 2 : 3;
+      }
+    }
+  } else {
+    const headingIndices: number[] = [];
+    for (let i = 0; i < blocks.length; i++) {
+      if (blocks[i]?.isHeading) headingIndices.push(i);
+    }
+
+    const isSubheader = new Array(blocks.length).fill(false);
+    let activeParentSize: number | null = null;
+    let activeSubSize: number | null = null;
+
+    for (let k = 0; k < headingIndices.length; k++) {
+      const currIdx = headingIndices[k];
+      const curr = blocks[currIdx];
+
+      if (k > 0) {
+        const prevIdx = headingIndices[k - 1];
+        const prev = blocks[prevIdx];
+        const hasContentBetween = blocks
+          .slice(prevIdx + 1, currIdx)
+          .some((b) => !b.isHeading && b.text.length > 0);
+
+        if (!hasContentBetween && curr.fontSize <= prev.fontSize) {
+          isSubheader[currIdx] = true;
+          activeParentSize = prev.fontSize;
+          activeSubSize = curr.fontSize;
+          continue;
+        }
+      }
+
+      if (activeSubSize !== null && activeParentSize !== null && curr.fontSize <= activeSubSize) {
+        isSubheader[currIdx] = true;
+        continue;
+      }
+
+      activeParentSize = null;
+      activeSubSize = null;
+    }
+
+    for (const idx of headingIndices) {
+      blocks[idx].markdownLevel = isSubheader[idx] ? 3 : 2;
+    }
   }
 
   const markdownLines: string[] = [];
   for (const b of blocks) {
     if (b.isHeading) {
-      markdownLines.push(`\n## ${b.text}\n`);
+      const hashes = b.markdownLevel === 2 ? "##" : "###";
+      markdownLines.push(`\n${hashes} ${b.text}\n`);
     } else if (b.isList) {
       markdownLines.push(`- ${b.text}`);
     } else {

@@ -214,6 +214,7 @@ import {
   parseDocSections,
   parseGoogleDocHtml,
   parsePastedText,
+  stripMarkdownHeadings,
 } from "./src/sections";
 test("parseDocSections extracts the four main aggregate sections in exact order", async () => {
   const content = await Bun.file("./samples/doc.md").text();
@@ -537,4 +538,121 @@ test("site and standalone build include favicon links", async () => {
   const distHtml = await Bun.file("./dist/index.html").text();
   expect(distHtml).toContain('rel="icon"');
   expect(distHtml).toContain("data:image/png;base64,");
+});
+
+test("standalone build produces GitHub Pages assets (index.html, 404.html, and .nojekyll)", async () => {
+  expect(await Bun.file("./dist/index.html").exists()).toBe(true);
+  expect(await Bun.file("./dist/404.html").exists()).toBe(true);
+  expect(await Bun.file("./dist/.nojekyll").exists()).toBe(true);
+  const notFoundHtml = await Bun.file("./dist/404.html").text();
+  expect(notFoundHtml).toContain("WordCloudy");
+});
+
+test("stripMarkdownHeadings removes heading lines and preserves content", () => {
+  const input = `# Title
+## Section 1
+This is body text.
+### Subheader
+- Bullet point
+Another line.`;
+  const stripped = stripMarkdownHeadings(input);
+  expect(stripped).not.toContain("# Title");
+  expect(stripped).not.toContain("## Section 1");
+  expect(stripped).not.toContain("### Subheader");
+  expect(stripped).toContain("This is body text.");
+  expect(stripped).toContain("- Bullet point");
+  expect(stripped).toContain("Another line.");
+});
+
+test("parseGoogleDocHtml parses local copy of US Constitution export correctly", async () => {
+  const html = await Bun.file("./samples/us-constitution.html").text();
+  const parsed = parseGoogleDocHtml(html);
+  expect(parsed.title).toBe("The Constitution of the United States");
+  expect(parsed.markdown).toContain("## Article. I.");
+  expect(parsed.markdown).toContain("### Section. 1.");
+
+  const docData = getDocumentWordData(parsed.markdown, 100, parsed.title);
+  expect(docData.sections.length).toBe(7);
+  expect(docData.sections.map((s) => s.title)).toEqual([
+    "Article. I.",
+    "Article. II.",
+    "Article. III.",
+    "Article. IV.",
+    "Article. V.",
+    "Article. VI.",
+    "Article. VII.",
+  ]);
+
+  const article1 = docData.sections[0];
+  expect(article1?.words.length).toBeGreaterThan(0);
+  expect(article1?.sentences.length).toBe(62);
+  expect(article1?.words.some((w) => w.text === "section")).toBe(false);
+});
+
+test("parseGoogleDocHtml parses local copy of Housing doc export correctly", async () => {
+  const html = await Bun.file("./samples/housing-doc.html").text();
+  const parsed = parseGoogleDocHtml(html);
+  expect(parsed.title).toBe(
+    "Gleanings and Questions from Our Experiences of Housing, What Housing Does, and Sense of Being “At Home”",
+  );
+  expect(parsed.markdown).toContain("## Cost of Housing and Implications for Costs of Living");
+  expect(parsed.markdown).toContain("## Finding a Place to Live");
+  expect(parsed.markdown).toContain("## Location -- Getting There and Being There");
+  expect(parsed.markdown).toContain("## Sense of “Being At Home”");
+  expect(parsed.markdown).toContain("### We feel “at home” when….");
+  expect(parsed.markdown).toContain("### Ways to cultivate “homefulness”");
+
+  const docData = getDocumentWordData(parsed.markdown, 100, parsed.title);
+  expect(docData.sections.length).toBe(4);
+  expect(docData.sections.map((s) => s.title)).toEqual([
+    "Cost of Housing and Implications for Costs of Living",
+    "Finding a Place to Live",
+    "Location -- Getting There and Being There",
+    "Sense of “Being At Home”",
+  ]);
+
+  const senseOfHome = docData.sections[3];
+  expect(senseOfHome?.sentences.length).toBe(11);
+  expect(senseOfHome?.words[0]?.text).toBe("power");
+  // Subheaders are excluded from words
+  expect(senseOfHome?.words.some((w) => w.text === "cultivate")).toBe(false);
+});
+
+test("fetchAndParseGoogleDoc loads and parses live US Constitution Google Doc", async () => {
+  const docData = await fetchAndParseGoogleDoc("1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc");
+  expect(docData.title).toBe("The Constitution of the United States");
+  expect(docData.sections.length).toBe(7);
+  expect(docData.sections.map((s) => s.title)).toEqual([
+    "Article. I.",
+    "Article. II.",
+    "Article. III.",
+    "Article. IV.",
+    "Article. V.",
+    "Article. VI.",
+    "Article. VII.",
+  ]);
+
+  const article1 = docData.sections[0];
+  expect(article1?.words.length).toBeGreaterThan(0);
+  expect(article1?.sentences.length).toBeGreaterThan(50);
+  // Subheaders like "Section. 1." are aggregated inside Article I and excluded from word frequencies
+  expect(article1?.words.some((w) => w.text === "section")).toBe(false);
+});
+
+test("fetchAndParseGoogleDoc loads and parses live Housing Google Doc", async () => {
+  const docData = await fetchAndParseGoogleDoc("1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA");
+  expect(docData.title).toBe(
+    "Gleanings and Questions from Our Experiences of Housing, What Housing Does, and Sense of Being “At Home”",
+  );
+  expect(docData.sections.length).toBe(4);
+  expect(docData.sections.map((s) => s.title)).toEqual([
+    "Cost of Housing and Implications for Costs of Living",
+    "Finding a Place to Live",
+    "Location -- Getting There and Being There",
+    "Sense of “Being At Home”",
+  ]);
+
+  const senseOfHome = docData.sections[3];
+  expect(senseOfHome?.sentences.length).toBeGreaterThan(5);
+  expect(senseOfHome?.words[0]?.text).toBe("power");
 });

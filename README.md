@@ -38,6 +38,14 @@ Execute the test suite with Bun's built-in test runner:
 bun test
 ```
 
+### Deploy to GitHub Pages
+
+The project includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that automatically builds and deploys the static site to GitHub Pages whenever changes are pushed to `main`.
+
+1. Go to repository **Settings** $\to$ **Pages** on GitHub.
+2. Under **Build and deployment** $\to$ **Source**, select **GitHub Actions**.
+3. Push to `main` (or trigger the workflow manually from the **Actions** tab via `workflow_dispatch`).
+
 ---
 
 ## N-Gram & Collocation Extraction
