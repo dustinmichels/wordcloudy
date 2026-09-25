@@ -13,6 +13,8 @@ async function build() {
   const { title, markdown } = parseGoogleDocHtml(rawHtml);
   const docData = getDocumentWordData(markdown, 100, title);
   docData.sourceGoogleDocId = "1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc";
+  docData.attribution = "Independence Hall, Philadelphia";
+  docData.date = "September 1787";
   const topWords = docData.all;
 
   console.log(

@@ -167,7 +167,6 @@ This document outlines the step-by-step procedure to migrate the WordCloudy proj
     - Header changes conditionally: "Create a New Word Cloud" vs "Edit Word Cloud" with matching subtitle description.
     - Mode toggle buttons: "Google Doc Link" (`FileText` icon) and "Paste Text / Markdown" (`Type` icon).
     - Google Doc & Sheet Mode:
-      - Warning callout: `<div class="create-callout create-callout-warning" role="alert">` with `AlertTriangle` icon and "Google Doc Must be Public!".
       - Inputs:
         - URL/ID input (`#gdoc-url-input`) supporting both Google Docs and Google Sheets with placeholder `https://docs.google.com/document/d/... or .../spreadsheets/d/...`.
         - Title input (`#gdoc-title-input`).
@@ -208,10 +207,11 @@ This document outlines the step-by-step procedure to migrate the WordCloudy proj
       - `loading`, `loadingMessage`, `saving`
     - Top Navigation Bar (`app-top-nav`):
       - Brand logo: Lucide `Cloud` icon (`color="var(--accent-color)"`, `size="20"`) with text "WordCloudy".
-      - 3 Tabs:
-        - "View Word Cloud" with `Eye` icon (`size="15"`).
+      - 4 Tabs:
+        - "View" with `Eye` icon (`size="15"`).
         - "Edit" with `Pencil` icon (`size="15"`).
-        - "+ Create New".
+        - "Load" with `FolderOpen` icon (`size="15"`).
+        - "Create New" with `Plus` icon (`size="15"`), separated slightly by a divider.
       - Floating close button (`.page-close-btn` with `X` icon, positioned below top-nav at `top: 4.75rem`) to close edit/create view back to "view".
     - URL parameter parsing & sync:
       - Parse on mount: `?doc=`, `?attribution=`, `?date=`, `?title=`, `?text=`, `?mode=` (and hash parameters `#doc=`, etc.).
@@ -287,8 +287,8 @@ This document outlines the step-by-step procedure to migrate the WordCloudy proj
     - Document title and sections: `"The Constitution of the United States"`, `"Article. I."`, `"shall"`, `"1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc"`.
     - Modal & Dialog accessibility: `about-btn`, `role="dialog"`, `aria-modal="true"`.
     - Navigation tabs & ordering:
-      - `app-top-nav`, `WordCloudy`, `View Word Cloud`, `Edit`, `+ Create New`.
-      - Index check: `Edit` appears between `View Word Cloud` and `+ Create New`.
+      - `app-top-nav`, `WordCloudy`, `View`, `Edit`, `Load`, `Create New`.
+      - Index check: `View`, `Edit`, `Load`, `Create New` in order, with `top-nav-tab-divider`.
     - Lucide icons present in bundle: `Eye` icon path (`M2.062 12.348`), `Pencil` icon path (`M21.174 6.812`), `lucide` class names.
     - Page close button styling: `top: 4.75rem`, `margin-left: auto`.
     - Form elements & callouts:
@@ -302,12 +302,10 @@ This document outlines the step-by-step procedure to migrate the WordCloudy proj
     - Inlined favicons: `rel="icon"`, `data:image/png;base64,`.
     - Security constraint: `housing-doc.md` must not appear in HTML.
   - Migrate component SSR tests from React to Vue:
-    - Update `CreateCloudView` unit tests in `index.test.ts` (currently using `react-dom/server`'s `renderToString`) to render the Vue 3 component using `@vue/server-renderer` (`renderToString(createSSRApp(CreateCloudView, ...))`) or `@vue/test-utils`:
-      - Warning callout visibility when `initialSourceMode="gdoc"` ("Google Doc Must be Public!").
-      - Shareable info callout visibility when `initialSourceMode="paste"` ("Only word clouds created from a google doc will be shareable").
-      - Lucide icon rendering (`lucide-file-text`, `lucide-type`, `lucide-alert-triangle`, `lucide-loader`).
-      - In-flight loading banner with animated spinner and status message when `initialLoading=true`.
-      - Plain-text date input rendering (`type="text"`, `#gdoc-date-input`, `#paste-date-input`).
+    - Shareable info callout visibility when `initialSourceMode="paste"` ("Only word clouds created from a google doc will be shareable").
+    - Lucide icon rendering (`lucide-file-text`, `lucide-type`, `lucide-loader`).
+    - In-flight loading banner with animated spinner and status message when `initialLoading=true`.
+    - Plain-text date input rendering (`type="text"`, `#gdoc-date-input`, `#paste-date-input`).
 - [ ] **5.2 Run test suite**
   ```bash
   bun test

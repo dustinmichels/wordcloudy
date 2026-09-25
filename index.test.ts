@@ -223,6 +223,7 @@ import {
   extractTitleFromUrl,
   fetchAndParseGoogleDoc,
   getDocumentWordData,
+  getGoogleDocWebUrl,
   getInitialEditValuesFromUrl,
   getShareableAppUrl,
   parseDocSections,
@@ -230,6 +231,12 @@ import {
   parsePastedText,
   stripMarkdownHeadings,
 } from "./src/sections";
+import {
+  SAMPLE_DOC_ID,
+  SAMPLE_DOC_TITLE,
+  SAMPLE_DOC_ATTRIBUTION,
+  SAMPLE_DOC_DATE,
+} from "./src/storage";
 test("parseDocSections extracts the four main aggregate sections in exact order", async () => {
   const content = await Bun.file("./samples/housing-doc.md").text();
   const sections = parseDocSections(content);
@@ -775,7 +782,7 @@ test("standalone build includes About button and methodology modal assets", asyn
   expect(html).toContain("Word Cloud Methodology");
   expect(html).toContain("Text Normalization");
   expect(html).toContain("N-Grams");
-  expect(html).toContain("Collocation Scoring");
+  expect(html).toContain("Collocation Filtering");
 
   // Security constraint: housing-doc.md must not appear in HTML
   expect(html.includes("housing-doc.md")).toBe(false);
@@ -801,23 +808,24 @@ test("standalone build includes Create New Word Cloud page and navigation", asyn
   // Navigation elements
   expect(html).toContain("app-top-nav");
   expect(html).toContain("WordCloudy");
-  expect(html).toContain("View Word Cloud");
+  expect(html).toContain("View");
   expect(html).toContain("Edit");
-  expect(html).toContain("+ Create New");
+  expect(html).toContain("Load");
+  expect(html).toContain("Create New");
+  expect(html).toContain("top-nav-tab-divider");
 
-  // Verify Edit is between View Word Cloud and + Create New
-  const viewIdx = html.indexOf("View Word Cloud");
+  // Verify order: View, Edit, Load, then Create New
+  const viewIdx = html.indexOf("View");
   expect(viewIdx).toBeGreaterThan(-1);
   const editIdx = html.indexOf("Edit", viewIdx);
   expect(editIdx).toBeGreaterThan(viewIdx);
-  const createIdx = html.indexOf("+ Create New", editIdx);
-  expect(createIdx).toBeGreaterThan(editIdx);
-  // Verify Lucide icons for View and Edit are included in bundle
+  const loadIdx = html.indexOf("Load", editIdx);
+  expect(loadIdx).toBeGreaterThan(editIdx);
+  const createIdx = html.indexOf("Create New", loadIdx);
+  expect(createIdx).toBeGreaterThan(loadIdx);
+  // Verify Lucide icons for View, Edit, and Load are included in bundle
   expect(html).toContain("M2.062 12.348"); // Eye icon path
   expect(html).toContain("M21.174 6.812"); // Pencil icon path
-
-  // Verify page-close-btn is moved lower so it doesn't overlap toggle buttons
-  expect(html).toContain("top: 4.75rem");
   expect(html).toContain("margin-left: auto");
   // Create form elements
   expect(html).toContain("Google Doc Link");
@@ -1002,7 +1010,7 @@ test("fetchAndParseGoogleDoc loads and parses live Housing Google Doc", async ()
   expect(senseOfHome?.words[0]?.text).toBe("power");
 });
 
-test("CreateCloudView displays public warning callout when Google Doc is selected", () => {
+test("CreateCloudView does not display public warning callout when Google Doc is selected", () => {
   const { renderToString } = require("react-dom/server");
   const React = require("react");
   const { CreateCloudView } = require("./src/frontend");
@@ -1014,8 +1022,8 @@ test("CreateCloudView displays public warning callout when Google Doc is selecte
     }),
   );
 
-  expect(html).toContain("Google Doc Must be Public!");
-  expect(html).toContain("create-callout-warning");
+  expect(html).not.toContain("Google Doc Must be Public!");
+  expect(html).not.toContain("create-callout-warning");
   expect(html).not.toContain("Only word clouds created from a google doc will be shareable");
 });
 
@@ -1036,7 +1044,7 @@ test("CreateCloudView displays shareable callout when custom text pane is select
   expect(html).not.toContain("Google Doc Must be Public!");
 });
 
-test("CreateCloudView renders lucide icons for tabs and callouts", () => {
+test("CreateCloudView renders lucide icons for tabs", () => {
   const { renderToString } = require("react-dom/server");
   const React = require("react");
   const { CreateCloudView } = require("./src/frontend");
@@ -1050,7 +1058,7 @@ test("CreateCloudView renders lucide icons for tabs and callouts", () => {
 
   expect(html).toContain("lucide-file-text");
   expect(html).toContain("lucide-type");
-  expect(html).toContain("lucide-alert-triangle");
+  expect(html).not.toContain("lucide-alert-triangle");
 });
 
 test("CreateCloudView displays lucide loading icon and parsing message when google doc is being parsed", () => {
@@ -1153,4 +1161,482 @@ test("frontend.tsx contains valid PNG download logic with href and click trigger
   expect(frontendSrc).toContain("document.body.appendChild(downloadLink);");
   expect(frontendSrc).toContain("downloadLink.click();");
   expect(frontendSrc).toContain("document.body.removeChild(downloadLink);");
+});
+
+test("fetchAndParseGoogleDoc throws clear error when Google Doc returns 401 (mock)", async () => {
+  const originalFetch = globalThis.fetch;
+  let callCount = 0;
+  try {
+    globalThis.fetch = (async () => {
+      callCount++;
+      return new Response(null, { status: 401 });
+    }) as typeof fetch;
+
+    await expect(
+      fetchAndParseGoogleDoc(
+        "https://docs.google.com/document/d/1LOEtTJ5nlqRS8gBByySi8csu8c4WV6ngIRjPF3upB3E/edit?tab=t.0",
+      ),
+    ).rejects.toThrow("Google doc has not been made public!");
+    expect(callCount).toBe(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+const isLive = process.env.LIVE === "1" || process.env.TEST_LIVE === "1";
+const testLive = test.skipIf(!isLive);
+
+testLive("fetchAndParseGoogleDoc throws clear error for private Google Doc (:live)", async () => {
+  await expect(
+    fetchAndParseGoogleDoc(
+      "https://docs.google.com/document/d/1LOEtTJ5nlqRS8gBByySi8csu8c4WV6ngIRjPF3upB3E/edit?tab=t.0",
+    ),
+  ).rejects.toThrow("Google doc has not been made public!");
+});
+// ============================================================================
+// 7. Recent Documents Storage & Home / Load Navigation
+// ============================================================================
+
+test("saveRecentDocument saves Google Doc URL, title, attribution, and date to browser storage", () => {
+  const { saveRecentDocument, getRecentDocuments, clearRecentDocuments } = require("./src/storage");
+
+  clearRecentDocuments();
+  const doc = {
+    id: "testDoc123",
+    url: "https://docs.google.com/document/d/testDoc123/edit",
+    title: "Housing Policy Review",
+    attribution: "Urban Planning Team",
+    date: "Sep 2026",
+  };
+  saveRecentDocument(doc);
+  const recent = getRecentDocuments();
+  expect(recent.length).toBe(1);
+  expect(recent[0]?.id).toBe("testDoc123");
+  expect(recent[0]?.url).toBe("https://docs.google.com/document/d/testDoc123/edit");
+  expect(recent[0]?.title).toBe("Housing Policy Review");
+  expect(recent[0]?.attribution).toBe("Urban Planning Team");
+  expect(recent[0]?.date).toBe("Sep 2026");
+  clearRecentDocuments();
+});
+
+test("saveRecentDocument deduplicates and moves re-opened doc to top", () => {
+  const { saveRecentDocument, getRecentDocuments, clearRecentDocuments } = require("./src/storage");
+
+  clearRecentDocuments();
+  saveRecentDocument({ id: "doc1", title: "Doc One" });
+  saveRecentDocument({ id: "doc2", title: "Doc Two" });
+  saveRecentDocument({ id: "doc1", title: "Doc One Updated" });
+
+  const recent = getRecentDocuments();
+  expect(recent.length).toBe(2);
+  expect(recent[0]?.id).toBe("doc1");
+  expect(recent[0]?.title).toBe("Doc One Updated");
+  expect(recent[1]?.id).toBe("doc2");
+  clearRecentDocuments();
+});
+
+test("removeRecentDocument removes document by id", () => {
+  const {
+    saveRecentDocument,
+    getRecentDocuments,
+    removeRecentDocument,
+    clearRecentDocuments,
+  } = require("./src/storage");
+
+  clearRecentDocuments();
+  saveRecentDocument({ id: "docA", title: "Doc A" });
+  saveRecentDocument({ id: "docB", title: "Doc B" });
+  removeRecentDocument("docA");
+  const recent = getRecentDocuments();
+  expect(recent.length).toBe(1);
+  expect(recent[0]?.id).toBe("docB");
+  clearRecentDocuments();
+});
+
+test("clearRecentDocuments empties recent docs list", () => {
+  const { saveRecentDocument, getRecentDocuments, clearRecentDocuments } = require("./src/storage");
+
+  saveRecentDocument({ id: "docX", title: "Doc X" });
+  expect(getRecentDocuments().length).toBeGreaterThan(0);
+  clearRecentDocuments();
+  expect(getRecentDocuments().length).toBe(0);
+});
+
+test("saveRecentDocument ignores empty or invalid document IDs", () => {
+  const { saveRecentDocument, getRecentDocuments, clearRecentDocuments } = require("./src/storage");
+
+  clearRecentDocuments();
+  saveRecentDocument({ id: "", title: "Empty ID" });
+  saveRecentDocument({ id: "   ", title: "Whitespace ID" });
+  expect(getRecentDocuments().length).toBe(0);
+});
+
+test("saveRecentDocument never saves SAMPLE_DOC_ID to storage", () => {
+  const {
+    saveRecentDocument,
+    getRecentDocuments,
+    clearRecentDocuments,
+    SAMPLE_DOC_ID,
+  } = require("./src/storage");
+
+  clearRecentDocuments();
+  saveRecentDocument({ id: SAMPLE_DOC_ID, title: "Constitution" });
+  expect(getRecentDocuments().length).toBe(0);
+});
+
+test("saveRecentDocument canonicalizes bare document ID into full Google Docs URL", () => {
+  const { saveRecentDocument, getRecentDocuments, clearRecentDocuments } = require("./src/storage");
+
+  clearRecentDocuments();
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  saveRecentDocument({
+    id: rawId,
+    url: rawId,
+    title: "Housing Doc",
+  });
+  const recent = getRecentDocuments();
+  expect(recent.length).toBe(1);
+  expect(recent[0]?.url).toBe(`https://docs.google.com/document/d/${rawId}/edit`);
+  clearRecentDocuments();
+});
+
+test("saveRecentDocument and getRecentDocuments degrade gracefully when localStorage throws SecurityError", () => {
+  const { saveRecentDocument, getRecentDocuments, clearRecentDocuments } = require("./src/storage");
+
+  const originalWindow = globalThis.window;
+  try {
+    const mockWindow = {
+      get localStorage(): Storage {
+        throw new DOMException("The operation is insecure.", "SecurityError");
+      },
+    };
+    (globalThis as unknown as { window: unknown }).window = mockWindow;
+
+    expect(() => {
+      saveRecentDocument({
+        id: "docBlocked123",
+        title: "Blocked Doc",
+      });
+    }).not.toThrow();
+
+    const recents = getRecentDocuments();
+    expect(recents.length).toBeGreaterThanOrEqual(1);
+    expect(recents[0]?.id).toBe("docBlocked123");
+  } finally {
+    (globalThis as unknown as { window: unknown }).window = originalWindow;
+    clearRecentDocuments();
+  }
+});
+
+test("CreateCloudView renders create form without recent pane", () => {
+  const React = require("react");
+  const { renderToString } = require("react-dom/server");
+  const { CreateCloudView } = require("./src/frontend");
+
+  const html = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "gdoc",
+    }),
+  );
+
+  expect(html).toContain("Create a New Word Cloud");
+  expect(html).toContain("Google Doc Link");
+  expect(html).toContain("Paste Text / Markdown");
+  expect(html).not.toContain("load-recent-card");
+});
+
+test("HomeView renders 'Create New' button and 'Load Recent' list with Constitution sample", () => {
+  const React = require("react");
+  const { renderToString } = require("react-dom/server");
+  const { HomeView } = require("./src/frontend");
+
+  const html = renderToString(
+    React.createElement(HomeView, {
+      onCreate: () => {},
+      onLoadSample: () => {},
+      onGoCreate: () => {},
+    }),
+  );
+
+  expect(html).toContain("home-create-btn");
+  expect(html).toContain("Create New");
+  expect(html).toContain("Load Recent");
+  expect(html).toContain("The Constitution of the United States");
+  expect(html).toContain("Sample");
+  expect(html).toContain("Independence Hall, Philadelphia");
+  expect(html).toContain("September 1787");
+});
+
+test("LoadRecentView renders 'Load Document' modal with Constitution sample", () => {
+  const React = require("react");
+  const { renderToString } = require("react-dom/server");
+  const { LoadRecentView } = require("./src/frontend");
+
+  const html = renderToString(
+    React.createElement(LoadRecentView, {
+      onCreate: () => {},
+      onLoadSample: () => {},
+    }),
+  );
+
+  expect(html).toContain("Load Document");
+  expect(html).toContain("The Constitution of the United States");
+  expect(html).toContain("Sample");
+  expect(html).toContain("Independence Hall, Philadelphia");
+  expect(html).toContain("September 1787");
+});
+
+test("RecentDocumentsList keeps sample above other docs and has sample-doc-item class", () => {
+  const React = require("react");
+  const { renderToString } = require("react-dom/server");
+  const { RecentDocumentsList } = require("./src/frontend");
+  const { saveRecentDocument, clearRecentDocuments } = require("./src/storage");
+
+  clearRecentDocuments();
+  saveRecentDocument({ id: "otherDoc1", title: "My Custom Doc" });
+
+  const html = renderToString(
+    React.createElement(RecentDocumentsList, {
+      onCreate: () => {},
+      onLoadSample: () => {},
+    }),
+  );
+
+  expect(html).toContain("sample-doc-item");
+  expect(html).toContain("The Constitution of the United States");
+  expect(html).toContain("My Custom Doc");
+
+  const sampleIndex = html.indexOf("sample-doc-item");
+  const otherDocIndex = html.indexOf("My Custom Doc");
+  expect(sampleIndex).toBeGreaterThan(-1);
+  expect(otherDocIndex).toBeGreaterThan(-1);
+  // Sample is kept above other docs in the list
+  expect(sampleIndex).toBeLessThan(otherDocIndex);
+  clearRecentDocuments();
+});
+
+test("sample-doc-item in frontend.css has subtle yellow pastel background", async () => {
+  const css = await Bun.file("./src/frontend.css").text();
+  expect(css).toContain(".recent-doc-item.sample-doc-item");
+  expect(css).toContain("#fefce8");
+  expect(css).toContain("#fef08a");
+});
+
+test("standalone build includes Load tab, HomeView, sample-badge, and Load recent list", async () => {
+  const distFile = Bun.file("./dist/index.html");
+  expect(await distFile.exists()).toBe(true);
+  const html = await distFile.text();
+
+  // Load tab in top nav
+  expect(html).toContain("top-nav-tab");
+  expect(html).toContain("Load");
+  // Home hero and create button
+  expect(html).toContain("home-hero-card");
+  expect(html).toContain("home-create-btn");
+  expect(html).toContain("Create New");
+  // Load Recent pane and sample badge
+  expect(html).toContain("Load Recent");
+  expect(html).toContain("The Constitution of the United States");
+  expect(html).toContain("sample-badge");
+  expect(html).toContain("Sample");
+  expect(html).toContain("Independence Hall, Philadelphia");
+  expect(html).toContain("September 1787");
+});
+
+test("standalone build header WordCloudy brand click clears URL params and navigates home", async () => {
+  const distFile = Bun.file("./dist/index.html");
+  expect(await distFile.exists()).toBe(true);
+  const html = await distFile.text();
+
+  expect(html).toContain("WordCloudy Home");
+  expect(html).toContain("window.location.pathname");
+
+  const frontendSrc = await Bun.file("./src/frontend.tsx").text();
+  expect(frontendSrc).toMatch(/handleGoHome[\s\S]*?setCurrentPage\("home"\)/);
+});
+
+test("WordCloudy title jiggles when pressed via CSS animation and interactive triggers", async () => {
+  const css = await Bun.file("./src/frontend.css").text();
+  expect(css).toContain("@keyframes title-jiggle");
+  expect(css).toContain(".brand-name.jiggling");
+  expect(css).toContain(".top-nav-brand:active .brand-name");
+
+  const frontendSrc = await Bun.file("./src/frontend.tsx").text();
+  expect(frontendSrc).toContain("triggerBrandJiggle");
+  expect(frontendSrc).toContain("isBrandJiggling");
+  expect(frontendSrc).toContain("onPointerDown");
+
+  const distFile = Bun.file("./dist/index.html");
+  expect(await distFile.exists()).toBe(true);
+  const html = await distFile.text();
+  expect(html).toContain("title-jiggle");
+});
+
+test("CLAUDE.md link compatibility: URL doc param decoding works as expected", () => {
+  const url =
+    "https://dustinmichels.github.io/wordcloudy/?doc=1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA&title=Gleanings+and+Questions+from+Our+Experiences+of+Housing%2C+What+Housing+Does%2C+and+Sense+of+Being+%E2%80%9CAt+Home%E2%80%9D&attribution=Laurie%27s+Housing+Class&date=Sep+10%2C+2026";
+  const docId = decodeGoogleDocShareCode(url);
+  const title = extractTitleFromUrl(url);
+  const attribution = extractAttributionFromUrl(url);
+  const date = extractDateFromUrl(url);
+
+  expect(docId).toBe("1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA");
+  expect(title).toBe(
+    "Gleanings and Questions from Our Experiences of Housing, What Housing Does, and Sense of Being “At Home”",
+  );
+  expect(attribution).toBe("Laurie's Housing Class");
+  expect(date).toBe("Sep 10, 2026");
+});
+test("Constitution sample loads with expected query parameters", () => {
+  const url = getShareableAppUrl(
+    SAMPLE_DOC_ID,
+    "http://localhost:3000/",
+    SAMPLE_DOC_ATTRIBUTION,
+    SAMPLE_DOC_DATE,
+    SAMPLE_DOC_TITLE,
+  );
+  expect(url).toBe(
+    "http://localhost:3000/?doc=1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc&title=The+Constitution+of+the+United+States&attribution=Independence+Hall%2C+Philadelphia&date=September+1787",
+  );
+
+  const docId = decodeGoogleDocShareCode(url);
+  const title = extractTitleFromUrl(url);
+  const attribution = extractAttributionFromUrl(url);
+  const date = extractDateFromUrl(url);
+
+  expect(docId).toBe("1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc");
+  expect(title).toBe("The Constitution of the United States");
+  expect(attribution).toBe("Independence Hall, Philadelphia");
+  expect(date).toBe("September 1787");
+});
+
+test("getGoogleDocWebUrl handles full URLs, raw IDs, spreadsheets, and invalid links", () => {
+  // Full Google Doc URL
+  expect(
+    getGoogleDocWebUrl(
+      "https://docs.google.com/document/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/edit?tab=t.0",
+    ),
+  ).toBe(
+    "https://docs.google.com/document/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/edit?tab=t.0",
+  );
+
+  // Google Doc URL without protocol
+  expect(
+    getGoogleDocWebUrl(
+      "docs.google.com/document/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/edit",
+    ),
+  ).toBe("https://docs.google.com/document/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/edit");
+
+  // Raw doc ID
+  expect(getGoogleDocWebUrl("1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA")).toBe(
+    "https://docs.google.com/document/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/edit",
+  );
+
+  // Google Spreadsheet URL
+  const sheetUrl =
+    "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0";
+  expect(getGoogleDocWebUrl(sheetUrl)).toBe(sheetUrl);
+
+  // Non-Google Doc URL
+  expect(getGoogleDocWebUrl("https://example.com/not-a-google-doc")).toBeNull();
+  expect(getGoogleDocWebUrl("https://google.com")).toBeNull();
+  expect(getGoogleDocWebUrl("not a link")).toBeNull();
+  expect(getGoogleDocWebUrl("")).toBeNull();
+});
+
+test("CreateCloudView renders URL input container, checkmark, and external link icon when valid link provided", () => {
+  const React = require("react");
+  const { renderToString } = require("react-dom/server");
+  const { CreateCloudView } = require("./src/frontend");
+
+  // 1. Create mode with empty URL: has container, no spinner, no checkmark, no red X, no external link icon
+  const createHtml = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "gdoc",
+      initialGdocUrl: "",
+    }),
+  );
+  expect(createHtml).toContain("url-input-container");
+  expect(createHtml).not.toContain("url-loading-spinner");
+  expect(createHtml).not.toContain("url-status-success");
+  expect(createHtml).not.toContain("url-status-error");
+  expect(createHtml).not.toContain("url-external-link");
+
+  // 2. Edit mode with valid Google Doc URL: renders checkmark icon and external link icon next to textbox
+  const editDocUrl =
+    "https://docs.google.com/document/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/edit";
+  const editHtml = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "gdoc",
+      initialGdocUrl: editDocUrl,
+      isEdit: true,
+    }),
+  );
+  expect(editHtml).toContain("url-input-container");
+  expect(editHtml).toContain("url-status-success");
+  expect(editHtml).toContain("lucide-check");
+  expect(editHtml).toContain("Document loaded successfully");
+  expect(editHtml).toContain("url-external-link");
+  expect(editHtml).toContain(`href="${editDocUrl}"`);
+  expect(editHtml).toContain('target="_blank"');
+  expect(editHtml).toContain("lucide-external-link");
+  expect(editHtml).toContain("Open Google Doc in new tab");
+  expect(editHtml).toContain("form-input-success");
+
+  // 3. Edit mode with Spreadsheet URL: renders checkmark and external link pointing to sheet
+  const sheetUrl =
+    "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit";
+  const sheetHtml = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "gdoc",
+      initialGdocUrl: sheetUrl,
+      isEdit: true,
+    }),
+  );
+  expect(sheetHtml).toContain("url-status-success");
+  expect(sheetHtml).toContain("lucide-check");
+  expect(sheetHtml).toContain("url-external-link");
+  expect(sheetHtml).toContain(`href="${sheetUrl}"`);
+});
+
+test("CreateCloudView live link logic handles validation, loading, checkmark, red X, and errors", async () => {
+  const frontendSrc = await Bun.file("./src/frontend.tsx").text();
+
+  // Check that useEffect is attached to gdocUrl changes for immediate link handling
+  expect(frontendSrc).toMatch(/useEffect\(\(\)\s*=>\s*\{[\s\S]*?\},?\s*\[gdocUrl\]\)/);
+
+  // Check that invalid links show an error right away without loading
+  expect(frontendSrc).toMatch(/if\s*\(!docId\)\s*\{[\s\S]*?setErrorMessage\([\s\S]*?return;/);
+
+  // Check that valid Google Doc links set isUrlLoading and fetch right away
+  expect(frontendSrc).toMatch(
+    /setIsUrlLoading\(true\)[\s\S]*?fetchAndParseGoogleDoc\(requestUrl\)/,
+  );
+
+  // Check that on success, custom title is populated right away
+  expect(frontendSrc).toMatch(/setCustomTitle\(data\.title\)/);
+
+  // Check that on success, checkmark icon and external link are displayed
+  expect(frontendSrc).toMatch(/url-status-success/);
+  expect(frontendSrc).toMatch(/url-external-link/);
+
+  // Check that on error/failure, red X icon is displayed
+  expect(frontendSrc).toMatch(/url-status-error/);
+});
+
+test("standalone build includes URL input styling, checkmark, red X, and live status icon classes", async () => {
+  const distHtml = await Bun.file("./dist/index.html").text();
+  expect(distHtml).toContain(".url-input-container");
+  expect(distHtml).toContain(".url-status-icon");
+  expect(distHtml).toContain(".url-loading-spinner");
+  expect(distHtml).toContain(".url-status-success");
+  expect(distHtml).toContain(".url-status-error");
+  expect(distHtml).toContain(".url-external-link");
+  expect(distHtml).toContain(".form-input-error");
+  expect(distHtml).toContain(".form-input-success");
+  expect(distHtml).toContain(".url-feedback");
 });

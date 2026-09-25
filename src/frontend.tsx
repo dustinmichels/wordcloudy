@@ -6,28 +6,44 @@ import { Wordcloud } from "@visx/wordcloud";
 import { ParentSize } from "@visx/responsive";
 import {
   AlertCircle,
-  AlertTriangle,
+  BookOpen,
   Check,
+  Clock,
   Cloud,
   Download,
   ExternalLink,
   Eye,
   FileText,
+  FolderOpen,
   Info,
   Loader2,
   MessageSquare,
   Pencil,
+  Plus,
   Share2,
+  Trash2,
   Type,
   X,
 } from "lucide-react";
+import {
+  getRecentDocuments,
+  removeRecentDocument,
+  saveRecentDocument,
+  type RecentDocument,
+  SAMPLE_DOC_ID,
+  SAMPLE_DOC_TITLE,
+  SAMPLE_DOC_ATTRIBUTION,
+  SAMPLE_DOC_DATE,
+} from "./storage";
 import {
   buildTermRegex,
   decodeGoogleDocShareCode,
   extractAttributionFromUrl,
   extractDateFromUrl,
+  extractGoogleDocId,
   extractTitleFromUrl,
   fetchAndParseGoogleDoc,
+  getGoogleDocWebUrl,
   getInitialEditValuesFromUrl,
   getShareableAppUrl,
   parsePastedText,
@@ -269,6 +285,10 @@ export function CreateCloudView({
   initialLoading = false,
   isEdit = false,
 }: CreateCloudViewProps) {
+  const initialExternalLink = useMemo(() => {
+    return initialGdocUrl ? getGoogleDocWebUrl(initialGdocUrl) : null;
+  }, [initialGdocUrl]);
+
   const [sourceMode, setSourceMode] = useState<"gdoc" | "paste">(initialSourceMode);
   const [gdocUrl, setGdocUrl] = useState(initialGdocUrl);
   const [pastedText, setPastedText] = useState(initialPastedText);
@@ -277,15 +297,102 @@ export function CreateCloudView({
   const [date, setDate] = useState(initialDate);
   const [isLoading, setIsLoading] = useState(initialLoading);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Live URL validation and loading states
+  const [isUrlLoading, setIsUrlLoading] = useState(false);
+  const [urlLoadSuccess, setUrlLoadSuccess] = useState(Boolean(initialExternalLink));
+  const [urlExternalLink, setUrlExternalLink] = useState<string | null>(initialExternalLink);
+  const [preloadedData, setPreloadedData] = useState<ParsedDocumentData | null>(null);
+
+  const hasUserEditedTitle = useRef(Boolean(initialCustomTitle));
+  const activeUrlRef = useRef(gdocUrl);
+  activeUrlRef.current = gdocUrl;
+  const isFirstMount = useRef(true);
+  const inFlightPromiseRef = useRef<Promise<ParsedDocumentData> | null>(null);
+
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+
+    const trimmed = gdocUrl.trim();
+
+    if (!trimmed) {
+      setIsUrlLoading(false);
+      setUrlLoadSuccess(false);
+      setUrlExternalLink(null);
+      setPreloadedData(null);
+      inFlightPromiseRef.current = null;
+      setErrorMessage(null);
+      return;
+    }
+
+    const docId = extractGoogleDocId(trimmed);
+    if (!docId) {
+      setIsUrlLoading(false);
+      setUrlLoadSuccess(false);
+      setUrlExternalLink(null);
+      setPreloadedData(null);
+      inFlightPromiseRef.current = null;
+      setErrorMessage(
+        "Link does not look like a valid Google Doc or Sheet link. Please paste a link like https://docs.google.com/document/d/... or a Google Doc ID.",
+      );
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsUrlLoading(true);
+    setUrlLoadSuccess(false);
+    setUrlExternalLink(null);
+    setPreloadedData(null);
+
+    const requestUrl = trimmed;
+    let isCancelled = false;
+
+    const promise = fetchAndParseGoogleDoc(requestUrl);
+    inFlightPromiseRef.current = promise;
+
+    promise
+      .then((data) => {
+        if (isCancelled || activeUrlRef.current.trim() !== requestUrl) return;
+        setIsUrlLoading(false);
+        setUrlLoadSuccess(true);
+        setPreloadedData(data);
+        setUrlExternalLink(getGoogleDocWebUrl(requestUrl));
+
+        if (data.title && (!hasUserEditedTitle.current || !customTitle.trim())) {
+          setCustomTitle(data.title);
+        }
+      })
+      .catch((err) => {
+        if (isCancelled || activeUrlRef.current.trim() !== requestUrl) return;
+        setIsUrlLoading(false);
+        setUrlLoadSuccess(false);
+        setUrlExternalLink(null);
+        setPreloadedData(null);
+        setErrorMessage(err instanceof Error ? err.message : String(err));
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [gdocUrl]);
+
   const handleExampleClick = () => {
     setGdocUrl(
       "https://docs.google.com/document/d/1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc/edit?tab=t.0",
     );
+    setCustomTitle(SAMPLE_DOC_TITLE);
+    hasUserEditedTitle.current = true;
+    setAttribution(SAMPLE_DOC_ATTRIBUTION);
+    setDate(SAMPLE_DOC_DATE);
     setErrorMessage(null);
   };
 
   const handleSampleTextClick = () => {
     setCustomTitle("Urban Housing & Transit Notes");
+    hasUserEditedTitle.current = true;
     setPastedText(
       `## Affordability and Living Costs\nHousing costs consume a major share of household income. When rent is high, families have less left over for healthcare, nutrition, and daily transit.\n\n## Transit and Location\nDense transit-oriented neighborhoods foster walkability, community connection, and reduced emissions. Proximity to amenities makes cities more vibrant.\n\n## Sense of Home\nA sense of home requires stability, safety, and personal autonomy within living spaces.`,
     );
@@ -297,10 +404,72 @@ export function CreateCloudView({
     setErrorMessage(null);
 
     if (sourceMode === "gdoc") {
-      if (!gdocUrl.trim()) {
+      const trimmed = gdocUrl.trim();
+      if (!trimmed) {
         setErrorMessage("Please enter a Google Doc link or document ID.");
         return;
       }
+
+      const docId = extractGoogleDocId(trimmed);
+      if (!docId) {
+        setErrorMessage(
+          "Link does not look like a valid Google Doc or Sheet link. Please paste a link like https://docs.google.com/document/d/... or a Google Doc ID.",
+        );
+        return;
+      }
+
+      // If already preloaded for this doc ID, use it immediately
+      if (preloadedData && preloadedData.sourceGoogleDocId === docId) {
+        const finalData: ParsedDocumentData = {
+          ...preloadedData,
+          title: customTitle.trim() || preloadedData.title,
+          customTitle: customTitle.trim() || preloadedData.customTitle,
+          attribution: attribution.trim() || undefined,
+          date: date.trim() || undefined,
+        };
+        if (finalData.sourceGoogleDocId && finalData.sourceGoogleDocId !== SAMPLE_DOC_ID) {
+          saveRecentDocument({
+            id: finalData.sourceGoogleDocId,
+            url: gdocUrl,
+            title: finalData.customTitle || finalData.title,
+            attribution: finalData.attribution,
+            date: finalData.date,
+          });
+        }
+        onCreate(finalData);
+        return;
+      }
+
+      // If an in-flight fetch is currently running for this URL, await it
+      if (isUrlLoading && inFlightPromiseRef.current) {
+        setIsLoading(true);
+        try {
+          const data = await inFlightPromiseRef.current;
+          const finalData: ParsedDocumentData = {
+            ...data,
+            title: customTitle.trim() || data.title,
+            customTitle: customTitle.trim() || data.customTitle,
+            attribution: attribution.trim() || undefined,
+            date: date.trim() || undefined,
+          };
+          if (finalData.sourceGoogleDocId && finalData.sourceGoogleDocId !== SAMPLE_DOC_ID) {
+            saveRecentDocument({
+              id: finalData.sourceGoogleDocId,
+              url: gdocUrl,
+              title: finalData.customTitle || finalData.title,
+              attribution: finalData.attribution,
+              date: finalData.date,
+            });
+          }
+          onCreate(finalData);
+        } catch (err) {
+          setErrorMessage(err instanceof Error ? err.message : String(err));
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       setIsLoading(true);
       try {
         const data = await fetchAndParseGoogleDoc(
@@ -309,6 +478,15 @@ export function CreateCloudView({
           attribution || undefined,
           date || undefined,
         );
+        if (data.sourceGoogleDocId && data.sourceGoogleDocId !== SAMPLE_DOC_ID) {
+          saveRecentDocument({
+            id: data.sourceGoogleDocId,
+            url: gdocUrl,
+            title: data.customTitle || data.title,
+            attribution: data.attribution,
+            date: data.date,
+          });
+        }
         onCreate(data);
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : String(err));
@@ -338,7 +516,7 @@ export function CreateCloudView({
   };
 
   return (
-    <div className="create-view-container">
+    <div className={`create-view-container ${isEdit ? "is-edit" : ""}`}>
       <div className="create-view-card">
         <div className="create-view-header">
           <h2>{isEdit ? "Edit Word Cloud" : "Create a New Word Cloud"}</h2>
@@ -381,23 +559,73 @@ export function CreateCloudView({
         <form onSubmit={handleSubmit} className="create-form">
           {sourceMode === "gdoc" ? (
             <div className="form-section">
-              <div className="create-callout create-callout-warning" role="alert">
-                <AlertTriangle className="create-callout-icon" size={18} aria-hidden="true" />
-                <span className="create-callout-text">Google Doc Must be Public!</span>
-              </div>
               <div className="form-group">
                 <label htmlFor="gdoc-url-input">
                   Google Doc or Sheet Link or ID <span className="required-star">*</span>
                 </label>
-                <input
-                  id="gdoc-url-input"
-                  type="text"
-                  className="form-input"
-                  placeholder="https://docs.google.com/document/d/... or .../spreadsheets/d/..."
-                  value={gdocUrl}
-                  onChange={(e) => setGdocUrl(e.target.value)}
-                  disabled={isLoading}
-                />
+                <div className="url-input-container">
+                  <input
+                    id="gdoc-url-input"
+                    type="text"
+                    className={`form-input ${
+                      errorMessage ? "form-input-error" : urlLoadSuccess ? "form-input-success" : ""
+                    }`}
+                    placeholder="https://docs.google.com/document/d/... or .../spreadsheets/d/..."
+                    value={gdocUrl}
+                    onChange={(e) => setGdocUrl(e.target.value)}
+                    disabled={isLoading}
+                  />
+                  <div className="url-input-actions">
+                    {isUrlLoading && (
+                      <span
+                        className="url-status-icon url-loading-spinner"
+                        title="Loading document..."
+                        aria-label="Loading document"
+                        role="status"
+                      >
+                        <Loader2 className="spin" size={18} aria-hidden="true" />
+                      </span>
+                    )}
+                    {!isUrlLoading && urlLoadSuccess && (
+                      <>
+                        <span
+                          className="url-status-icon url-status-success"
+                          title="Document loaded successfully"
+                          aria-label="Document loaded successfully"
+                        >
+                          <Check size={18} aria-hidden="true" />
+                        </span>
+                        {urlExternalLink && (
+                          <a
+                            href={urlExternalLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="url-status-icon url-external-link"
+                            title="Open Google Doc in new tab"
+                            aria-label="Open Google Doc in new tab"
+                          >
+                            <ExternalLink size={18} aria-hidden="true" />
+                          </a>
+                        )}
+                      </>
+                    )}
+                    {!isUrlLoading && errorMessage && gdocUrl.trim().length > 0 && (
+                      <span
+                        className="url-status-icon url-status-error"
+                        title={errorMessage}
+                        aria-label={errorMessage}
+                      >
+                        <X size={18} aria-hidden="true" />
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {!isUrlLoading && errorMessage && gdocUrl.trim().length > 0 && (
+                  <div className="url-feedback url-feedback-error" role="alert">
+                    <X size={14} aria-hidden="true" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
                 <div className="form-helper">
                   <span>
                     Sharing must be set to{" "}
@@ -426,7 +654,10 @@ export function CreateCloudView({
                   className="form-input"
                   placeholder="e.g. The Constitution of the United States"
                   value={customTitle}
-                  onChange={(e) => setCustomTitle(e.target.value)}
+                  onChange={(e) => {
+                    setCustomTitle(e.target.value);
+                    hasUserEditedTitle.current = true;
+                  }}
                   disabled={isLoading}
                 />
               </div>
@@ -595,17 +826,255 @@ export function CreateCloudView({
   );
 }
 
+export interface RecentDocumentsListProps {
+  onCreate: (data: ParsedDocumentData) => void;
+  onLoadSample: () => void;
+  sampleLoading?: boolean;
+}
+
+export function RecentDocumentsList({
+  onCreate,
+  onLoadSample,
+  sampleLoading = false,
+}: RecentDocumentsListProps) {
+  const [recentDocs, setRecentDocs] = useState<RecentDocument[]>(getRecentDocuments);
+  const [loadingRecentId, setLoadingRecentId] = useState<string | null>(null);
+  const [recentError, setRecentError] = useState<string | null>(null);
+
+  return (
+    <div className="recent-docs-section">
+      {recentError && (
+        <div className="recent-docs-error" role="alert">
+          <AlertCircle size={15} aria-hidden="true" />
+          <span>{recentError}</span>
+        </div>
+      )}
+
+      <ul className="recent-docs-list" aria-label="Recent documents">
+        {/* Sample document item */}
+        <li key="sample-constitution" className="recent-doc-item sample-doc-item">
+          <button
+            type="button"
+            className="recent-doc-select-btn"
+            onClick={onLoadSample}
+            disabled={sampleLoading}
+            title="Load The Constitution of the United States sample"
+          >
+            <div className="recent-doc-main">
+              <div className="recent-doc-title-row">
+                <span className="recent-doc-title">{SAMPLE_DOC_TITLE}</span>
+                <span className="sample-badge">Sample</span>
+              </div>
+              <span className="recent-doc-meta">
+                <span>{SAMPLE_DOC_ATTRIBUTION}</span>
+                <span className="meta-dot">•</span>
+                <span>{SAMPLE_DOC_DATE}</span>
+              </span>
+            </div>
+            {sampleLoading && (
+              <Loader2 className="recent-doc-spinner spin" size={16} aria-hidden="true" />
+            )}
+          </button>
+        </li>
+
+        {/* Stored recent documents */}
+        {recentDocs
+          .filter((doc) => doc.id !== SAMPLE_DOC_ID)
+          .map((doc) => (
+            <li key={doc.id} className="recent-doc-item">
+              <button
+                type="button"
+                className="recent-doc-select-btn"
+                onClick={async () => {
+                  setRecentError(null);
+                  setLoadingRecentId(doc.id);
+                  try {
+                    const data = await fetchAndParseGoogleDoc(
+                      doc.id,
+                      doc.title,
+                      doc.attribution,
+                      doc.date,
+                    );
+                    const updated = saveRecentDocument({
+                      id: doc.id,
+                      url: doc.url,
+                      title: data.customTitle || data.title,
+                      attribution: data.attribution,
+                      date: data.date,
+                    });
+                    setRecentDocs(updated);
+                    onCreate(data);
+                  } catch (err) {
+                    setRecentError(
+                      err instanceof Error
+                        ? err.message
+                        : "Failed to load document from Google Docs.",
+                    );
+                  } finally {
+                    setLoadingRecentId(null);
+                  }
+                }}
+                disabled={loadingRecentId === doc.id}
+                title={`Load "${doc.title}"`}
+              >
+                <div className="recent-doc-main">
+                  <span className="recent-doc-title">{doc.title}</span>
+                  {(doc.attribution || doc.date) && (
+                    <span className="recent-doc-meta">
+                      {doc.attribution && <span>{doc.attribution}</span>}
+                      {doc.attribution && doc.date && <span className="meta-dot">•</span>}
+                      {doc.date && <span>{doc.date}</span>}
+                    </span>
+                  )}
+                </div>
+                {loadingRecentId === doc.id && (
+                  <Loader2 className="recent-doc-spinner spin" size={16} aria-hidden="true" />
+                )}
+              </button>
+              <div className="recent-doc-actions">
+                <a
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="recent-doc-ext-link"
+                  title="Open Google Doc in new tab"
+                  aria-label={`Open ${doc.title} Google Doc in new tab`}
+                >
+                  <ExternalLink size={14} aria-hidden="true" />
+                </a>
+                <button
+                  type="button"
+                  className="recent-doc-remove-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const updated = removeRecentDocument(doc.id);
+                    setRecentDocs(updated);
+                  }}
+                  title="Remove from recent documents"
+                  aria-label={`Remove ${doc.title} from recent documents`}
+                >
+                  <Trash2 size={14} aria-hidden="true" />
+                </button>
+              </div>
+            </li>
+          ))}
+      </ul>
+    </div>
+  );
+}
+
+export interface LoadRecentViewProps {
+  onCreate: (data: ParsedDocumentData) => void;
+  onLoadSample: () => void;
+  sampleLoading?: boolean;
+  onCancel?: () => void;
+}
+
+export function LoadRecentView({
+  onCreate,
+  onLoadSample,
+  sampleLoading = false,
+  onCancel,
+}: LoadRecentViewProps) {
+  return (
+    <div className="load-view-container">
+      <div className="load-recent-card">
+        <div className="load-recent-header">
+          <div className="load-recent-title-group">
+            <Clock className="load-recent-icon" size={22} aria-hidden="true" />
+            <h3>Load Document</h3>
+          </div>
+          <p className="load-recent-subtitle">
+            Open a recently analyzed Google Doc or explore the US Constitution sample.
+          </p>
+        </div>
+        <RecentDocumentsList
+          onCreate={onCreate}
+          onLoadSample={onLoadSample}
+          sampleLoading={sampleLoading}
+        />
+        {onCancel && (
+          <div className="load-recent-footer">
+            <button type="button" className="btn-secondary" onClick={onCancel}>
+              Back
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export interface HomeViewProps {
+  onCreate: (data: ParsedDocumentData) => void;
+  onLoadSample: () => void;
+  sampleLoading?: boolean;
+  onGoCreate: () => void;
+}
+
+export function HomeView({
+  onCreate,
+  onLoadSample,
+  sampleLoading = false,
+  onGoCreate,
+}: HomeViewProps) {
+  return (
+    <div className="home-view-container">
+      <div className="home-hero-card">
+        <div className="home-hero-content">
+          <div className="home-hero-badge">
+            <Cloud size={16} aria-hidden="true" />
+            <span>WordCloudy</span>
+          </div>
+          <h1 className="home-hero-title">Create and Explore Interactive Word Clouds</h1>
+          <p className="home-hero-subtitle">
+            Transform any Google Doc or custom text into interactive word clouds with section
+            navigation and sentence context.
+          </p>
+          <div className="home-hero-actions">
+            <button type="button" className="btn-primary home-create-btn" onClick={onGoCreate}>
+              <Plus size={18} aria-hidden="true" />
+              Create New
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="load-recent-card home-recent-card">
+        <div className="load-recent-header">
+          <div className="load-recent-title-group">
+            <Clock className="load-recent-icon" size={22} aria-hidden="true" />
+            <h3>Load Recent</h3>
+          </div>
+          <p className="load-recent-subtitle">Load a recent doc, from local browser storage.</p>
+        </div>
+        <RecentDocumentsList
+          onCreate={onCreate}
+          onLoadSample={onLoadSample}
+          sampleLoading={sampleLoading}
+        />
+      </div>
+    </div>
+  );
+}
+
 const initialDocData: ParsedDocumentData | null =
   typeof __DOCUMENT_DATA__ !== "undefined" && __DOCUMENT_DATA__?.all ? __DOCUMENT_DATA__ : null;
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<"view" | "edit" | "create">("view");
-  const [docData, setDocData] = useState<ParsedDocumentData | null>(initialDocData);
+  const hasSharedDocInUrl =
+    typeof window !== "undefined" && Boolean(decodeGoogleDocShareCode(window.location.href));
+
+  const [currentPage, setCurrentPage] = useState<"home" | "view" | "edit" | "create" | "load">(
+    hasSharedDocInUrl ? "view" : "home",
+  );
+  const [docData, setDocData] = useState<ParsedDocumentData | null>(null);
+  const [sampleData, setSampleData] = useState<ParsedDocumentData | null>(initialDocData);
   const [selectedSection, setSelectedSection] = useState<string>("all");
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [spiralType, setSpiralType] = useState<SpiralType>("archimedean");
   const [withRotation, setWithRotation] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(!initialDocData);
+  const [loading, setLoading] = useState<boolean>(hasSharedDocInUrl);
   const [loadingMessage, setLoadingMessage] = useState<string>("Loading word cloud...");
   const [saving, setSaving] = useState<boolean>(false);
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
@@ -615,6 +1084,14 @@ export default function App() {
   const [sharedDocError, setSharedDocError] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const sentencePanelRef = useRef<HTMLDivElement>(null);
+  const [isBrandJiggling, setIsBrandJiggling] = useState<boolean>(false);
+  const [brandJiggleKey, setBrandJiggleKey] = useState<number>(0);
+  const isPointerPressedRef = useRef<boolean>(false);
+
+  const triggerBrandJiggle = useCallback(() => {
+    setIsBrandJiggling(true);
+    setBrandJiggleKey((prev) => prev + 1);
+  }, []);
   const editInitialValues = useMemo(() => {
     if (typeof window === "undefined") {
       return {
@@ -637,6 +1114,67 @@ export default function App() {
       const sharedDate = extractDateFromUrl(window.location.href);
       const sharedTitle = extractTitleFromUrl(window.location.href);
       if (sharedDocId) {
+        if (sharedDocId === SAMPLE_DOC_ID) {
+          if (initialDocData) {
+            setDocData({
+              ...initialDocData,
+              customTitle: sharedTitle || initialDocData.customTitle || SAMPLE_DOC_TITLE,
+              title: sharedTitle || initialDocData.title || SAMPLE_DOC_TITLE,
+              attribution:
+                sharedAttribution ?? initialDocData.attribution ?? SAMPLE_DOC_ATTRIBUTION,
+              date: sharedDate ?? initialDocData.date ?? SAMPLE_DOC_DATE,
+            });
+            setCurrentPage("view");
+            setSelectedSection("all");
+            setSelectedWord(null);
+            return;
+          }
+          fetch("/api/sections")
+            .then((res) => (res.ok ? res.json() : null))
+            .then((apiData: ParsedDocumentData | null) => {
+              if (apiData) {
+                setDocData({
+                  ...apiData,
+                  customTitle: sharedTitle || apiData.customTitle || SAMPLE_DOC_TITLE,
+                  title: sharedTitle || apiData.title || SAMPLE_DOC_TITLE,
+                  attribution: sharedAttribution ?? apiData.attribution ?? SAMPLE_DOC_ATTRIBUTION,
+                  date: sharedDate ?? apiData.date ?? SAMPLE_DOC_DATE,
+                });
+                setCurrentPage("view");
+                setSelectedSection("all");
+                setSelectedWord(null);
+                return;
+              }
+              throw new Error("No /api/sections data");
+            })
+            .catch(() => {
+              fetchAndParseGoogleDoc(
+                sharedDocId,
+                sharedTitle || SAMPLE_DOC_TITLE,
+                sharedAttribution || SAMPLE_DOC_ATTRIBUTION,
+                sharedDate || SAMPLE_DOC_DATE,
+              )
+                .then((data) => {
+                  setDocData(data);
+                  setCurrentPage("view");
+                  setSelectedSection("all");
+                  setSelectedWord(null);
+                })
+                .catch((err: unknown) => {
+                  setSharedDocError(
+                    err instanceof Error
+                      ? err.message
+                      : "Could not load shared Google Doc. Please verify the link and permissions.",
+                  );
+                });
+            })
+            .finally(() => {
+              setLoading(false);
+              setLoadingMessage("Loading word cloud...");
+            });
+          return;
+        }
+
         setLoading(true);
         setLoadingMessage("Fetching shared Google Doc...");
         fetchAndParseGoogleDoc(
@@ -646,6 +1184,15 @@ export default function App() {
           sharedDate || undefined,
         )
           .then((data) => {
+            if (data.sourceGoogleDocId && data.sourceGoogleDocId !== SAMPLE_DOC_ID) {
+              saveRecentDocument({
+                id: data.sourceGoogleDocId,
+                url: `https://docs.google.com/document/d/${data.sourceGoogleDocId}/edit`,
+                title: data.customTitle || data.title,
+                attribution: data.attribution,
+                date: data.date,
+              });
+            }
             setDocData(data);
             setCurrentPage("view");
             setSelectedSection("all");
@@ -659,7 +1206,14 @@ export default function App() {
                 : "Could not load shared Google Doc. Please verify the link and permissions.";
             setSharedDocError(message);
             if (initialDocData) {
-              setDocData(initialDocData);
+              setDocData({
+                ...initialDocData,
+                customTitle: sharedTitle || initialDocData.customTitle || SAMPLE_DOC_TITLE,
+                title: sharedTitle || initialDocData.title || SAMPLE_DOC_TITLE,
+                attribution:
+                  sharedAttribution ?? initialDocData.attribution ?? SAMPLE_DOC_ATTRIBUTION,
+                date: sharedDate ?? initialDocData.date ?? SAMPLE_DOC_DATE,
+              });
             }
           })
           .finally(() => {
@@ -670,50 +1224,16 @@ export default function App() {
       }
     }
 
-    if (initialDocData) {
-      if (typeof window !== "undefined") {
-        const sharedTitle = extractTitleFromUrl(window.location.href);
-        const sharedAttribution = extractAttributionFromUrl(window.location.href);
-        const sharedDate = extractDateFromUrl(window.location.href);
-        if (sharedTitle || sharedAttribution || sharedDate) {
-          setDocData({
-            ...initialDocData,
-            ...(sharedTitle ? { title: sharedTitle, customTitle: sharedTitle } : {}),
-            ...(sharedAttribution ? { attribution: sharedAttribution } : {}),
-            ...(sharedDate ? { date: sharedDate } : {}),
-          });
-        }
-      }
-      return;
+    if (!initialDocData) {
+      fetch("/api/sections")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: ParsedDocumentData | null) => {
+          if (data) {
+            setSampleData(data);
+          }
+        })
+        .catch(() => {});
     }
-    fetch("/api/sections")
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        return res.json();
-      })
-      .then((data: ParsedDocumentData) => {
-        if (typeof window !== "undefined") {
-          const sharedTitle = extractTitleFromUrl(window.location.href);
-          const sharedAttribution = extractAttributionFromUrl(window.location.href);
-          const sharedDate = extractDateFromUrl(window.location.href);
-          if (sharedTitle) {
-            data.title = sharedTitle;
-            data.customTitle = sharedTitle;
-          }
-          if (sharedAttribution) {
-            data.attribution = sharedAttribution;
-          }
-          if (sharedDate) {
-            data.date = sharedDate;
-          }
-        }
-        setDocData(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching sections:", err);
-        setLoading(false);
-      });
   }, []);
 
   const handleCreateDoc = useCallback((newData: ParsedDocumentData) => {
@@ -728,19 +1248,92 @@ export default function App() {
         undefined,
         newData.attribution,
         newData.date,
-        newData.customTitle,
+        newData.customTitle || newData.title,
       );
       window.history.pushState(
         {
           doc: newData.sourceGoogleDocId,
           attribution: newData.attribution,
           date: newData.date,
-          title: newData.customTitle,
+          title: newData.customTitle || newData.title,
         },
         "",
         shareUrl,
       );
     }
+  }, []);
+  const handleLoadSample = useCallback(async () => {
+    const applySample = (sample: ParsedDocumentData) => {
+      const sampleWithMeta: ParsedDocumentData = {
+        ...sample,
+        sourceGoogleDocId: SAMPLE_DOC_ID,
+        title: sample.title || SAMPLE_DOC_TITLE,
+        customTitle: SAMPLE_DOC_TITLE,
+        attribution: SAMPLE_DOC_ATTRIBUTION,
+        date: SAMPLE_DOC_DATE,
+      };
+      setDocData(sampleWithMeta);
+      setSelectedSection("all");
+      setSelectedWord(null);
+      setCurrentPage("view");
+      setSharedDocError(null);
+      if (typeof window !== "undefined") {
+        const shareUrl = getShareableAppUrl(
+          sampleWithMeta.sourceGoogleDocId,
+          undefined,
+          sampleWithMeta.attribution,
+          sampleWithMeta.date,
+          sampleWithMeta.customTitle || sampleWithMeta.title,
+        );
+        window.history.pushState(
+          {
+            docId: sampleWithMeta.sourceGoogleDocId,
+            attribution: sampleWithMeta.attribution,
+            date: sampleWithMeta.date,
+            title: sampleWithMeta.customTitle || sampleWithMeta.title,
+          },
+          "",
+          shareUrl,
+        );
+      }
+    };
+
+    if (sampleData) {
+      applySample(sampleData);
+      return;
+    }
+    setLoading(true);
+    setLoadingMessage("Loading sample document...");
+    try {
+      const res = await fetch("/api/sections");
+      if (res.ok) {
+        const data = await res.json();
+        setSampleData(data);
+        applySample(data);
+        return;
+      }
+      const data = await fetchAndParseGoogleDoc(
+        SAMPLE_DOC_ID,
+        SAMPLE_DOC_TITLE,
+        SAMPLE_DOC_ATTRIBUTION,
+        SAMPLE_DOC_DATE,
+      );
+      setSampleData(data);
+      applySample(data);
+    } catch (err) {
+      console.error("Failed to load sample:", err);
+      setSharedDocError(err instanceof Error ? err.message : "Failed to load sample document");
+    } finally {
+      setLoading(false);
+    }
+  }, [sampleData]);
+  const handleGoHome = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.history.pushState({}, "", window.location.pathname);
+    }
+    setSelectedWord(null);
+    setSharedDocError(null);
+    setCurrentPage("home");
   }, []);
   useEffect(() => {
     return () => {
@@ -755,7 +1348,7 @@ export default function App() {
           undefined,
           docData.attribution,
           docData.date,
-          docData.customTitle,
+          docData.customTitle || docData.title,
         )
       : typeof window !== "undefined"
         ? window.location.href
@@ -1021,61 +1614,111 @@ export default function App() {
         <div className="top-nav-inner">
           <div
             className="top-nav-brand"
-            onClick={() => setCurrentPage("view")}
+            onClick={() => {
+              if (!isPointerPressedRef.current) {
+                triggerBrandJiggle();
+              }
+              isPointerPressedRef.current = false;
+              handleGoHome();
+            }}
+            onPointerDown={() => {
+              isPointerPressedRef.current = true;
+              triggerBrandJiggle();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                triggerBrandJiggle();
+                handleGoHome();
+              }
+            }}
             role="button"
             tabIndex={0}
+            title="WordCloudy Home"
           >
             <span className="brand-logo" aria-hidden="true">
               <Cloud size={20} color="var(--accent-color)" />
             </span>
-            <span className="brand-name">WordCloudy</span>
+            <span
+              key={brandJiggleKey}
+              className={`brand-name ${isBrandJiggling ? "jiggling" : ""}`}
+              onAnimationEnd={() => setIsBrandJiggling(false)}
+            >
+              WordCloudy
+            </span>
           </div>
           <div className="top-nav-tabs">
             <button
               type="button"
               className={`top-nav-tab ${currentPage === "view" ? "active" : ""}`}
-              onClick={() => setCurrentPage("view")}
+              onClick={() => {
+                if (docData) {
+                  setCurrentPage("view");
+                }
+              }}
+              disabled={!docData}
             >
               <Eye size={15} aria-hidden="true" />
-              View Word Cloud
+              View
             </button>
             <button
               type="button"
               className={`top-nav-tab ${currentPage === "edit" ? "active" : ""}`}
-              onClick={() => setCurrentPage("edit")}
+              onClick={() => {
+                if (docData) {
+                  setCurrentPage("edit");
+                }
+              }}
+              disabled={!docData}
             >
               <Pencil size={15} aria-hidden="true" />
               Edit
             </button>
             <button
               type="button"
-              className={`top-nav-tab ${currentPage === "create" ? "active" : ""}`}
+              className={`top-nav-tab ${currentPage === "load" ? "active" : ""}`}
+              onClick={() => setCurrentPage("load")}
+            >
+              <FolderOpen size={15} aria-hidden="true" />
+              Load
+            </button>
+            <div className="top-nav-tab-divider" aria-hidden="true" />
+            <button
+              type="button"
+              className={`top-nav-tab top-nav-tab-create ${currentPage === "create" ? "active" : ""}`}
               onClick={() => setCurrentPage("create")}
             >
-              + Create New
+              <Plus size={15} aria-hidden="true" />
+              Create New
             </button>
           </div>
         </div>
       </header>
-
-      {selectedWord && currentPage === "view" && (
-        <button
-          type="button"
-          className="page-close-btn"
-          onClick={() => setSelectedWord(null)}
-          title="Clear selection (Esc)"
-          aria-label="Clear selection (Esc)"
-        >
-          <X className="page-close-icon" size={24} aria-hidden="true" />
-        </button>
-      )}
-
-      {currentPage === "create" ? (
+      {currentPage === "home" ? (
+        <main className="wordcloud-content">
+          <HomeView
+            onCreate={handleCreateDoc}
+            onLoadSample={handleLoadSample}
+            sampleLoading={loading}
+            onGoCreate={() => setCurrentPage("create")}
+          />
+        </main>
+      ) : currentPage === "load" ? (
+        <main className="wordcloud-content">
+          <LoadRecentView
+            onCreate={handleCreateDoc}
+            onLoadSample={handleLoadSample}
+            sampleLoading={loading}
+            onCancel={docData ? () => setCurrentPage("view") : () => setCurrentPage("home")}
+          />
+        </main>
+      ) : currentPage === "create" ? (
         <main className="wordcloud-content">
           <CreateCloudView
             key="create"
             onCreate={handleCreateDoc}
-            onCancel={() => setCurrentPage("view")}
+            onCancel={docData ? () => setCurrentPage("view") : () => setCurrentPage("home")}
+            initialLoading={loading}
             isEdit={false}
           />
         </main>
@@ -1202,6 +1845,21 @@ export default function App() {
                 ) : (
                   <>
                     <div className="wordcloud-stage" ref={stageRef}>
+                      {selectedWord && (
+                        <button
+                          type="button"
+                          className="wordcloud-clear-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedWord(null);
+                          }}
+                          title="Clear selection (Esc)"
+                          aria-label="Clear selection (Esc)"
+                        >
+                          <X className="wordcloud-clear-icon" size={15} aria-hidden="true" />
+                          <kbd className="wordcloud-clear-kbd">esc</kbd>
+                        </button>
+                      )}
                       <ParentSize debounceTime={60}>
                         {({ width, height }) =>
                           width > 0 && height > 0 ? (
@@ -1484,15 +2142,14 @@ export default function App() {
                 <div className="methodology-card">
                   <div className="methodology-card-header">
                     <span className="methodology-step">3</span>
-                    <h3>Frequency Ranking &amp; Collocation Scoring</h3>
+                    <h3>Frequency Ranking &amp; Collocation Filtering</h3>
                   </div>
                   <p>
                     Candidate words and keyphrases are pooled and ranked by occurrence frequency,
                     enforcing a recurrence threshold of at least two mentions for multi-word
-                    phrases. The analyzer also supports Pointwise Mutual Information (
-                    <strong>PMI</strong> / <strong>NPMI</strong>) to evaluate statistical
-                    association strength and score meaningful collocations beyond chance
-                    co-occurrence.
+                    phrases. Stop-word filtering on phrase boundaries prevents generic glue pairs
+                    from qualifying, ensuring prominent collocations reflect meaningful recurring
+                    concepts.
                   </p>
                 </div>
 

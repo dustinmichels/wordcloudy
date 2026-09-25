@@ -286,6 +286,25 @@ export function extractGoogleDocId(input: string): string | null {
 }
 
 /**
+ * Resolves a Google Doc/Sheet input (URL or raw ID) into a full web URL for viewing the original document.
+ */
+export function getGoogleDocWebUrl(input: string): string | null {
+  const docId = extractGoogleDocId(input);
+  if (!docId) return null;
+  const trimmed = input.trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (/^docs\.google\.com/i.test(trimmed)) {
+    return `https://${trimmed}`;
+  }
+  if (trimmed.includes("spreadsheets")) {
+    return `https://docs.google.com/spreadsheets/d/${docId}/edit`;
+  }
+  return `https://docs.google.com/document/d/${docId}/edit`;
+}
+
+/**
  * Parses exported Google Doc HTML into clean markdown and document title.
  */
 export function parseGoogleDocHtml(html: string): { title?: string; markdown: string } {
@@ -524,11 +543,17 @@ export async function fetchAndParseGoogleDoc(
     let htmlSuccess = false;
     try {
       const res = await fetch(`https://docs.google.com/document/d/${docId}/export?format=html`);
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Google doc has not been made public!");
+      }
       if (res.ok) {
         html = await res.text();
         htmlSuccess = html.includes("<body") || html.length > 50;
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.message === "Google doc has not been made public!") {
+        throw err;
+      }
       htmlSuccess = false;
     }
 
@@ -553,13 +578,20 @@ export async function fetchAndParseGoogleDoc(
     // Fallback to text export
     try {
       const txtRes = await fetch(`https://docs.google.com/document/d/${docId}/export?format=txt`);
+      if (txtRes.status === 401 || txtRes.status === 403) {
+        throw new Error("Google doc has not been made public!");
+      }
       if (txtRes.ok) {
         const txt = await txtRes.text();
         const result = parsePastedText(txt, customTitle, attribution, date);
         result.sourceGoogleDocId = docId;
         return result;
       }
-    } catch {}
+    } catch (err) {
+      if (err instanceof Error && err.message === "Google doc has not been made public!") {
+        throw err;
+      }
+    }
   }
 
   // Try Google Sheet CSV export if it was a spreadsheet or document export failed

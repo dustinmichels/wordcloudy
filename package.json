@@ -7,7 +7,8 @@
     "build": "bun run ./build.ts",
     "dev": "bun --hot ./index.ts",
     "fmt": "oxfmt",
-    "test": "bun test"
+    "test": "bun test",
+    "test:live": "LIVE=1 bun test"
   },
   "dependencies": {
     "@types/react": "^19.3.0",
