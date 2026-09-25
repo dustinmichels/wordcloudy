@@ -552,43 +552,7 @@ export default function App() {
       </main>
       <footer className="wordcloud-footer">
         <div className="wordcloud-footer-inner">
-          <div className="footer-left">
-            <span className="footer-attribution">By: Dustin Michels, 2026</span>
-            <span className="footer-divider" aria-hidden="true">
-              •
-            </span>
-            <span className="footer-source">
-              "Our Experiences of Housing, What Housing Does, and Sense of Being 'At Home'"
-            </span>
-          </div>
-          <div className="footer-right">
-            <button
-              type="button"
-              className="footer-btn"
-              onClick={() => setIsAboutOpen(true)}
-              aria-haspopup="dialog"
-              aria-expanded={isAboutOpen}
-            >
-              <svg
-                className="footer-btn-icon"
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="16" x2="12" y2="12" />
-                <line x1="12" y1="8" x2="12.01" y2="8" />
-              </svg>
-              Methodology
-            </button>
-            <span className="footer-badge">Visx · React · Bun</span>
-          </div>
+          <span className="footer-attribution">By Dustin Michels, 2026</span>
         </div>
       </footer>
       {isAboutOpen && (

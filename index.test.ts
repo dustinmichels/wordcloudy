@@ -354,5 +354,5 @@ test("standalone build includes footer attribution", async () => {
   expect(await distFile.exists()).toBe(true);
   const html = await distFile.text();
   expect(html).toContain("wordcloud-footer");
-  expect(html).toContain("By: Dustin Michels, 2026");
+  expect(html).toContain("By Dustin Michels, 2026");
 });
