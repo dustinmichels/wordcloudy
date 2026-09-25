@@ -1363,13 +1363,15 @@ export default function App() {
                 <div className="methodology-card">
                   <div className="methodology-card-header">
                     <span className="methodology-step">3</span>
-                    <h3>Collocation Scoring (PMI)</h3>
+                    <h3>Frequency Ranking &amp; Collocation Scoring</h3>
                   </div>
                   <p>
-                    Pointwise Mutual Information (<strong>PMI</strong> / <strong>NPMI</strong>)
-                    measures statistical association strength to ensure multi-word terms reflect
-                    true conceptual partnerships rather than accidental juxtapositions of common
-                    words.
+                    Candidate words and keyphrases are pooled and ranked by occurrence frequency,
+                    enforcing a recurrence threshold of at least two mentions for multi-word
+                    phrases. The analyzer also supports Pointwise Mutual Information (
+                    <strong>PMI</strong> / <strong>NPMI</strong>) to evaluate statistical
+                    association strength and score meaningful collocations beyond chance
+                    co-occurrence.
                   </p>
                 </div>
 
