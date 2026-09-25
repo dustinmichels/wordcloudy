@@ -214,10 +214,16 @@ import {
   cleanMarkdownFormatting,
   decodeGoogleDocShareCode,
   encodeGoogleDocShareCode,
+  extractAttributionFromUrl,
+  extractDateFromUrl,
   extractGoogleDocId,
+  extractModeFromUrl,
   extractSentences,
+  extractTextFromUrl,
+  extractTitleFromUrl,
   fetchAndParseGoogleDoc,
   getDocumentWordData,
+  getInitialEditValuesFromUrl,
   getShareableAppUrl,
   parseDocSections,
   parseGoogleDocHtml,
@@ -437,7 +443,7 @@ test("fetchAndParseGoogleDoc loads and parses public Google Doc", async () => {
 
 test("fetchAndParseGoogleDoc throws clear error for invalid Google Doc ID", async () => {
   await expect(fetchAndParseGoogleDoc("https://example.com/not-a-doc")).rejects.toThrow(
-    "Invalid Google Doc link",
+    "Invalid Google Doc",
   );
 });
 test("encodeGoogleDocShareCode extracts and compresses Google Doc URL into 44-character doc ID", () => {
@@ -451,6 +457,126 @@ test("getShareableAppUrl generates clean ?doc= share link", () => {
   const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
   const shareUrl = getShareableAppUrl(rawId, "https://wordcloud.example.com/app");
   expect(shareUrl).toBe(`https://wordcloud.example.com/app?doc=${rawId}`);
+});
+
+test("getShareableAppUrl includes encoded attribution when provided", () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const shareUrl = getShareableAppUrl(
+    rawId,
+    "https://wordcloud.example.com/app",
+    "By Dustin Michels",
+  );
+  expect(shareUrl).toBe(
+    `https://wordcloud.example.com/app?doc=${rawId}&attribution=By+Dustin+Michels`,
+  );
+});
+
+test("getShareableAppUrl includes encoded date when provided", () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const shareUrl = getShareableAppUrl(
+    rawId,
+    "https://wordcloud.example.com/app",
+    undefined,
+    "September 2026",
+  );
+  expect(shareUrl).toBe(`https://wordcloud.example.com/app?doc=${rawId}&date=September+2026`);
+});
+
+test("getShareableAppUrl includes both encoded attribution and date when provided", () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const shareUrl = getShareableAppUrl(
+    rawId,
+    "https://wordcloud.example.com/app",
+    "By Dustin Michels",
+    "September 17, 1787",
+  );
+  expect(shareUrl).toBe(
+    `https://wordcloud.example.com/app?doc=${rawId}&attribution=By+Dustin+Michels&date=September+17%2C+1787`,
+  );
+});
+
+test("extractAttributionFromUrl extracts attribution from query and hash parameters", () => {
+  // Query param with plus-encoded spaces
+  expect(
+    extractAttributionFromUrl(
+      "https://wordcloud.example.com/?doc=123&attribution=By+Dustin+Michels",
+    ),
+  ).toBe("By Dustin Michels");
+
+  // Query param with percent-encoded spaces
+  expect(
+    extractAttributionFromUrl(
+      "https://wordcloud.example.com/?doc=123&attribution=By%20Dustin%20Michels",
+    ),
+  ).toBe("By Dustin Michels");
+
+  // Short attr query param
+  expect(
+    extractAttributionFromUrl("https://wordcloud.example.com/?doc=123&attr=Dustin+Michels"),
+  ).toBe("Dustin Michels");
+
+  // Hash parameter
+  expect(
+    extractAttributionFromUrl("https://wordcloud.example.com/#doc=123&attribution=By+Jane+Doe"),
+  ).toBe("By Jane Doe");
+
+  // Base64-encoded URL
+  const encoded = btoa("https://wordcloud.example.com/?doc=123&attribution=By+Jane+Doe");
+  expect(extractAttributionFromUrl(encoded)).toBe("By Jane Doe");
+
+  // Omitted or missing attribution
+  expect(extractAttributionFromUrl("https://wordcloud.example.com/?doc=123")).toBe(null);
+  expect(extractAttributionFromUrl("")).toBe(null);
+});
+
+test("extractDateFromUrl extracts date from query and hash parameters", () => {
+  // Query param with plus-encoded spaces
+  expect(extractDateFromUrl("https://wordcloud.example.com/?doc=123&date=September+2026")).toBe(
+    "September 2026",
+  );
+
+  // Query param with percent-encoded spaces
+  expect(extractDateFromUrl("https://wordcloud.example.com/?doc=123&date=September%202026")).toBe(
+    "September 2026",
+  );
+
+  // Short d query param
+  expect(extractDateFromUrl("https://wordcloud.example.com/?doc=123&d=1787")).toBe("1787");
+
+  // Hash parameter
+  expect(extractDateFromUrl("https://wordcloud.example.com/#doc=123&date=October+2023")).toBe(
+    "October 2023",
+  );
+
+  // Base64-encoded URL
+  const encoded = btoa("https://wordcloud.example.com/?doc=123&date=September+2026");
+  expect(extractDateFromUrl(encoded)).toBe("September 2026");
+
+  // Omitted or missing date
+  expect(extractDateFromUrl("https://wordcloud.example.com/?doc=123")).toBe(null);
+  expect(extractDateFromUrl("")).toBe(null);
+});
+
+test("extractGoogleDocId recognizes Google Spreadsheet URLs as well as Google Docs", () => {
+  const sheetUrl =
+    "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit#gid=0";
+  expect(extractGoogleDocId(sheetUrl)).toBe("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms");
+});
+
+test("parsePastedText preserves custom attribution", () => {
+  const data = parsePastedText("# Test Title\nSome content for testing.", "My Title", "By Author");
+  expect(data.attribution).toBe("By Author");
+});
+
+test("parsePastedText preserves custom date", () => {
+  const data = parsePastedText(
+    "# Test Title\nSome content for testing.",
+    "My Title",
+    "By Author",
+    "September 2026",
+  );
+  expect(data.attribution).toBe("By Author");
+  expect(data.date).toBe("September 2026");
 });
 
 test("decodeGoogleDocShareCode decodes multiple formats (query, hash, base64, raw ID)", () => {
@@ -480,6 +606,48 @@ test("fetchAndParseGoogleDoc sets sourceGoogleDocId on returned data", async () 
   const data = await fetchAndParseGoogleDoc(rawId);
   expect(data.sourceGoogleDocId).toBe(rawId);
 });
+test("getInitialEditValuesFromUrl extracts Google Doc URL, title, attribution, and date from URL params", () => {
+  const rawId = "1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc";
+  const url = `https://wordcloudy.com/?doc=${rawId}&title=Custom%20Title&attribution=By%20Alice&date=September%202026`;
+  const values = getInitialEditValuesFromUrl(url);
+
+  expect(values.sourceMode).toBe("gdoc");
+  expect(values.gdocUrl).toBe(`https://docs.google.com/document/d/${rawId}/edit`);
+  expect(values.customTitle).toBe("Custom Title");
+  expect(values.attribution).toBe("By Alice");
+  expect(values.date).toBe("September 2026");
+  expect(values.pastedText).toBe("");
+});
+
+test("getInitialEditValuesFromUrl extracts pasted text mode and content from URL params", () => {
+  const url = `https://wordcloudy.com/?mode=paste&text=%23%23%20Header%0ASome%20pasted%20text&title=Notes&attribution=Author`;
+  const values = getInitialEditValuesFromUrl(url);
+
+  expect(values.sourceMode).toBe("paste");
+  expect(values.pastedText).toBe("## Header\nSome pasted text");
+  expect(values.customTitle).toBe("Notes");
+  expect(values.attribution).toBe("Author");
+  expect(values.gdocUrl).toBe("");
+});
+
+test("getInitialEditValuesFromUrl falls back to loaded document data when URL has no params", () => {
+  const currentDoc = {
+    sourceGoogleDocId: "1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc",
+    title: "The Constitution of the United States",
+    attribution: "By Framers",
+    date: "1787",
+  };
+  const values = getInitialEditValuesFromUrl("https://wordcloudy.com/", currentDoc);
+
+  expect(values.sourceMode).toBe("gdoc");
+  expect(values.gdocUrl).toBe(
+    "https://docs.google.com/document/d/1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc/edit",
+  );
+  expect(values.customTitle).toBe("The Constitution of the United States");
+  expect(values.attribution).toBe("By Framers");
+  expect(values.date).toBe("1787");
+});
+
 test("standalone build includes About button and methodology modal assets", async () => {
   const distFile = Bun.file("./dist/index.html");
   expect(await distFile.exists()).toBe(true);
@@ -503,7 +671,7 @@ test("standalone build includes About button and methodology modal assets", asyn
   // Security constraint: housing-doc.md must not appear in HTML
   expect(html.includes("housing-doc.md")).toBe(false);
 });
-test("standalone build includes footer attribution", async () => {
+test("standalone build includes footer attribution and github link", async () => {
   const distFile = Bun.file("./dist/index.html");
   expect(await distFile.exists()).toBe(true);
   const html = await distFile.text();
@@ -512,6 +680,9 @@ test("standalone build includes footer attribution", async () => {
   expect(html).toContain("Made by");
   expect(html).toContain("Dustin Michels");
   expect(html).toContain("https://dustinmichels.com/");
+  expect(html).toContain("https://github.com/dustinmichels/wordcloudy");
+  expect(html).toContain("footer-github-link");
+  expect(html).toContain("View Source Code");
 });
 test("standalone build includes Create New Word Cloud page and navigation", async () => {
   const distFile = Bun.file("./dist/index.html");
@@ -522,13 +693,39 @@ test("standalone build includes Create New Word Cloud page and navigation", asyn
   expect(html).toContain("app-top-nav");
   expect(html).toContain("WordCloudy");
   expect(html).toContain("View Word Cloud");
+  expect(html).toContain("Edit");
   expect(html).toContain("+ Create New");
 
+  // Verify Edit is between View Word Cloud and + Create New
+  const viewIdx = html.indexOf("View Word Cloud");
+  expect(viewIdx).toBeGreaterThan(-1);
+  const editIdx = html.indexOf("Edit", viewIdx);
+  expect(editIdx).toBeGreaterThan(viewIdx);
+  const createIdx = html.indexOf("+ Create New", editIdx);
+  expect(createIdx).toBeGreaterThan(editIdx);
+  // Verify Lucide icons for View and Edit are included in bundle
+  expect(html).toContain("M2.062 12.348"); // Eye icon path
+  expect(html).toContain("M21.174 6.812"); // Pencil icon path
+
+  // Verify page-close-btn is moved lower so it doesn't overlap toggle buttons
+  expect(html).toContain("top: 4.75rem");
+  expect(html).toContain("margin-left: auto");
   // Create form elements
   expect(html).toContain("Google Doc Link");
   expect(html).toContain("Paste Text / Markdown");
   expect(html).toContain("Generate Word Cloud");
   expect(html).toContain("Anyone with the link can view");
+
+  // Attribution & Date fields in create form and view page
+  expect(html).toContain("gdoc-attribution-input");
+  expect(html).toContain("Attribution");
+  expect(html).toContain("gdoc-date-input");
+  expect(html).toContain("paste-date-input");
+  expect(html).toContain("Date");
+  expect(html).toContain("wordcloud-attribution");
+  expect(html).toContain("wordcloud-date");
+  expect(html).toContain("wordcloud-byline");
+  expect(html).toContain("byline-separator");
 });
 test("standalone build includes Share Word Cloud assets and modal", async () => {
   const distFile = Bun.file("./dist/index.html");
@@ -691,4 +888,141 @@ test("fetchAndParseGoogleDoc loads and parses live Housing Google Doc", async ()
   const senseOfHome = docData.sections[3];
   expect(senseOfHome?.sentences.length).toBeGreaterThan(5);
   expect(senseOfHome?.words[0]?.text).toBe("power");
+});
+
+test("CreateCloudView displays public warning callout when Google Doc is selected", () => {
+  const { renderToString } = require("react-dom/server");
+  const React = require("react");
+  const { CreateCloudView } = require("./src/frontend");
+
+  const html = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "gdoc",
+    }),
+  );
+
+  expect(html).toContain("Google Doc Must be Public!");
+  expect(html).toContain("create-callout-warning");
+  expect(html).not.toContain("Only word clouds created from a google doc will be shareable");
+});
+
+test("CreateCloudView displays shareable callout when custom text pane is selected", () => {
+  const { renderToString } = require("react-dom/server");
+  const React = require("react");
+  const { CreateCloudView } = require("./src/frontend");
+
+  const html = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "paste",
+    }),
+  );
+
+  expect(html).toContain("Only word clouds created from a google doc will be shareable");
+  expect(html).toContain("create-callout-info");
+  expect(html).not.toContain("Google Doc Must be Public!");
+});
+
+test("CreateCloudView renders lucide icons for tabs and callouts", () => {
+  const { renderToString } = require("react-dom/server");
+  const React = require("react");
+  const { CreateCloudView } = require("./src/frontend");
+
+  const html = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "gdoc",
+    }),
+  );
+
+  expect(html).toContain("lucide-file-text");
+  expect(html).toContain("lucide-type");
+  expect(html).toContain("lucide-alert-triangle");
+});
+
+test("CreateCloudView displays lucide loading icon and parsing message when google doc is being parsed", () => {
+  const { renderToString } = require("react-dom/server");
+  const React = require("react");
+  const { CreateCloudView } = require("./src/frontend");
+
+  const html = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "gdoc",
+      initialLoading: true,
+    }),
+  );
+
+  // Verify Lucide loading icon is rendered
+  expect(html).toContain("lucide-loader");
+  expect(html).toContain("create-loading-banner");
+  expect(html).toContain("Fetching &amp; Parsing Google Doc...");
+  expect(html).toContain("Parsing Google Doc...");
+});
+
+test("CreateCloudView displays lucide loading icon when analyzing pasted text", () => {
+  const { renderToString } = require("react-dom/server");
+  const React = require("react");
+  const { CreateCloudView } = require("./src/frontend");
+
+  const html = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "paste",
+      initialLoading: true,
+    }),
+  );
+
+  expect(html).toContain("lucide-loader");
+  expect(html).toContain("create-loading-banner");
+  expect(html).toContain("Analyzing Text...");
+});
+
+test("standalone build includes lucide icons and loading states", async () => {
+  const distHtml = await Bun.file("./dist/index.html").text();
+  // Lucide icons present in bundled script/assets
+  expect(distHtml).toContain("lucide");
+  expect(distHtml).toContain("wordcloud-loading");
+  expect(distHtml).toContain("create-loading-banner");
+});
+
+test("CreateCloudView renders plain text date input for both google doc and paste text modes", () => {
+  const { renderToString } = require("react-dom/server");
+  const React = require("react");
+  const { CreateCloudView } = require("./src/frontend");
+
+  const gdocHtml = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "gdoc",
+    }),
+  );
+  expect(gdocHtml).toContain('id="gdoc-date-input"');
+  expect(gdocHtml).toContain('type="text"');
+  expect(gdocHtml).toContain("Date");
+
+  const pasteHtml = renderToString(
+    React.createElement(CreateCloudView, {
+      onCreate: () => {},
+      initialSourceMode: "paste",
+    }),
+  );
+  expect(pasteHtml).toContain('id="paste-date-input"');
+  expect(pasteHtml).toContain('type="text"');
+  expect(pasteHtml).toContain("Date");
+});
+
+test("save-btn svg sizing rule is present in css to prevent jumbo icons", async () => {
+  const css = await Bun.file("./src/frontend.css").text();
+  expect(css).toContain(".save-btn svg");
+  expect(css).toContain(".wordcloud-stage svg");
+  expect(css).not.toContain(".wordcloud svg {");
+});
+
+test("wordcloud-byline styles place attribution and date on the same row with separator", async () => {
+  const css = await Bun.file("./src/frontend.css").text();
+  expect(css).toContain(".wordcloud-byline");
+  expect(css).toContain(".byline-separator");
+  expect(css).toContain("display: flex");
 });

@@ -5,9 +5,30 @@ import { scaleLog } from "@visx/scale";
 import { Wordcloud } from "@visx/wordcloud";
 import { ParentSize } from "@visx/responsive";
 import {
+  AlertCircle,
+  AlertTriangle,
+  Check,
+  Cloud,
+  Copy,
+  Download,
+  ExternalLink,
+  Eye,
+  FileText,
+  Info,
+  Loader2,
+  MessageSquare,
+  Pencil,
+  Share2,
+  Type,
+  X,
+} from "lucide-react";
+import {
   buildTermRegex,
   decodeGoogleDocShareCode,
+  extractAttributionFromUrl,
+  extractDateFromUrl,
   fetchAndParseGoogleDoc,
+  getInitialEditValuesFromUrl,
   getShareableAppUrl,
   parsePastedText,
 } from "./sections";
@@ -38,8 +59,29 @@ export interface ParsedDocumentData {
   sections: SectionWordData[];
   sourceGoogleDocId?: string;
   stats?: DocumentWordStats;
+  attribution?: string;
+  date?: string;
 }
 type SpiralType = "archimedean" | "rectangular";
+
+function GithubIcon({ size = 16, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"
+      />
+    </svg>
+  );
+}
 
 function formatPercent(value: number): string {
   if (value <= 0) return "0%";
@@ -201,19 +243,39 @@ function CloudView({
     </Wordcloud>
   );
 }
-interface CreateCloudViewProps {
+export interface CreateCloudViewProps {
   onCreate: (data: ParsedDocumentData) => void;
   onCancel?: () => void;
+  initialSourceMode?: "gdoc" | "paste";
+  initialGdocUrl?: string;
+  initialPastedText?: string;
+  initialCustomTitle?: string;
+  initialAttribution?: string;
+  initialDate?: string;
+  initialLoading?: boolean;
+  isEdit?: boolean;
 }
 
-function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
-  const [sourceMode, setSourceMode] = useState<"gdoc" | "paste">("gdoc");
-  const [gdocUrl, setGdocUrl] = useState("");
-  const [pastedText, setPastedText] = useState("");
-  const [customTitle, setCustomTitle] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+export function CreateCloudView({
+  onCreate,
+  onCancel,
+  initialSourceMode = "gdoc",
+  initialGdocUrl = "",
+  initialPastedText = "",
+  initialCustomTitle = "",
+  initialAttribution = "",
+  initialDate = "",
+  initialLoading = false,
+  isEdit = false,
+}: CreateCloudViewProps) {
+  const [sourceMode, setSourceMode] = useState<"gdoc" | "paste">(initialSourceMode);
+  const [gdocUrl, setGdocUrl] = useState(initialGdocUrl);
+  const [pastedText, setPastedText] = useState(initialPastedText);
+  const [customTitle, setCustomTitle] = useState(initialCustomTitle);
+  const [attribution, setAttribution] = useState(initialAttribution);
+  const [date, setDate] = useState(initialDate);
+  const [isLoading, setIsLoading] = useState(initialLoading);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
   const handleExampleClick = () => {
     setGdocUrl(
       "https://docs.google.com/document/d/1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc/edit?tab=t.0",
@@ -240,7 +302,12 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
       }
       setIsLoading(true);
       try {
-        const data = await fetchAndParseGoogleDoc(gdocUrl, customTitle || undefined);
+        const data = await fetchAndParseGoogleDoc(
+          gdocUrl,
+          customTitle || undefined,
+          attribution || undefined,
+          date || undefined,
+        );
         onCreate(data);
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : String(err));
@@ -254,7 +321,12 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
       }
       setIsLoading(true);
       try {
-        const data = parsePastedText(pastedText, customTitle || undefined);
+        const data = parsePastedText(
+          pastedText,
+          customTitle || undefined,
+          attribution || undefined,
+          date || undefined,
+        );
         onCreate(data);
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : String(err));
@@ -268,10 +340,11 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
     <div className="create-view-container">
       <div className="create-view-card">
         <div className="create-view-header">
-          <h2>Create a New Word Cloud</h2>
+          <h2>{isEdit ? "Edit Word Cloud" : "Create a New Word Cloud"}</h2>
           <p className="create-view-subtitle">
-            Generate an interactive word cloud with section navigation and sentence exploration from
-            any Google Doc or custom text.
+            {isEdit
+              ? "Update your Google Doc link or custom text to re-generate the word cloud."
+              : "Generate an interactive word cloud with section navigation and sentence exploration from any Google Doc or custom text."}
           </p>
         </div>
 
@@ -286,23 +359,7 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
               setErrorMessage(null);
             }}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-              <polyline points="10 9 9 9 8 9" />
-            </svg>
+            <FileText size={16} aria-hidden="true" />
             Google Doc Link
           </button>
           <button
@@ -315,21 +372,7 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
               setErrorMessage(null);
             }}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="4 7 4 4 20 4 20 7" />
-              <line x1="9" y1="20" x2="15" y2="20" />
-              <line x1="12" y1="4" x2="12" y2="20" />
-            </svg>
+            <Type size={16} aria-hidden="true" />
             Paste Text / Markdown
           </button>
         </div>
@@ -337,15 +380,19 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
         <form onSubmit={handleSubmit} className="create-form">
           {sourceMode === "gdoc" ? (
             <div className="form-section">
+              <div className="create-callout create-callout-warning" role="alert">
+                <AlertTriangle className="create-callout-icon" size={18} aria-hidden="true" />
+                <span className="create-callout-text">Google Doc Must be Public!</span>
+              </div>
               <div className="form-group">
                 <label htmlFor="gdoc-url-input">
-                  Google Doc Link or ID <span className="required-star">*</span>
+                  Google Doc or Sheet Link or ID <span className="required-star">*</span>
                 </label>
                 <input
                   id="gdoc-url-input"
                   type="text"
                   className="form-input"
-                  placeholder="https://docs.google.com/document/d/.../edit"
+                  placeholder="https://docs.google.com/document/d/... or .../spreadsheets/d/..."
                   value={gdocUrl}
                   onChange={(e) => setGdocUrl(e.target.value)}
                   disabled={isLoading}
@@ -353,7 +400,8 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
                 <div className="form-helper">
                   <span>
                     Sharing must be set to{" "}
-                    <strong>&ldquo;Anyone with the link can view&rdquo;</strong> in Google Docs.
+                    <strong>&ldquo;Anyone with the link can view&rdquo;</strong> in Google Docs or
+                    Sheets.
                   </span>
                   <button
                     type="button"
@@ -381,9 +429,43 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
                   disabled={isLoading}
                 />
               </div>
+              <div className="form-group">
+                <label htmlFor="gdoc-attribution-input">
+                  Attribution <span className="optional-tag">(optional)</span>
+                </label>
+                <input
+                  id="gdoc-attribution-input"
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. By Jane Doe or Source: Census Bureau"
+                  value={attribution}
+                  onChange={(e) => setAttribution(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="gdoc-date-input">
+                  Date <span className="optional-tag">(optional)</span>
+                </label>
+                <input
+                  id="gdoc-date-input"
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. September 2026 or 1787"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
             </div>
           ) : (
             <div className="form-section">
+              <div className="create-callout create-callout-info" role="note">
+                <Info className="create-callout-icon" size={18} aria-hidden="true" />
+                <span className="create-callout-text">
+                  Only word clouds created from a google doc will be shareable
+                </span>
+              </div>
               <div className="form-group">
                 <label htmlFor="paste-title-input">
                   Document Title <span className="optional-tag">(optional)</span>
@@ -395,6 +477,34 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
                   placeholder="e.g. Urban Policy Perspectives"
                   value={customTitle}
                   onChange={(e) => setCustomTitle(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="paste-attribution-input">
+                  Attribution <span className="optional-tag">(optional)</span>
+                </label>
+                <input
+                  id="paste-attribution-input"
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. By Jane Doe"
+                  value={attribution}
+                  onChange={(e) => setAttribution(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="paste-date-input">
+                  Date <span className="optional-tag">(optional)</span>
+                </label>
+                <input
+                  id="paste-date-input"
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. September 2026"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
@@ -431,23 +541,25 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
 
           {errorMessage && (
             <div className="create-error-banner" role="alert">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
+              <AlertCircle size={18} aria-hidden="true" />
               <div className="create-error-text">
                 <strong>Error:</strong> {errorMessage}
+              </div>
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="create-loading-banner" role="status" aria-live="polite">
+              <Loader2 className="create-loading-icon spin" size={20} aria-hidden="true" />
+              <div className="create-loading-content">
+                <strong>
+                  {sourceMode === "gdoc" ? "Fetching & Parsing Google Doc..." : "Analyzing Text..."}
+                </strong>
+                <span>
+                  {sourceMode === "gdoc"
+                    ? "Connecting to Google Docs, extracting sections, and analyzing word frequencies..."
+                    : "Processing sections and computing word frequencies..."}
+                </span>
               </div>
             </div>
           )}
@@ -466,9 +578,11 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
             <button type="submit" className="btn-primary" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <span className="btn-spinner" aria-hidden="true" />
-                  Fetching &amp; Analyzing...
+                  <Loader2 className="btn-spinner-icon spin" size={16} aria-hidden="true" />
+                  {sourceMode === "gdoc" ? "Parsing Google Doc..." : "Analyzing..."}
                 </>
+              ) : isEdit ? (
+                "Update Word Cloud"
               ) : (
                 "Generate Word Cloud"
               )}
@@ -484,9 +598,7 @@ const initialDocData: ParsedDocumentData | null =
   typeof __DOCUMENT_DATA__ !== "undefined" && __DOCUMENT_DATA__?.all ? __DOCUMENT_DATA__ : null;
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<"view" | "create">("view");
-  const defaultDocDataRef = useRef<ParsedDocumentData | null>(initialDocData);
-  const [isCustomDoc, setIsCustomDoc] = useState(false);
+  const [currentPage, setCurrentPage] = useState<"view" | "edit" | "create">("view");
   const [docData, setDocData] = useState<ParsedDocumentData | null>(initialDocData);
   const [selectedSection, setSelectedSection] = useState<string>("all");
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
@@ -501,18 +613,37 @@ export default function App() {
   const [sharedDocError, setSharedDocError] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const sentencePanelRef = useRef<HTMLDivElement>(null);
+  const editInitialValues = useMemo(() => {
+    if (typeof window === "undefined") {
+      return {
+        sourceMode: "gdoc" as const,
+        gdocUrl: "",
+        pastedText: "",
+        customTitle: "",
+        attribution: "",
+        date: "",
+      };
+    }
+    return getInitialEditValuesFromUrl(window.location.href, docData);
+  }, [docData, currentPage]);
 
   useEffect(() => {
     // Check if the page was loaded with a shared Google Doc parameter: ?doc=, ?share=, #doc=, etc.
     if (typeof window !== "undefined") {
       const sharedDocId = decodeGoogleDocShareCode(window.location.href);
+      const sharedAttribution = extractAttributionFromUrl(window.location.href);
+      const sharedDate = extractDateFromUrl(window.location.href);
       if (sharedDocId) {
         setLoading(true);
         setLoadingMessage("Fetching shared Google Doc...");
-        fetchAndParseGoogleDoc(sharedDocId)
+        fetchAndParseGoogleDoc(
+          sharedDocId,
+          undefined,
+          sharedAttribution || undefined,
+          sharedDate || undefined,
+        )
           .then((data) => {
             setDocData(data);
-            setIsCustomDoc(true);
             setCurrentPage("view");
             setSelectedSection("all");
             setSelectedWord(null);
@@ -537,7 +668,6 @@ export default function App() {
     }
 
     if (initialDocData) {
-      defaultDocDataRef.current = initialDocData;
       return;
     }
     fetch("/api/sections")
@@ -546,7 +676,6 @@ export default function App() {
         return res.json();
       })
       .then((data: ParsedDocumentData) => {
-        defaultDocDataRef.current = data;
         setDocData(data);
         setLoading(false);
       })
@@ -555,43 +684,29 @@ export default function App() {
         setLoading(false);
       });
   }, []);
-  const handleResetToDefault = useCallback(() => {
-    if (typeof window !== "undefined" && window.location.search) {
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-    setSharedDocError(null);
-    if (defaultDocDataRef.current) {
-      setDocData(defaultDocDataRef.current);
-      setSelectedSection("all");
-      setSelectedWord(null);
-      setIsCustomDoc(false);
-      setCurrentPage("view");
-    } else {
-      setLoading(true);
-      fetch("/api/sections")
-        .then((res) => res.json())
-        .then((data: ParsedDocumentData) => {
-          defaultDocDataRef.current = data;
-          setDocData(data);
-          setSelectedSection("all");
-          setSelectedWord(null);
-          setIsCustomDoc(false);
-          setCurrentPage("view");
-        })
-        .finally(() => setLoading(false));
-    }
-  }, []);
 
   const handleCreateDoc = useCallback((newData: ParsedDocumentData) => {
     setDocData(newData);
     setSelectedSection("all");
     setSelectedWord(null);
-    setIsCustomDoc(true);
     setCurrentPage("view");
     setSharedDocError(null);
     if (newData.sourceGoogleDocId && typeof window !== "undefined") {
-      const shareUrl = getShareableAppUrl(newData.sourceGoogleDocId);
-      window.history.pushState({ doc: newData.sourceGoogleDocId }, "", shareUrl);
+      const shareUrl = getShareableAppUrl(
+        newData.sourceGoogleDocId,
+        undefined,
+        newData.attribution,
+        newData.date,
+      );
+      window.history.pushState(
+        {
+          doc: newData.sourceGoogleDocId,
+          attribution: newData.attribution,
+          date: newData.date,
+        },
+        "",
+        shareUrl,
+      );
     }
   }, []);
 
@@ -809,7 +924,7 @@ export default function App() {
             tabIndex={0}
           >
             <span className="brand-logo" aria-hidden="true">
-              ☁️
+              <Cloud size={20} color="var(--accent-color)" />
             </span>
             <span className="brand-name">WordCloudy</span>
           </div>
@@ -819,7 +934,16 @@ export default function App() {
               className={`top-nav-tab ${currentPage === "view" ? "active" : ""}`}
               onClick={() => setCurrentPage("view")}
             >
+              <Eye size={15} aria-hidden="true" />
               View Word Cloud
+            </button>
+            <button
+              type="button"
+              className={`top-nav-tab ${currentPage === "edit" ? "active" : ""}`}
+              onClick={() => setCurrentPage("edit")}
+            >
+              <Pencil size={15} aria-hidden="true" />
+              Edit
             </button>
             <button
               type="button"
@@ -828,18 +952,6 @@ export default function App() {
             >
               + Create New
             </button>
-          </div>
-          <div className="top-nav-actions">
-            {isCustomDoc && (
-              <button
-                type="button"
-                className="reset-doc-btn"
-                onClick={handleResetToDefault}
-                title="Return to the default document"
-              >
-                Reset to Default
-              </button>
-            )}
           </div>
         </div>
       </header>
@@ -852,31 +964,40 @@ export default function App() {
           title="Clear selection (Esc)"
           aria-label="Clear selection (Esc)"
         >
-          <svg
-            className="page-close-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="15" y1="9" x2="9" y2="15" />
-            <line x1="9" y1="9" x2="15" y2="15" />
-          </svg>
+          <X className="page-close-icon" size={24} aria-hidden="true" />
         </button>
       )}
 
       {currentPage === "create" ? (
         <main className="wordcloud-content">
-          <CreateCloudView onCreate={handleCreateDoc} onCancel={() => setCurrentPage("view")} />
+          <CreateCloudView
+            key="create"
+            onCreate={handleCreateDoc}
+            onCancel={() => setCurrentPage("view")}
+            isEdit={false}
+          />
+        </main>
+      ) : currentPage === "edit" ? (
+        <main className="wordcloud-content">
+          <CreateCloudView
+            key="edit"
+            onCreate={handleCreateDoc}
+            onCancel={() => setCurrentPage("view")}
+            initialSourceMode={editInitialValues.sourceMode}
+            initialGdocUrl={editInitialValues.gdocUrl}
+            initialPastedText={editInitialValues.pastedText}
+            initialCustomTitle={editInitialValues.customTitle}
+            initialAttribution={editInitialValues.attribution}
+            initialDate={editInitialValues.date}
+            isEdit={true}
+          />
         </main>
       ) : (
         <main className="wordcloud-content">
           {sharedDocError && (
             <div className="shared-doc-error-banner" role="alert">
               <div className="shared-doc-error-content">
+                <AlertCircle size={18} aria-hidden="true" style={{ flexShrink: 0 }} />
                 <span className="shared-doc-error-title">Could not load shared Google Doc:</span>
                 <span className="shared-doc-error-msg">{sharedDocError}</span>
               </div>
@@ -886,27 +1007,26 @@ export default function App() {
                 onClick={() => setSharedDocError(null)}
                 aria-label="Dismiss error"
               >
-                ✕
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
           )}
           <div className="wordcloud-header">
             <h1>{docData?.title || "The Constitution of the United States"}</h1>
+            {(docData?.attribution || docData?.date) && (
+              <p className="wordcloud-byline">
+                {docData.attribution && (
+                  <span className="wordcloud-attribution">{docData.attribution}</span>
+                )}
+                {docData.attribution && docData.date && (
+                  <span className="byline-separator" aria-hidden="true">
+                    •
+                  </span>
+                )}
+                {docData.date && <span className="wordcloud-date">{docData.date}</span>}
+              </p>
+            )}
             <div className="wordcloud-header-meta">
-              <span>{isCustomDoc ? "Custom Document" : "September 1787"}</span>
-              <span className="meta-separator" aria-hidden="true">
-                •
-              </span>
-              <button
-                type="button"
-                className="nav-inline-btn"
-                onClick={() => setCurrentPage("create")}
-              >
-                + Create New Word Cloud
-              </button>
-              <span className="meta-separator" aria-hidden="true">
-                •
-              </span>
               {docData?.sourceGoogleDocId && (
                 <>
                   <button
@@ -918,24 +1038,7 @@ export default function App() {
                     }}
                     title="Share word cloud link"
                   >
-                    <svg
-                      className="share-btn-icon"
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <circle cx="18" cy="5" r="3" />
-                      <circle cx="6" cy="12" r="3" />
-                      <circle cx="18" cy="19" r="3" />
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-                    </svg>
+                    <Share2 className="share-btn-icon" size={14} aria-hidden="true" />
                     Share
                   </button>
                   <span className="meta-separator" aria-hidden="true">
@@ -950,22 +1053,7 @@ export default function App() {
                 aria-haspopup="dialog"
                 aria-expanded={isAboutOpen}
               >
-                <svg
-                  className="about-btn-icon"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="16" x2="12" y2="12" />
-                  <line x1="12" y1="8" x2="12.01" y2="8" />
-                </svg>
+                <Info className="about-btn-icon" size={14} aria-hidden="true" />
                 About
               </button>
             </div>
@@ -975,7 +1063,19 @@ export default function App() {
               {/* Left: Word Cloud */}
               <div className="wordcloud-left">
                 {loading ? (
-                  <div className="wordcloud-message">{loadingMessage}</div>
+                  <div
+                    className="wordcloud-message wordcloud-loading"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <Loader2 className="wordcloud-loading-icon spin" size={32} aria-hidden="true" />
+                    <span className="wordcloud-loading-text">{loadingMessage}</span>
+                    {loadingMessage.includes("Google Doc") && (
+                      <span className="wordcloud-loading-subtext">
+                        Parsing document content, cleaning stop words, and generating word cloud...
+                      </span>
+                    )}
+                  </div>
                 ) : activeWords.length === 0 ? (
                   <div className="wordcloud-message">No words found.</div>
                 ) : (
@@ -1034,7 +1134,7 @@ export default function App() {
                             aria-label="Clear word selection"
                             title="Clear selection"
                           >
-                            ✕
+                            <X size={13} aria-hidden="true" />
                           </button>
                         </div>
                       ) : (
@@ -1092,7 +1192,17 @@ export default function App() {
                     onClick={handleSavePng}
                     disabled={saving || loading || activeWords.length === 0}
                   >
-                    {saving ? "Saving..." : "Save as PNG"}
+                    {saving ? (
+                      <>
+                        <Loader2 className="btn-spinner-icon spin" size={14} aria-hidden="true" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Download size={14} aria-hidden="true" />
+                        Save as PNG
+                      </>
+                    )}
                   </button>
                 </div>
 
@@ -1119,7 +1229,7 @@ export default function App() {
                           onClick={() => setSelectedWord(null)}
                           title="Clear selection"
                         >
-                          ✕ Clear
+                          <X size={13} aria-hidden="true" /> Clear
                         </button>
                       </div>
 
@@ -1146,7 +1256,9 @@ export default function App() {
                     </>
                   ) : (
                     <div className="sentence-placeholder">
-                      <span className="sentence-placeholder-icon">💬</span>
+                      <span className="sentence-placeholder-icon">
+                        <MessageSquare size={36} strokeWidth={1.75} aria-hidden="true" />
+                      </span>
                       <h3 className="sentence-placeholder-title">Example Sentences</h3>
                       <p className="sentence-placeholder-desc">
                         Click any word or phrase in the word cloud to view sentence fragments from
@@ -1174,6 +1286,16 @@ export default function App() {
             </a>
             , 2026
           </span>
+          <a
+            href="https://github.com/dustinmichels/wordcloudy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="footer-github-link"
+            aria-label="View Source Code on GitHub"
+          >
+            <span>View Source Code</span>
+            <GithubIcon size={16} />
+          </a>
         </div>
       </footer>
       {isAboutOpen && (
@@ -1199,7 +1321,7 @@ export default function App() {
                 title="Close modal (Esc)"
                 aria-label="Close modal"
               >
-                ✕
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
@@ -1300,7 +1422,7 @@ export default function App() {
                 title="Close dialog (Esc)"
                 aria-label="Close dialog"
               >
-                ✕
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
@@ -1315,14 +1437,24 @@ export default function App() {
                     type="text"
                     readOnly
                     className="form-input share-url-input"
-                    value={getShareableAppUrl(docData.sourceGoogleDocId)}
+                    value={getShareableAppUrl(
+                      docData.sourceGoogleDocId,
+                      undefined,
+                      docData.attribution,
+                      docData.date,
+                    )}
                     onFocus={(e) => e.currentTarget.select()}
                   />
                   <button
                     type="button"
                     className={`btn-primary copy-share-btn ${copyStatus === "copied" ? "copied" : ""}`}
                     onClick={async () => {
-                      const url = getShareableAppUrl(docData.sourceGoogleDocId!);
+                      const url = getShareableAppUrl(
+                        docData.sourceGoogleDocId!,
+                        undefined,
+                        docData.attribution,
+                        docData.date,
+                      );
                       try {
                         if (navigator?.clipboard?.writeText) {
                           await navigator.clipboard.writeText(url);
@@ -1342,37 +1474,12 @@ export default function App() {
                   >
                     {copyStatus === "copied" ? (
                       <>
-                        <svg
-                          width="15"
-                          height="15"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
+                        <Check size={15} aria-hidden="true" />
                         Copied!
                       </>
                     ) : (
                       <>
-                        <svg
-                          width="15"
-                          height="15"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                        </svg>
+                        <Copy size={15} aria-hidden="true" />
                         Copy Link
                       </>
                     )}
@@ -1392,7 +1499,8 @@ export default function App() {
                   rel="noopener noreferrer"
                   className="share-source-link"
                 >
-                  Open original Google Doc ↗
+                  <span>Open original Google Doc</span>
+                  <ExternalLink size={13} aria-hidden="true" />
                 </a>
               </div>
             </div>

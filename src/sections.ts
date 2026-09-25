@@ -27,6 +27,8 @@ export interface ParsedDocumentData {
   sections: SectionWordData[];
   sourceGoogleDocId?: string;
   stats?: DocumentWordStats;
+  attribution?: string;
+  date?: string;
 }
 
 function slugify(text: string): string {
@@ -278,7 +280,7 @@ export function extractGoogleDocId(input: string): string | null {
   if (/^[a-zA-Z0-9_-]{25,}$/.test(trimmed)) {
     return trimmed;
   }
-  const match = trimmed.match(/\/document(?:\/u\/\d+)?\/d\/([a-zA-Z0-9_-]+)/);
+  const match = trimmed.match(/\/(?:document|spreadsheets)(?:\/u\/\d+)?\/d\/([a-zA-Z0-9_-]+)/);
   return match && match[1] ? match[1] : null;
 }
 
@@ -466,7 +468,12 @@ export function parseGoogleDocHtml(html: string): { title?: string; markdown: st
 /**
  * Parses pasted raw text or Markdown into structured ParsedDocumentData.
  */
-export function parsePastedText(text: string, customTitle?: string): ParsedDocumentData {
+export function parsePastedText(
+  text: string,
+  customTitle?: string,
+  attribution?: string,
+  date?: string,
+): ParsedDocumentData {
   let title = customTitle?.trim();
   let content = text;
 
@@ -478,7 +485,14 @@ export function parsePastedText(text: string, customTitle?: string): ParsedDocum
     }
   }
 
-  return getDocumentWordData(content, 100, title);
+  const result = getDocumentWordData(content, 100, title);
+  if (attribution?.trim()) {
+    result.attribution = attribution.trim();
+  }
+  if (date?.trim()) {
+    result.date = date.trim();
+  }
+  return result;
 }
 
 /**
@@ -488,49 +502,83 @@ export function parsePastedText(text: string, customTitle?: string): ParsedDocum
 export async function fetchAndParseGoogleDoc(
   docIdOrUrl: string,
   customTitle?: string,
+  attribution?: string,
+  date?: string,
 ): Promise<ParsedDocumentData> {
   const docId = extractGoogleDocId(docIdOrUrl);
   if (!docId) {
     throw new Error(
-      "Invalid Google Doc link. Please paste a link like https://docs.google.com/document/d/... or a Google Doc ID.",
+      "Invalid Google Doc or Sheet link. Please paste a link like https://docs.google.com/document/d/... or a Google Doc ID.",
     );
   }
 
-  let html = "";
-  let htmlSuccess = false;
-  try {
-    const res = await fetch(`https://docs.google.com/document/d/${docId}/export?format=html`);
-    if (res.ok) {
-      html = await res.text();
-      htmlSuccess = html.includes("<body") || html.length > 50;
+  const isSheet = docIdOrUrl.includes("spreadsheets");
+
+  if (!isSheet) {
+    let html = "";
+    let htmlSuccess = false;
+    try {
+      const res = await fetch(`https://docs.google.com/document/d/${docId}/export?format=html`);
+      if (res.ok) {
+        html = await res.text();
+        htmlSuccess = html.includes("<body") || html.length > 50;
+      }
+    } catch {
+      htmlSuccess = false;
     }
-  } catch {
-    htmlSuccess = false;
+
+    if (htmlSuccess && html) {
+      const parsed = parseGoogleDocHtml(html);
+      const finalTitle = customTitle?.trim() || parsed.title;
+      const result = getDocumentWordData(parsed.markdown, 100, finalTitle);
+      result.sourceGoogleDocId = docId;
+      if (attribution?.trim()) {
+        result.attribution = attribution.trim();
+      }
+      if (date?.trim()) {
+        result.date = date.trim();
+      }
+      return result;
+    }
+
+    // Fallback to text export
+    try {
+      const txtRes = await fetch(`https://docs.google.com/document/d/${docId}/export?format=txt`);
+      if (txtRes.ok) {
+        const txt = await txtRes.text();
+        const result = parsePastedText(txt, customTitle, attribution, date);
+        result.sourceGoogleDocId = docId;
+        return result;
+      }
+    } catch {}
   }
 
-  if (htmlSuccess && html) {
-    const parsed = parseGoogleDocHtml(html);
-    const finalTitle = customTitle?.trim() || parsed.title;
-    const result = getDocumentWordData(parsed.markdown, 100, finalTitle);
-    result.sourceGoogleDocId = docId;
-    return result;
-  }
-
-  // Fallback to text export
+  // Try Google Sheet CSV export if it was a spreadsheet or document export failed
   try {
-    const txtRes = await fetch(`https://docs.google.com/document/d/${docId}/export?format=txt`);
-    if (!txtRes.ok) {
-      throw new Error(`HTTP ${txtRes.status}`);
+    const csvRes = await fetch(`https://docs.google.com/spreadsheets/d/${docId}/export?format=csv`);
+    if (csvRes.ok) {
+      const csv = await csvRes.text();
+      const cleanText = csv
+        .split(/\r?\n/)
+        .map((row) =>
+          row
+            .split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+            .map((cell) => cell.replace(/^"|"$/g, "").trim())
+            .filter(Boolean)
+            .join(" "),
+        )
+        .filter(Boolean)
+        .join("\n\n");
+
+      const result = parsePastedText(cleanText, customTitle || "Google Sheet", attribution, date);
+      result.sourceGoogleDocId = docId;
+      return result;
     }
-    const txt = await txtRes.text();
-    const result = parsePastedText(txt, customTitle);
-    result.sourceGoogleDocId = docId;
-    return result;
-  } catch {
-    throw new Error(
-      "Could not load the Google Doc. Please verify the link and ensure document sharing is set to 'Anyone with the link can view'.",
-    );
-  }
+  } catch {}
+
+  throw new Error(
+    "Could not load the Google Doc or Sheet. Please verify the link and ensure document sharing is set to 'Anyone with the link can view'.",
+  );
 }
 
 /**
@@ -547,7 +595,12 @@ export function encodeGoogleDocShareCode(docIdOrUrl: string): string {
 /**
  * Generates a full shareable application URL containing the encoded share code.
  */
-export function getShareableAppUrl(docIdOrUrl: string, baseUrl?: string): string {
+export function getShareableAppUrl(
+  docIdOrUrl: string,
+  baseUrl?: string,
+  attribution?: string,
+  date?: string,
+): string {
   const code = encodeGoogleDocShareCode(docIdOrUrl);
   let base = baseUrl;
   if (!base && typeof window !== "undefined") {
@@ -556,7 +609,15 @@ export function getShareableAppUrl(docIdOrUrl: string, baseUrl?: string): string
   if (!base) {
     base = "";
   }
-  return `${base}?doc=${encodeURIComponent(code)}`;
+  const params = new URLSearchParams();
+  params.set("doc", code);
+  if (attribution && attribution.trim()) {
+    params.set("attribution", attribution.trim());
+  }
+  if (date && date.trim()) {
+    params.set("date", date.trim());
+  }
+  return `${base}?${params.toString()}`;
 }
 
 /**
@@ -597,4 +658,259 @@ export function decodeGoogleDocShareCode(input: string): string | null {
 
   // 3. Fallback: direct ID or full Google Doc URL
   return extractGoogleDocId(trimmed);
+}
+
+/**
+ * Extracts an optional attribution from a URL or query string.
+ * Supports ?attribution=, ?attr=, and #attribution= / #attr= parameters.
+ */
+export function extractAttributionFromUrl(input: string): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+
+  // 1. If it's a URL or query string with parameters:
+  try {
+    const urlObj = new URL(trimmed, "https://placeholder.local");
+    const param = urlObj.searchParams.get("attribution") || urlObj.searchParams.get("attr");
+    if (param && param.trim()) {
+      return param.trim();
+    }
+    if (urlObj.hash) {
+      const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+      const hashParam = hashParams.get("attribution") || hashParams.get("attr");
+      if (hashParam && hashParam.trim()) {
+        return hashParam.trim();
+      }
+    }
+  } catch {}
+
+  // 2. Check if base64 encoded
+  try {
+    const decoded = atob(trimmed);
+    if (decoded && (decoded.includes("attribution=") || decoded.includes("attr="))) {
+      return extractAttributionFromUrl(decoded);
+    }
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Extracts an optional date from a URL or query string.
+ * Supports ?date=, ?d=, and #date= / #d= parameters.
+ */
+export function extractDateFromUrl(input: string): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+
+  // 1. If it's a URL or query string with parameters:
+  try {
+    const urlObj = new URL(trimmed, "https://placeholder.local");
+    const param = urlObj.searchParams.get("date") || urlObj.searchParams.get("d");
+    if (param && param.trim()) {
+      return param.trim();
+    }
+    if (urlObj.hash) {
+      const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+      const hashParam = hashParams.get("date") || hashParams.get("d");
+      if (hashParam && hashParam.trim()) {
+        return hashParam.trim();
+      }
+    }
+  } catch {}
+
+  // 2. Check if base64 encoded
+  try {
+    const decoded = atob(trimmed);
+    if (decoded && (decoded.includes("date=") || decoded.includes("d="))) {
+      return extractDateFromUrl(decoded);
+    }
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Extracts an optional title from a URL or query string.
+ * Supports ?title=, ?name=, ?t=, and hash parameters.
+ */
+export function extractTitleFromUrl(input: string): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+
+  try {
+    const urlObj = new URL(trimmed, "https://placeholder.local");
+    const param =
+      urlObj.searchParams.get("title") ||
+      urlObj.searchParams.get("name") ||
+      urlObj.searchParams.get("t");
+    if (param && param.trim()) {
+      return param.trim();
+    }
+    if (urlObj.hash) {
+      const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+      const hashParam = hashParams.get("title") || hashParams.get("name") || hashParams.get("t");
+      if (hashParam && hashParam.trim()) {
+        return hashParam.trim();
+      }
+    }
+  } catch {}
+
+  try {
+    const decoded = atob(trimmed);
+    if (decoded && (decoded.includes("title=") || decoded.includes("name="))) {
+      return extractTitleFromUrl(decoded);
+    }
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Extracts optional custom text / markdown from a URL or query string.
+ * Supports ?text=, ?markdown=, ?content=, and hash parameters.
+ */
+export function extractTextFromUrl(input: string): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+
+  try {
+    const urlObj = new URL(trimmed, "https://placeholder.local");
+    const param =
+      urlObj.searchParams.get("text") ||
+      urlObj.searchParams.get("markdown") ||
+      urlObj.searchParams.get("content");
+    if (param && param.trim()) {
+      return param.trim();
+    }
+    if (urlObj.hash) {
+      const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+      const hashParam =
+        hashParams.get("text") || hashParams.get("markdown") || hashParams.get("content");
+      if (hashParam && hashParam.trim()) {
+        return hashParam.trim();
+      }
+    }
+  } catch {}
+
+  try {
+    const decoded = atob(trimmed);
+    if (decoded && (decoded.includes("text=") || decoded.includes("markdown="))) {
+      return extractTextFromUrl(decoded);
+    }
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Extracts optional source mode ("gdoc" | "paste") from a URL or query string.
+ */
+export function extractModeFromUrl(input: string): "gdoc" | "paste" | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+
+  try {
+    const urlObj = new URL(trimmed, "https://placeholder.local");
+    const param = (
+      urlObj.searchParams.get("mode") || urlObj.searchParams.get("source")
+    )?.toLowerCase();
+    if (param === "paste" || param === "gdoc") {
+      return param;
+    }
+    if (urlObj.hash) {
+      const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+      const hashParam = (hashParams.get("mode") || hashParams.get("source"))?.toLowerCase();
+      if (hashParam === "paste" || hashParam === "gdoc") {
+        return hashParam;
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
+export interface EditFormValues {
+  sourceMode: "gdoc" | "paste";
+  gdocUrl: string;
+  pastedText: string;
+  customTitle: string;
+  attribution: string;
+  date: string;
+}
+
+/**
+ * Extracts initial form field values for the Edit view from a URL,
+ * falling back to loaded document data if a field is not present in URL parameters.
+ */
+export function getInitialEditValuesFromUrl(
+  input: string,
+  currentDoc?: {
+    sourceGoogleDocId?: string;
+    title?: string;
+    attribution?: string;
+    date?: string;
+  } | null,
+): EditFormValues {
+  const modeParam = extractModeFromUrl(input);
+  const titleParam = extractTitleFromUrl(input);
+  const attributionParam = extractAttributionFromUrl(input);
+  const dateParam = extractDateFromUrl(input);
+  const textParam = extractTextFromUrl(input);
+  // Check for doc in URL
+  const docId = decodeGoogleDocShareCode(input);
+  let gdocUrl = "";
+
+  if (input) {
+    try {
+      const urlObj = new URL(input.trim(), "https://placeholder.local");
+      const rawDoc =
+        urlObj.searchParams.get("doc") ||
+        urlObj.searchParams.get("gdoc") ||
+        urlObj.searchParams.get("share");
+      if (rawDoc && (rawDoc.startsWith("http://") || rawDoc.startsWith("https://"))) {
+        gdocUrl = rawDoc;
+      }
+      if (!gdocUrl && urlObj.hash) {
+        const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+        const rawHashDoc =
+          hashParams.get("doc") || hashParams.get("gdoc") || hashParams.get("share");
+        if (rawHashDoc && (rawHashDoc.startsWith("http://") || rawHashDoc.startsWith("https://"))) {
+          gdocUrl = rawHashDoc;
+        }
+      }
+    } catch {}
+  }
+
+  if (!gdocUrl && docId) {
+    gdocUrl = `https://docs.google.com/document/d/${docId}/edit`;
+  }
+
+  // Fallback to current document if URL has no doc or text
+  if (!gdocUrl && !textParam && currentDoc?.sourceGoogleDocId) {
+    gdocUrl = `https://docs.google.com/document/d/${currentDoc.sourceGoogleDocId}/edit`;
+  }
+
+  const isSameDoc =
+    !docId || !currentDoc?.sourceGoogleDocId || docId === currentDoc.sourceGoogleDocId;
+  const customTitle = titleParam || (isSameDoc ? currentDoc?.title || "" : "");
+  const attribution = attributionParam || (isSameDoc ? currentDoc?.attribution || "" : "");
+  const date = dateParam || (isSameDoc ? currentDoc?.date || "" : "");
+  const pastedText = textParam || "";
+
+  let sourceMode: "gdoc" | "paste" = "gdoc";
+  if (modeParam) {
+    sourceMode = modeParam;
+  } else if (textParam && !docId && !gdocUrl) {
+    sourceMode = "paste";
+  }
+
+  return {
+    sourceMode,
+    gdocUrl,
+    pastedText,
+    customTitle,
+    attribution,
+    date,
+  };
 }
