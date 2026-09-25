@@ -494,6 +494,69 @@ test("getShareableAppUrl includes both encoded attribution and date when provide
     `https://wordcloud.example.com/app?doc=${rawId}&attribution=By+Dustin+Michels&date=September+17%2C+1787`,
   );
 });
+test("getShareableAppUrl includes encoded title when custom title is provided", () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const shareUrl = getShareableAppUrl(
+    rawId,
+    "https://wordcloud.example.com/app",
+    undefined,
+    undefined,
+    "Custom Title",
+  );
+  expect(shareUrl).toBe(`https://wordcloud.example.com/app?doc=${rawId}&title=Custom+Title`);
+});
+
+test("getShareableAppUrl includes title, attribution, and date when all are provided", () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const shareUrl = getShareableAppUrl(
+    rawId,
+    "https://wordcloud.example.com/app",
+    "Laurie's Housing Class",
+    "Sep 10, 2026",
+    "Housing in America",
+  );
+  expect(shareUrl).toBe(
+    `https://wordcloud.example.com/app?doc=${rawId}&title=Housing+in+America&attribution=Laurie%27s+Housing+Class&date=Sep+10%2C+2026`,
+  );
+});
+
+test("getShareableAppUrl ignores empty or whitespace-only title", () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const shareUrl = getShareableAppUrl(
+    rawId,
+    "https://wordcloud.example.com/app",
+    undefined,
+    undefined,
+    "   ",
+  );
+  expect(shareUrl).toBe(`https://wordcloud.example.com/app?doc=${rawId}`);
+});
+
+test("getShareableAppUrl preserves compatibility with existing link format without title", () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const shareUrl = getShareableAppUrl(
+    rawId,
+    "https://dustinmichels.github.io/wordcloudy/",
+    "Laurie's Housing Class",
+    "Sep 10, 2026",
+  );
+  expect(shareUrl).toBe(
+    "https://dustinmichels.github.io/wordcloudy/?doc=1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA&attribution=Laurie%27s+Housing+Class&date=Sep+10%2C+2026",
+  );
+});
+
+test("getShareableAppUrl supports options object format", () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const shareUrl = getShareableAppUrl(rawId, {
+    baseUrl: "https://wordcloud.example.com/app",
+    title: "Housing Policy",
+    attribution: "Prof. Smith",
+    date: "2026",
+  });
+  expect(shareUrl).toBe(
+    `https://wordcloud.example.com/app?doc=${rawId}&title=Housing+Policy&attribution=Prof.+Smith&date=2026`,
+  );
+});
 
 test("extractAttributionFromUrl extracts attribution from query and hash parameters", () => {
   // Query param with plus-encoded spaces
@@ -556,6 +619,40 @@ test("extractDateFromUrl extracts date from query and hash parameters", () => {
   expect(extractDateFromUrl("https://wordcloud.example.com/?doc=123")).toBe(null);
   expect(extractDateFromUrl("")).toBe(null);
 });
+test("extractTitleFromUrl extracts title from query and hash parameters", () => {
+  // Query param with plus-encoded spaces
+  expect(extractTitleFromUrl("https://wordcloud.example.com/?doc=123&title=Custom+Title")).toBe(
+    "Custom Title",
+  );
+
+  // Query param with percent-encoded spaces
+  expect(extractTitleFromUrl("https://wordcloud.example.com/?doc=123&title=Custom%20Title")).toBe(
+    "Custom Title",
+  );
+
+  // name query param
+  expect(extractTitleFromUrl("https://wordcloud.example.com/?doc=123&name=Doc+Name")).toBe(
+    "Doc Name",
+  );
+
+  // Short t query param
+  expect(extractTitleFromUrl("https://wordcloud.example.com/?doc=123&t=Short+Title")).toBe(
+    "Short Title",
+  );
+
+  // Hash parameter
+  expect(extractTitleFromUrl("https://wordcloud.example.com/#doc=123&title=Hash+Title")).toBe(
+    "Hash Title",
+  );
+
+  // Base64-encoded URL
+  const encoded = btoa("https://wordcloud.example.com/?doc=123&title=Base64+Title");
+  expect(extractTitleFromUrl(encoded)).toBe("Base64 Title");
+
+  // Omitted or missing title
+  expect(extractTitleFromUrl("https://wordcloud.example.com/?doc=123")).toBe(null);
+  expect(extractTitleFromUrl("")).toBe(null);
+});
 
 test("extractGoogleDocId recognizes Google Spreadsheet URLs as well as Google Docs", () => {
   const sheetUrl =
@@ -577,6 +674,18 @@ test("parsePastedText preserves custom date", () => {
   );
   expect(data.attribution).toBe("By Author");
   expect(data.date).toBe("September 2026");
+});
+test("parsePastedText preserves custom title and distinguishes from markdown heading", () => {
+  const withCustom = parsePastedText(
+    "# Ignored Heading\nContent text here.",
+    "Explicit Custom Title",
+  );
+  expect(withCustom.title).toBe("Explicit Custom Title");
+  expect(withCustom.customTitle).toBe("Explicit Custom Title");
+
+  const withoutCustom = parsePastedText("# Heading Title\nContent text here.");
+  expect(withoutCustom.title).toBe("Heading Title");
+  expect(withoutCustom.customTitle).toBeUndefined();
 });
 
 test("decodeGoogleDocShareCode decodes multiple formats (query, hash, base64, raw ID)", () => {

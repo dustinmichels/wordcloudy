@@ -27,6 +27,7 @@ import {
   decodeGoogleDocShareCode,
   extractAttributionFromUrl,
   extractDateFromUrl,
+  extractTitleFromUrl,
   fetchAndParseGoogleDoc,
   getInitialEditValuesFromUrl,
   getShareableAppUrl,
@@ -55,6 +56,7 @@ export interface SectionWordData {
 
 export interface ParsedDocumentData {
   title?: string;
+  customTitle?: string;
   all: WordData[];
   sections: SectionWordData[];
   sourceGoogleDocId?: string;
@@ -633,12 +635,13 @@ export default function App() {
       const sharedDocId = decodeGoogleDocShareCode(window.location.href);
       const sharedAttribution = extractAttributionFromUrl(window.location.href);
       const sharedDate = extractDateFromUrl(window.location.href);
+      const sharedTitle = extractTitleFromUrl(window.location.href);
       if (sharedDocId) {
         setLoading(true);
         setLoadingMessage("Fetching shared Google Doc...");
         fetchAndParseGoogleDoc(
           sharedDocId,
-          undefined,
+          sharedTitle || undefined,
           sharedAttribution || undefined,
           sharedDate || undefined,
         )
@@ -668,6 +671,19 @@ export default function App() {
     }
 
     if (initialDocData) {
+      if (typeof window !== "undefined") {
+        const sharedTitle = extractTitleFromUrl(window.location.href);
+        const sharedAttribution = extractAttributionFromUrl(window.location.href);
+        const sharedDate = extractDateFromUrl(window.location.href);
+        if (sharedTitle || sharedAttribution || sharedDate) {
+          setDocData({
+            ...initialDocData,
+            ...(sharedTitle ? { title: sharedTitle, customTitle: sharedTitle } : {}),
+            ...(sharedAttribution ? { attribution: sharedAttribution } : {}),
+            ...(sharedDate ? { date: sharedDate } : {}),
+          });
+        }
+      }
       return;
     }
     fetch("/api/sections")
@@ -676,6 +692,21 @@ export default function App() {
         return res.json();
       })
       .then((data: ParsedDocumentData) => {
+        if (typeof window !== "undefined") {
+          const sharedTitle = extractTitleFromUrl(window.location.href);
+          const sharedAttribution = extractAttributionFromUrl(window.location.href);
+          const sharedDate = extractDateFromUrl(window.location.href);
+          if (sharedTitle) {
+            data.title = sharedTitle;
+            data.customTitle = sharedTitle;
+          }
+          if (sharedAttribution) {
+            data.attribution = sharedAttribution;
+          }
+          if (sharedDate) {
+            data.date = sharedDate;
+          }
+        }
         setDocData(data);
         setLoading(false);
       })
@@ -697,12 +728,14 @@ export default function App() {
         undefined,
         newData.attribution,
         newData.date,
+        newData.customTitle,
       );
       window.history.pushState(
         {
           doc: newData.sourceGoogleDocId,
           attribution: newData.attribution,
           date: newData.date,
+          title: newData.customTitle,
         },
         "",
         shareUrl,
@@ -1444,6 +1477,7 @@ export default function App() {
                       undefined,
                       docData.attribution,
                       docData.date,
+                      docData.customTitle,
                     )}
                     onFocus={(e) => e.currentTarget.select()}
                   />
@@ -1456,6 +1490,7 @@ export default function App() {
                         undefined,
                         docData.attribution,
                         docData.date,
+                        docData.customTitle,
                       );
                       try {
                         if (navigator?.clipboard?.writeText) {

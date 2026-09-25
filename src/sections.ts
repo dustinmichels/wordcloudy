@@ -23,6 +23,7 @@ export interface SectionWordData {
 
 export interface ParsedDocumentData {
   title?: string;
+  customTitle?: string;
   all: WordFrequency[];
   sections: SectionWordData[];
   sourceGoogleDocId?: string;
@@ -474,6 +475,7 @@ export function parsePastedText(
   attribution?: string,
   date?: string,
 ): ParsedDocumentData {
+  const isCustomTitle = Boolean(customTitle && customTitle.trim());
   let title = customTitle?.trim();
   let content = text;
 
@@ -486,6 +488,9 @@ export function parsePastedText(
   }
 
   const result = getDocumentWordData(content, 100, title);
+  if (isCustomTitle) {
+    result.customTitle = customTitle!.trim();
+  }
   if (attribution?.trim()) {
     result.attribution = attribution.trim();
   }
@@ -529,9 +534,13 @@ export async function fetchAndParseGoogleDoc(
 
     if (htmlSuccess && html) {
       const parsed = parseGoogleDocHtml(html);
-      const finalTitle = customTitle?.trim() || parsed.title;
+      const isCustomTitle = Boolean(customTitle && customTitle.trim());
+      const finalTitle = isCustomTitle ? customTitle!.trim() : parsed.title;
       const result = getDocumentWordData(parsed.markdown, 100, finalTitle);
       result.sourceGoogleDocId = docId;
+      if (isCustomTitle) {
+        result.customTitle = customTitle!.trim();
+      }
       if (attribution?.trim()) {
         result.attribution = attribution.trim();
       }
@@ -570,8 +579,12 @@ export async function fetchAndParseGoogleDoc(
         .filter(Boolean)
         .join("\n\n");
 
+      const isCustomTitle = Boolean(customTitle && customTitle.trim());
       const result = parsePastedText(cleanText, customTitle || "Google Sheet", attribution, date);
       result.sourceGoogleDocId = docId;
+      if (isCustomTitle) {
+        result.customTitle = customTitle!.trim();
+      }
       return result;
     }
   } catch {}
@@ -597,12 +610,28 @@ export function encodeGoogleDocShareCode(docIdOrUrl: string): string {
  */
 export function getShareableAppUrl(
   docIdOrUrl: string,
-  baseUrl?: string,
+  baseUrlOrOptions?:
+    | string
+    | { baseUrl?: string; attribution?: string; date?: string; title?: string },
   attribution?: string,
   date?: string,
+  title?: string,
 ): string {
+  let base: string | undefined;
+  let attr = attribution;
+  let d = date;
+  let t = title;
+
+  if (typeof baseUrlOrOptions === "object" && baseUrlOrOptions !== null) {
+    base = baseUrlOrOptions.baseUrl;
+    attr = baseUrlOrOptions.attribution;
+    d = baseUrlOrOptions.date;
+    t = baseUrlOrOptions.title;
+  } else {
+    base = baseUrlOrOptions;
+  }
+
   const code = encodeGoogleDocShareCode(docIdOrUrl);
-  let base = baseUrl;
   if (!base && typeof window !== "undefined") {
     base = `${window.location.origin}${window.location.pathname}`;
   }
@@ -611,11 +640,14 @@ export function getShareableAppUrl(
   }
   const params = new URLSearchParams();
   params.set("doc", code);
-  if (attribution && attribution.trim()) {
-    params.set("attribution", attribution.trim());
+  if (t && t.trim()) {
+    params.set("title", t.trim());
   }
-  if (date && date.trim()) {
-    params.set("date", date.trim());
+  if (attr && attr.trim()) {
+    params.set("attribution", attr.trim());
+  }
+  if (d && d.trim()) {
+    params.set("date", d.trim());
   }
   return `${base}?${params.toString()}`;
 }
@@ -848,6 +880,7 @@ export function getInitialEditValuesFromUrl(
   currentDoc?: {
     sourceGoogleDocId?: string;
     title?: string;
+    customTitle?: string;
     attribution?: string;
     date?: string;
   } | null,
@@ -893,7 +926,8 @@ export function getInitialEditValuesFromUrl(
 
   const isSameDoc =
     !docId || !currentDoc?.sourceGoogleDocId || docId === currentDoc.sourceGoogleDocId;
-  const customTitle = titleParam || (isSameDoc ? currentDoc?.title || "" : "");
+  const customTitle =
+    titleParam || (isSameDoc ? currentDoc?.customTitle || currentDoc?.title || "" : "");
   const attribution = attributionParam || (isSameDoc ? currentDoc?.attribution || "" : "");
   const date = dateParam || (isSameDoc ? currentDoc?.date || "" : "");
   const pastedText = textParam || "";
