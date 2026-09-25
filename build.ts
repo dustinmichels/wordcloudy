@@ -5,9 +5,9 @@ async function build() {
   console.log("Building Housing Word Cloud...");
 
   // 1. Read source document and extract word frequencies
-  const docFile = Bun.file("./doc.md");
+  const docFile = Bun.file("./samples/doc.md");
   if (!(await docFile.exists())) {
-    throw new Error("doc.md not found");
+    throw new Error("samples/doc.md not found");
   }
   const content = await docFile.text();
   const docData = getDocumentWordData(content);
@@ -41,6 +41,17 @@ async function build() {
   // 3. Read CSS stylesheet
   const css = await Bun.file("./src/frontend.css").text();
 
+  // 3b. Read favicons for standalone embedding
+  const icon16Base64 = Buffer.from(
+    await Bun.file("./assets/favicons/icons8-cloud-keek-16.png").arrayBuffer(),
+  ).toString("base64");
+  const icon32Base64 = Buffer.from(
+    await Bun.file("./assets/favicons/icons8-cloud-keek-32.png").arrayBuffer(),
+  ).toString("base64");
+  const icon96Base64 = Buffer.from(
+    await Bun.file("./assets/favicons/icons8-cloud-keek-96.png").arrayBuffer(),
+  ).toString("base64");
+
   // 4. Construct self-contained HTML page
   // Escape any '</script' sequence in the bundled JS so the HTML parser does not prematurely terminate the script
   const safeJs = bundledJs.replace(/<\/script/gi, "<\\/script");
@@ -50,7 +61,10 @@ async function build() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WordCloud of "Our Experiences of Housing, What Housing Does, and Sense of Being 'At Home'"</title>
+  <title>WordCloudy</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,${icon32Base64}">
+  <link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,${icon16Base64}">
+  <link rel="icon" type="image/png" sizes="96x96" href="data:image/png;base64,${icon96Base64}">
   <style>
 ${css}
   </style>

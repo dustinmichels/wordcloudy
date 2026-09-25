@@ -6,15 +6,15 @@ This document outlines the step-by-step procedure to migrate the Housing Word Cl
 
 ## Architecture Summary
 
-| Layer | Current (React) | Target (Vue 3 + Vite) |
-|---|---|---|
-| **Package Manager / Runtime** | Bun | Bun |
-| **Bundler / Dev Server** | `Bun.serve` + HTML imports | Vite (`@vitejs/plugin-vue`) via Bun |
-| **UI Framework** | React 19 (`frontend.tsx`) | Vue 3 SFCs (`<script setup lang="ts">`) |
-| **Word Cloud Visualization** | `@visx/wordcloud` + `@visx/*` | Direct `d3-cloud` + `d3-scale` + Vue SVG |
-| **Element Sizing / Resize** | `@visx/responsive` (`ParentSize`) | `@vueuse/core` (`useElementSize`) |
-| **Text Processing & Tests** | `stopwords.ts`, `sections.ts`, Bun tests | *Unchanged* (pure TypeScript) |
-| **Production Distribution** | `build.ts` $\to$ single `dist/index.html` | `vite-plugin-singlefile` $\to$ `dist/index.html` |
+| Layer                         | Current (React)                           | Target (Vue 3 + Vite)                            |
+| ----------------------------- | ----------------------------------------- | ------------------------------------------------ |
+| **Package Manager / Runtime** | Bun                                       | Bun                                              |
+| **Bundler / Dev Server**      | `Bun.serve` + HTML imports                | Vite (`@vitejs/plugin-vue`) via Bun              |
+| **UI Framework**              | React 19 (`frontend.tsx`)                 | Vue 3 SFCs (`<script setup lang="ts">`)          |
+| **Word Cloud Visualization**  | `@visx/wordcloud` + `@visx/*`             | Direct `d3-cloud` + `d3-scale` + Vue SVG         |
+| **Element Sizing / Resize**   | `@visx/responsive` (`ParentSize`)         | `@vueuse/core` (`useElementSize`)                |
+| **Text Processing & Tests**   | `stopwords.ts`, `sections.ts`, Bun tests  | _Unchanged_ (pure TypeScript)                    |
+| **Production Distribution**   | `build.ts` $\to$ single `dist/index.html` | `vite-plugin-singlefile` $\to$ `dist/index.html` |
 
 ---
 
@@ -47,7 +47,7 @@ This document outlines the step-by-step procedure to migrate the Housing Word Cl
 
 - [ ] **2.1 Create `vite.config.ts`**
   - Configure `@vitejs/plugin-vue` and `vite-plugin-singlefile`.
-  - Add a custom Vite dev middleware plugin for `/api/sections` so the dev server can serve word data parsed from `doc.md` via `getDocumentWordData()` without needing a separate backend server process:
+  - Add a custom Vite dev middleware plugin for `/api/sections` so the dev server can serve word data parsed from `samples/doc.md` via `getDocumentWordData()` without needing a separate backend server process:
     ```ts
     // vite.config.ts
     import { defineConfig } from "vite";
@@ -57,7 +57,7 @@ This document outlines the step-by-step procedure to migrate the Housing Word Cl
     import { getDocumentWordData } from "./src/sections";
 
     export default defineConfig(({ command }) => {
-      const docContent = readFileSync("./doc.md", "utf-8");
+      const docContent = readFileSync("./samples/doc.md", "utf-8");
       const docData = getDocumentWordData(docContent);
 
       return {
@@ -173,7 +173,7 @@ This document outlines the step-by-step procedure to migrate the Housing Word Cl
 - [ ] **4.2 Verify single-file HTML generation**
   - Run `bun run build`.
   - Verify `dist/index.html` is generated with inlined CSS, bundled JS, and pre-baked `__DOCUMENT_DATA__`.
-  - Verify that the raw contents of `doc.md` are not leaked directly into the bundle.
+  - Verify that the raw contents of `samples/doc.md` are not leaked directly into the bundle.
 
 ---
 

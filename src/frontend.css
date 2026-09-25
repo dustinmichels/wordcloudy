@@ -874,6 +874,23 @@ mark.highlighted-term {
   color: var(--text-primary);
   white-space: nowrap;
 }
+
+.footer-link {
+  color: var(--accent-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s ease;
+}
+
+.footer-link:hover {
+  color: var(--accent-dark);
+}
+
+.footer-link:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
 /* Top Application Navigation */
 .app-top-nav {
   width: 100%;

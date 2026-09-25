@@ -1,6 +1,6 @@
 # housing-wordcloud
 
-Interactive word cloud and phrase frequency analysis tool built with Bun, React, and `@visx/wordcloud`. Extracts topical keywords, collocations, bigrams, and trigrams from document sources (`doc.md`).
+Interactive word cloud and phrase frequency analysis tool built with Bun, React, and `@visx/wordcloud`. Extracts topical keywords, collocations, bigrams, and trigrams from document sources (`samples/doc.md`).
 
 ---
 
@@ -46,7 +46,7 @@ bun test
 
 Allowing stop words indiscriminately into bigrams causes high-frequency function/glue words to **overwhelm topical keywords**.
 
-Running unrestricted bigram extraction against `doc.md` demonstrates the issue:
+Running unrestricted bigram extraction against `samples/doc.md` demonstrates the issue:
 
 | Approach                                          | Top Bigrams                                                         |         Count          | Word Cloud Impact                                                                                                                                  |
 | :------------------------------------------------ | :------------------------------------------------------------------ | :--------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -110,7 +110,7 @@ const collocations = getCollocations(text, {
 });
 ```
 
-In `doc.md`:
+In `samples/doc.md`:
 
 - `desired-outcomes`: PMI **8.69** (NPMI 1.06)
 - `least-effective`: PMI **8.10** (NPMI 0.99)

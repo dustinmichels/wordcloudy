@@ -1,7 +1,7 @@
 import index from "./index.html";
 import { getDocumentWordData } from "./src/sections";
 
-const docFile = Bun.file("./doc.md");
+const docFile = Bun.file("./samples/doc.md");
 const content = await docFile.text();
 const docData = getDocumentWordData(content);
 

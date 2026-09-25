@@ -741,7 +741,7 @@ export default function App() {
             <span className="brand-logo" aria-hidden="true">
               ☁️
             </span>
-            <span className="brand-name">WordCloud Studio</span>
+            <span className="brand-name">WordCloudy</span>
           </div>
           <div className="top-nav-tabs">
             <button
@@ -1105,7 +1105,18 @@ export default function App() {
       )}
       <footer className="wordcloud-footer">
         <div className="wordcloud-footer-inner">
-          <span className="footer-attribution">By Dustin Michels, 2026</span>
+          <span className="footer-attribution">
+            Made by{" "}
+            <a
+              href="https://dustinmichels.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="footer-link"
+            >
+              Dustin Michels
+            </a>
+            , 2026
+          </span>
         </div>
       </footer>
       {isAboutOpen && (

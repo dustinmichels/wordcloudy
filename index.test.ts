@@ -216,7 +216,7 @@ import {
   parsePastedText,
 } from "./src/sections";
 test("parseDocSections extracts the four main aggregate sections in exact order", async () => {
-  const content = await Bun.file("./doc.md").text();
+  const content = await Bun.file("./samples/doc.md").text();
   const sections = parseDocSections(content);
 
   expect(sections.map((s) => s.id)).toEqual([
@@ -265,7 +265,7 @@ test("parseDocSections dynamically turns any new H2 into a section and aggregate
 });
 
 test("getDocumentWordData computes overall and section-specific frequencies and sentences", async () => {
-  const content = await Bun.file("./doc.md").text();
+  const content = await Bun.file("./samples/doc.md").text();
   const data = getDocumentWordData(content);
 
   expect(data.all.length).toBeGreaterThan(0);
@@ -493,7 +493,10 @@ test("standalone build includes footer attribution", async () => {
   expect(await distFile.exists()).toBe(true);
   const html = await distFile.text();
   expect(html).toContain("wordcloud-footer");
-  expect(html).toContain("By Dustin Michels, 2026");
+  expect(html).toContain("footer-attribution");
+  expect(html).toContain("Made by");
+  expect(html).toContain("Dustin Michels");
+  expect(html).toContain("https://dustinmichels.com/");
 });
 test("standalone build includes Create New Word Cloud page and navigation", async () => {
   const distFile = Bun.file("./dist/index.html");
@@ -502,7 +505,7 @@ test("standalone build includes Create New Word Cloud page and navigation", asyn
 
   // Navigation elements
   expect(html).toContain("app-top-nav");
-  expect(html).toContain("WordCloud Studio");
+  expect(html).toContain("WordCloudy");
   expect(html).toContain("View Word Cloud");
   expect(html).toContain("+ Create New");
 
@@ -524,4 +527,14 @@ test("standalone build includes Share Word Cloud assets and modal", async () => 
   expect(html).toContain("Shareable App Link");
   expect(html).toContain("Copy Link");
   expect(html).toContain("share-url-input");
+});
+
+test("site and standalone build include favicon links", async () => {
+  const indexHtml = await Bun.file("./index.html").text();
+  expect(indexHtml).toContain('rel="icon"');
+  expect(indexHtml).toContain("icons8-cloud-keek-32.png");
+
+  const distHtml = await Bun.file("./dist/index.html").text();
+  expect(distHtml).toContain('rel="icon"');
+  expect(distHtml).toContain("data:image/png;base64,");
 });
