@@ -9,4 +9,4 @@
 
 - `us-constitution.html`: Exported HTML from the US Constitution Google Doc.
 - `housing-doc.html`: Exported HTML from the sample Housing Google Doc.
-- `doc.md`: Markdown version of the sample Housing document.
+- `housing-doc.md`: Markdown version of the sample Housing document.

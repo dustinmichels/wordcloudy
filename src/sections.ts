@@ -1,4 +1,11 @@
-import { getWordFrequencies, type WordFrequency } from "./stopwords";
+import {
+  countDocumentWords,
+  getWordFrequencies,
+  type DocumentWordStats,
+  type WordFrequency,
+} from "./stopwords";
+
+export type { DocumentWordStats };
 
 export interface Section {
   id: string;
@@ -11,6 +18,7 @@ export interface SectionWordData {
   title: string;
   words: WordFrequency[];
   sentences: string[];
+  stats?: DocumentWordStats;
 }
 
 export interface ParsedDocumentData {
@@ -18,6 +26,7 @@ export interface ParsedDocumentData {
   all: WordFrequency[];
   sections: SectionWordData[];
   sourceGoogleDocId?: string;
+  stats?: DocumentWordStats;
 }
 
 function slugify(text: string): string {
@@ -200,10 +209,9 @@ export function getDocumentWordData(
   topWordsLimit = 100,
   title?: string,
 ): ParsedDocumentData {
-  const allFrequencies = getWordFrequencies(stripMarkdownHeadings(markdown)).slice(
-    0,
-    topWordsLimit,
-  );
+  const strippedMarkdown = stripMarkdownHeadings(markdown);
+  const allFrequencies = getWordFrequencies(strippedMarkdown).slice(0, topWordsLimit);
+  const overallStats = countDocumentWords(strippedMarkdown);
   let parsedSections = parseDocSections(markdown);
 
   if (parsedSections.length === 0 && markdown.trim().length > 0) {
@@ -221,17 +229,22 @@ export function getDocumentWordData(
     }
   }
 
-  const sections: SectionWordData[] = parsedSections.map((sec) => ({
-    id: sec.id,
-    title: sec.title,
-    words: getWordFrequencies(stripMarkdownHeadings(sec.content)).slice(0, topWordsLimit),
-    sentences: extractSentences(sec.content),
-  }));
+  const sections: SectionWordData[] = parsedSections.map((sec) => {
+    const strippedSec = stripMarkdownHeadings(sec.content);
+    return {
+      id: sec.id,
+      title: sec.title,
+      words: getWordFrequencies(strippedSec).slice(0, topWordsLimit),
+      sentences: extractSentences(sec.content),
+      stats: countDocumentWords(strippedSec),
+    };
+  });
 
   return {
     title,
     all: allFrequencies,
     sections,
+    stats: overallStats,
   };
 }
 

@@ -1,5 +1,6 @@
 import { test, expect } from "bun:test";
 import {
+  countDocumentWords,
   tokenize,
   getWordFrequencies,
   getBigramFrequencies,
@@ -19,6 +20,13 @@ test("getWordFrequencies strips stop words and tallies frequencies", () => {
   expect(freqs[0]).toEqual({ text: "housing", value: 4 });
   expect(freqs.some((f) => f.text === "and" || f.text === "we")).toBe(false);
   expect(freqs.find((f) => f.text === "safe")).toEqual({ text: "safe", value: 1 });
+});
+
+test("countDocumentWords counts total words in text and words remaining after cleaning", () => {
+  const text = "Housing, housing and more housing! We need safe housing.";
+  const stats = countDocumentWords(text);
+  expect(stats.totalWords).toBe(9);
+  expect(stats.cleanedWords).toBe(6);
 });
 
 test("getWordFrequencies supports additional custom stop words", () => {
@@ -217,7 +225,7 @@ import {
   stripMarkdownHeadings,
 } from "./src/sections";
 test("parseDocSections extracts the four main aggregate sections in exact order", async () => {
-  const content = await Bun.file("./samples/doc.md").text();
+  const content = await Bun.file("./samples/housing-doc.md").text();
   const sections = parseDocSections(content);
 
   expect(sections.map((s) => s.id)).toEqual([
@@ -266,7 +274,7 @@ test("parseDocSections dynamically turns any new H2 into a section and aggregate
 });
 
 test("getDocumentWordData computes overall and section-specific frequencies and sentences", async () => {
-  const content = await Bun.file("./samples/doc.md").text();
+  const content = await Bun.file("./samples/housing-doc.md").text();
   const data = getDocumentWordData(content);
 
   expect(data.all.length).toBeGreaterThan(0);
@@ -285,8 +293,14 @@ test("getDocumentWordData computes overall and section-specific frequencies and 
   expect(costOfHousing).toBeDefined();
   expect(costOfHousing?.words[0]?.text).toBe("housing");
   expect(costOfHousing?.sentences.length).toBeGreaterThan(0);
+  expect(data.stats).toBeDefined();
+  expect(data.stats?.totalWords).toBeGreaterThan(0);
+  expect(data.stats?.cleanedWords).toBeGreaterThan(0);
+  expect(data.stats?.totalWords).toBeGreaterThanOrEqual(data.stats?.cleanedWords ?? 0);
+  expect(senseOfHome?.stats).toBeDefined();
+  expect(senseOfHome?.stats?.totalWords).toBeGreaterThan(0);
+  expect(senseOfHome?.stats?.cleanedWords).toBeGreaterThan(0);
 });
-
 test("cleanMarkdownFormatting strips markdown syntax and escapes", () => {
   expect(cleanMarkdownFormatting("- Housing is expensive\\!")).toBe("Housing is expensive!");
   expect(cleanMarkdownFormatting("• What does _choice_ mean to us?")).toBe(
@@ -486,8 +500,8 @@ test("standalone build includes About button and methodology modal assets", asyn
   expect(html).toContain("N-Grams");
   expect(html).toContain("Collocation Scoring");
 
-  // Security constraint: doc.md must not appear in HTML
-  expect(html.includes("doc.md")).toBe(false);
+  // Security constraint: housing-doc.md must not appear in HTML
+  expect(html.includes("housing-doc.md")).toBe(false);
 });
 test("standalone build includes footer attribution", async () => {
   const distFile = Bun.file("./dist/index.html");
@@ -528,6 +542,28 @@ test("standalone build includes Share Word Cloud assets and modal", async () => 
   expect(html).toContain("Shareable App Link");
   expect(html).toContain("Copy Link");
   expect(html).toContain("share-url-input");
+});
+
+test("standalone build includes word count stats widget under the word cloud", async () => {
+  const distFile = Bun.file("./dist/index.html");
+  expect(await distFile.exists()).toBe(true);
+  const html = await distFile.text();
+
+  expect(html).toContain("wordcloud-stats-widget");
+  expect(html).toContain("words in");
+  expect(html).toContain("after cleaning");
+  expect(html).toContain("wordcloud-stats-counts");
+});
+
+test("standalone build defaults to the US Constitution example", async () => {
+  const distFile = Bun.file("./dist/index.html");
+  expect(await distFile.exists()).toBe(true);
+  const html = await distFile.text();
+
+  expect(html).toContain("The Constitution of the United States");
+  expect(html).toContain("Article. I.");
+  expect(html).toContain("shall");
+  expect(html).toContain("1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc");
 });
 
 test("site and standalone build include favicon links", async () => {

@@ -1,6 +1,6 @@
 # Migration Plan: React to Vue 3 + Vite (with Bun)
 
-This document outlines the step-by-step procedure to migrate the Housing Word Cloud project from React 19 + Visx + Bun HTML imports to **Vue 3 + Vite** while continuing to use **Bun** as the package manager, runtime, and test runner.
+This document outlines the step-by-step procedure to migrate the WordCloudy project (formerly Housing Word Cloud) from React 19 + Visx + Bun HTML imports to **Vue 3 + Vite** while continuing to use **Bun** as the package manager, runtime, and test runner.
 
 ---
 
@@ -47,18 +47,20 @@ This document outlines the step-by-step procedure to migrate the Housing Word Cl
 
 - [ ] **2.1 Create `vite.config.ts`**
   - Configure `@vitejs/plugin-vue` and `vite-plugin-singlefile`.
-  - Add a custom Vite dev middleware plugin for `/api/sections` so the dev server can serve word data parsed from `samples/doc.md` via `getDocumentWordData()` without needing a separate backend server process:
+  - Add a custom Vite dev middleware plugin for `/api/sections` so the dev server can serve word data parsed from the default document (`samples/us-constitution.html`) via `parseGoogleDocHtml()` and `getDocumentWordData()` without needing a separate backend server process:
     ```ts
     // vite.config.ts
     import { defineConfig } from "vite";
     import vue from "@vitejs/plugin-vue";
     import { viteSingleFile } from "vite-plugin-singlefile";
     import { readFileSync } from "node:fs";
-    import { getDocumentWordData } from "./src/sections";
+    import { getDocumentWordData, parseGoogleDocHtml } from "./src/sections";
 
     export default defineConfig(({ command }) => {
-      const docContent = readFileSync("./samples/doc.md", "utf-8");
-      const docData = getDocumentWordData(docContent);
+      const rawHtml = readFileSync("./samples/us-constitution.html", "utf-8");
+      const { title, markdown } = parseGoogleDocHtml(rawHtml);
+      const docData = getDocumentWordData(markdown, 100, title);
+      docData.sourceGoogleDocId = "1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc";
 
       return {
         plugins: [
@@ -123,11 +125,13 @@ This document outlines the step-by-step procedure to migrate the Housing Word Cl
   - `src/components/AboutModal.vue`: "About & Methodology" modal.
     - Ensure accessibility attributes match existing test expectations: `role="dialog"`, `aria-modal="true"`, `aria-labelledby="about-modal-title"`.
     - Include headings: "Word Cloud Methodology", "Text Normalization", "N-Grams", "Collocation Scoring".
+    - Note normalization description filters out grammatical stop words so "substantive themes stand out".
   - `src/components/ShareModal.vue`: Google Doc sharing dialog.
     - Includes `share-btn`, `share-dialog`, input with class `share-url-input`, copy button, and encoded doc ID.
   - `src/components/SentenceDrawer.vue`: Side panel showing sentences containing the selected word, rendered using `HighlightedText`.
   - `src/components/CreateCloudView.vue`: Import page supporting Google Doc URL fetching and raw Markdown/text pasting.
-
+    - Supports quick-fill button "Try Constitution example doc" loading Google Doc ID `1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc`.
+    - Document title placeholder: `e.g. The Constitution of the United States`.
 - [ ] **3.5 Implement `src/App.vue` & `src/main.ts`**
   - `src/main.ts`:
     ```ts
@@ -145,24 +149,47 @@ This document outlines the step-by-step procedure to migrate the Housing Word Cl
       - `spiralType`: `"archimedean" | "rectangular"`
       - `withRotation`: boolean
       - URL query handling: parse `?doc=` / `#doc=` for shared Google Docs.
+    - Header and metadata:
+      - Document title defaults to `WordCloud of "${docData.title}"` or fallback `WordCloud of "The Constitution of the United States"`.
+      - Subtitle displays `"Custom Document"` or `"September 1787"` for default document.
+      - Reset action title: `"Return to the default document"`.
     - Implement export buttons:
-      - Export PNG via canvas render.
+      - Export PNG via canvas render, saving dynamically formatted filename: `${slug}-wordcloud.png` (or `wordcloud.png`).
       - Export SVG via serialized SVG element.
-    - Render top nav (`app-top-nav`), section selector chips/dropdown, search input, footer attribution (`"By Dustin Michels, 2026"`).
+    - Render top nav (`app-top-nav`) with brand `"WordCloudy"`, section selector chips/dropdown, search input, footer attribution (`"By Dustin Michels, 2026"`).
 
 ---
 
 ## Phase 4: HTML Template & Single-File Bundling
 
 - [ ] **4.1 Update `index.html`**
-  - Point script tag to Vue entry point:
+  - Point script tag to Vue entry point and retain favicon links:
     ```html
     <!doctype html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>WordCloud of "Our Experiences of Housing..."</title>
+        <title>WordCloudy</title>
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href="./assets/favicons/icons8-cloud-keek-32.png"
+        />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="16x16"
+          href="./assets/favicons/icons8-cloud-keek-16.png"
+        />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="96x96"
+          href="./assets/favicons/icons8-cloud-keek-96.png"
+        />
+        <link rel="stylesheet" href="./src/frontend.css" />
       </head>
       <body>
         <div id="root"></div>
@@ -172,8 +199,8 @@ This document outlines the step-by-step procedure to migrate the Housing Word Cl
     ```
 - [ ] **4.2 Verify single-file HTML generation**
   - Run `bun run build`.
-  - Verify `dist/index.html` is generated with inlined CSS, bundled JS, and pre-baked `__DOCUMENT_DATA__`.
-  - Verify that the raw contents of `samples/doc.md` are not leaked directly into the bundle.
+  - Verify `dist/index.html` is generated with inlined CSS, bundled JS, base64 data URI favicons, and pre-baked `__DOCUMENT_DATA__`.
+  - Verify that the raw contents of `samples/housing-doc.md` and `samples/us-constitution.html` are not leaked directly into the bundle.
 
 ---
 
@@ -181,6 +208,10 @@ This document outlines the step-by-step procedure to migrate the Housing Word Cl
 
 - [ ] **5.1 Audit `index.test.ts` for bundle assertions**
   - Check assertions verifying `dist/index.html`:
+    - `expect(html).toContain("The Constitution of the United States")`
+    - `expect(html).toContain("Article. I.")`
+    - `expect(html).toContain("shall")`
+    - `expect(html).toContain("1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc")`
     - `expect(html).toContain("about-btn")`
     - `expect(html).toContain('role="dialog"')` (or `role: "dialog"`)
     - `expect(html).toContain('"aria-modal":"true"')` (or `aria-modal="true"`)
@@ -188,7 +219,9 @@ This document outlines the step-by-step procedure to migrate the Housing Word Cl
     - `expect(html).toContain("By Dustin Michels, 2026")`
     - `expect(html).toContain("app-top-nav")`
     - `expect(html).toContain("Share Word Cloud")`
-    - `expect(html.includes("doc.md")).toBe(false)`
+    - `expect(html.includes("housing-doc.md")).toBe(false)`
+    - `expect(distHtml).toContain('rel="icon"')`
+    - `expect(distHtml).toContain("data:image/png;base64,")`
   - Update string matching in `index.test.ts` if Vue's template compiler renders attributes as HTML attributes (e.g. `role="dialog"`) rather than minified JS object keys (`role:"dialog"`).
 - [ ] **5.2 Run test suite**
   ```bash

@@ -1,16 +1,18 @@
 import { mkdir } from "node:fs/promises";
-import { getDocumentWordData } from "./src/sections";
+import { getDocumentWordData, parseGoogleDocHtml } from "./src/sections";
 
 async function build() {
-  console.log("Building Housing Word Cloud...");
+  console.log("Building WordCloudy...");
 
   // 1. Read source document and extract word frequencies
-  const docFile = Bun.file("./samples/doc.md");
+  const docFile = Bun.file("./samples/us-constitution.html");
   if (!(await docFile.exists())) {
-    throw new Error("samples/doc.md not found");
+    throw new Error("samples/us-constitution.html not found");
   }
-  const content = await docFile.text();
-  const docData = getDocumentWordData(content);
+  const rawHtml = await docFile.text();
+  const { title, markdown } = parseGoogleDocHtml(rawHtml);
+  const docData = getDocumentWordData(markdown, 100, title);
+  docData.sourceGoogleDocId = "1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc";
   const topWords = docData.all;
 
   console.log(
@@ -78,8 +80,8 @@ ${safeJs}
 </html>`;
 
   // 5. Verify build integrity
-  if (html.includes("doc.md")) {
-    throw new Error("Security verification failed: 'doc.md' string found in final build");
+  if (html.includes("housing-doc.md")) {
+    throw new Error("Security verification failed: 'housing-doc.md' string found in final build");
   }
   const topWord = topWords[0];
   if (!topWord || !html.includes(topWord.text)) {

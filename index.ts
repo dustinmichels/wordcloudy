@@ -1,9 +1,11 @@
 import index from "./index.html";
-import { getDocumentWordData } from "./src/sections";
+import { getDocumentWordData, parseGoogleDocHtml } from "./src/sections";
 
-const docFile = Bun.file("./samples/doc.md");
-const content = await docFile.text();
-const docData = getDocumentWordData(content);
+const docFile = Bun.file("./samples/us-constitution.html");
+const html = await docFile.text();
+const { title, markdown } = parseGoogleDocHtml(html);
+const docData = getDocumentWordData(markdown, 100, title);
+docData.sourceGoogleDocId = "1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc";
 
 const server = Bun.serve({
   port: 3000,

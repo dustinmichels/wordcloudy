@@ -235,6 +235,11 @@ export interface WordFrequency {
   value: number;
 }
 
+export interface DocumentWordStats {
+  totalWords: number;
+  cleanedWords: number;
+}
+
 /**
  * Normalizes quotes/apostrophes, strips markdown links/markers, and converts text to lowercase.
  */
@@ -509,4 +514,28 @@ export function getWordFrequencies(text: string, options: FrequencyOptions = {})
   return Object.entries(frequencies)
     .map(([text, value]) => ({ text, value }))
     .sort((a, b) => b.value - a.value || a.text.localeCompare(b.text));
+}
+
+/**
+ * Counts total words in raw/cleaned text and the count remaining after stop words are stripped.
+ */
+export function countDocumentWords(
+  text: string,
+  options: FrequencyOptions = {},
+): DocumentWordStats {
+  const { stopWords = DEFAULT_STOP_WORDS, additionalStopWords, ...tokenizeOpts } = options;
+  const cleaned = cleanText(text);
+  const totalTokens = cleaned.match(/[a-z0-9]+(?:'[a-z0-9]+)?/g) || [];
+  const tokens = tokenize(text, tokenizeOpts);
+  const lookup = buildStopWordLookup(stopWords, additionalStopWords);
+  let cleanedWords = 0;
+  for (const token of tokens) {
+    if (!lookup[token]) {
+      cleanedWords++;
+    }
+  }
+  return {
+    totalWords: totalTokens.length,
+    cleanedWords,
+  };
 }

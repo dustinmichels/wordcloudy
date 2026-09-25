@@ -19,11 +19,17 @@ export interface WordData {
   value: number;
 }
 
+export interface DocumentWordStats {
+  totalWords: number;
+  cleanedWords: number;
+}
+
 export interface SectionWordData {
   id: string;
   title: string;
   words: WordData[];
   sentences?: string[];
+  stats?: DocumentWordStats;
 }
 
 export interface ParsedDocumentData {
@@ -31,8 +37,16 @@ export interface ParsedDocumentData {
   all: WordData[];
   sections: SectionWordData[];
   sourceGoogleDocId?: string;
+  stats?: DocumentWordStats;
 }
 type SpiralType = "archimedean" | "rectangular";
+
+function formatPercent(value: number): string {
+  if (value <= 0) return "0%";
+  if (value < 0.1) return `${value.toFixed(2)}%`;
+  if (value < 10) return `${value.toFixed(1)}%`;
+  return `${Math.round(value)}%`;
+}
 
 const colors = ["#143059", "#2F6B9A", "#82a6c2"];
 
@@ -202,7 +216,7 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
 
   const handleExampleClick = () => {
     setGdocUrl(
-      "https://docs.google.com/document/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/edit?tab=t.0",
+      "https://docs.google.com/document/d/1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc/edit?tab=t.0",
     );
     setErrorMessage(null);
   };
@@ -347,7 +361,7 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
                     onClick={handleExampleClick}
                     disabled={isLoading}
                   >
-                    Try Housing example doc
+                    Try Constitution example doc
                   </button>
                 </div>
               </div>
@@ -361,7 +375,7 @@ function CreateCloudView({ onCreate, onCancel }: CreateCloudViewProps) {
                   id="gdoc-title-input"
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Housing Experiences"
+                  placeholder="e.g. The Constitution of the United States"
                   value={customTitle}
                   onChange={(e) => setCustomTitle(e.target.value)}
                   disabled={isLoading}
@@ -646,6 +660,57 @@ export default function App() {
 
     return results;
   }, [docData, selectedWord, selectedSection]);
+  const activeStats = useMemo(() => {
+    if (!docData) return { totalWords: 0, cleanedWords: 0 };
+    if (selectedSection === "all") {
+      if (docData.stats) return docData.stats;
+      const cleaned = docData.all.reduce((acc, w) => acc + w.value, 0);
+      return { totalWords: cleaned, cleanedWords: cleaned };
+    }
+    const sec = docData.sections.find((s) => s.id === selectedSection);
+    if (sec?.stats) return sec.stats;
+    if (sec?.words) {
+      const cleaned = sec.words.reduce((acc, w) => acc + w.value, 0);
+      return { totalWords: cleaned, cleanedWords: cleaned };
+    }
+    return { totalWords: 0, cleanedWords: 0 };
+  }, [docData, selectedSection]);
+
+  const selectedWordStats = useMemo(() => {
+    if (!selectedWord || !docData) return null;
+    const wordLower = selectedWord.toLowerCase();
+    const wordNormalized = wordLower.replace(/-/g, " ");
+
+    const match = activeWords.find((w) => {
+      const wLower = w.text.toLowerCase();
+      return wLower === wordLower || wLower.replace(/-/g, " ") === wordNormalized;
+    });
+
+    let count = match?.value;
+    if (count === undefined) {
+      const sourceList =
+        selectedSection === "all"
+          ? docData.all
+          : (docData.sections.find((s) => s.id === selectedSection)?.words ?? []);
+      const fallbackMatch = sourceList.find((w) => {
+        const wLower = w.text.toLowerCase();
+        return wLower === wordLower || wLower.replace(/-/g, " ") === wordNormalized;
+      });
+      count = fallbackMatch?.value ?? 0;
+    }
+
+    const total = activeStats.totalWords;
+    const cleaned = activeStats.cleanedWords;
+
+    const docPercent = total > 0 ? (count / total) * 100 : 0;
+    const cleanedPercent = cleaned > 0 ? (count / cleaned) * 100 : 0;
+
+    return {
+      count,
+      docPercent: formatPercent(docPercent),
+      cleanedPercent: formatPercent(cleanedPercent),
+    };
+  }, [selectedWord, docData, activeWords, selectedSection, activeStats]);
 
   // Reset selected word if switching sections and it's not present in the new section
   const handleSectionChange = useCallback(
@@ -710,8 +775,13 @@ export default function App() {
 
         const pngUrl = canvas.toDataURL("image/png");
         const downloadLink = document.createElement("a");
-        downloadLink.download = "housing-wordcloud.png";
-        downloadLink.href = pngUrl;
+        const filename = docData?.title
+          ? `${docData.title
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/(^-|-$)/g, "")}-wordcloud.png`
+          : "wordcloud.png";
+        downloadLink.download = filename;
         downloadLink.click();
         setSaving(false);
       };
@@ -760,71 +830,16 @@ export default function App() {
             </button>
           </div>
           <div className="top-nav-actions">
-            {currentPage === "view" && docData?.sourceGoogleDocId && (
-              <button
-                type="button"
-                className="nav-inline-btn share-nav-btn"
-                onClick={() => {
-                  setIsShareOpen(true);
-                  setCopyStatus("idle");
-                }}
-                title="Share word cloud link"
-              >
-                <svg
-                  className="share-btn-icon"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="18" cy="5" r="3" />
-                  <circle cx="6" cy="12" r="3" />
-                  <circle cx="18" cy="19" r="3" />
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-                </svg>
-                Share Link
-              </button>
-            )}
             {isCustomDoc && (
               <button
                 type="button"
                 className="reset-doc-btn"
                 onClick={handleResetToDefault}
-                title="Return to the default housing document"
+                title="Return to the default document"
               >
                 Reset to Default
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setIsAboutOpen(true)}
-              aria-haspopup="dialog"
-              aria-expanded={isAboutOpen}
-            >
-              <svg
-                className="about-btn-icon"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="16" x2="12" y2="12" />
-                <line x1="12" y1="8" x2="12.01" y2="8" />
-              </svg>
-              About
-            </button>
           </div>
         </div>
       </header>
@@ -879,10 +894,10 @@ export default function App() {
             <h1>
               {docData?.title
                 ? `WordCloud of "${docData.title}"`
-                : `WordCloud of "Our Experiences of Housing, What Housing Does, and Sense of Being 'At Home'"`}
+                : `WordCloud of "The Constitution of the United States"`}
             </h1>
             <div className="wordcloud-header-meta">
-              <span>{isCustomDoc ? "Custom Document" : "September 2026"}</span>
+              <span>{isCustomDoc ? "Custom Document" : "September 1787"}</span>
               <span className="meta-separator" aria-hidden="true">
                 •
               </span>
@@ -968,23 +983,69 @@ export default function App() {
                 ) : activeWords.length === 0 ? (
                   <div className="wordcloud-message">No words found.</div>
                 ) : (
-                  <div className="wordcloud-stage" ref={stageRef}>
-                    <ParentSize debounceTime={60}>
-                      {({ width, height }) =>
-                        width > 0 && height > 0 ? (
-                          <CloudView
-                            words={activeWords}
-                            width={width}
-                            height={height}
-                            spiralType={spiralType}
-                            withRotation={withRotation}
-                            selectedWord={selectedWord}
-                            onWordClick={handleWordClick}
-                          />
-                        ) : null
-                      }
-                    </ParentSize>
-                  </div>
+                  <>
+                    <div className="wordcloud-stage" ref={stageRef}>
+                      <ParentSize debounceTime={60}>
+                        {({ width, height }) =>
+                          width > 0 && height > 0 ? (
+                            <CloudView
+                              words={activeWords}
+                              width={width}
+                              height={height}
+                              spiralType={spiralType}
+                              withRotation={withRotation}
+                              selectedWord={selectedWord}
+                              onWordClick={handleWordClick}
+                            />
+                          ) : null
+                        }
+                      </ParentSize>
+                    </div>
+                    <div className="wordcloud-stats-widget" role="status" aria-live="polite">
+                      <div className="wordcloud-stats-counts">
+                        <span className="wordcloud-stats-item">
+                          <strong>{activeStats.totalWords.toLocaleString()}</strong> words in{" "}
+                          {selectedSection === "all" ? "doc" : "section"}
+                        </span>
+                        <span className="wordcloud-stats-divider">|</span>
+                        <span className="wordcloud-stats-item">
+                          <strong>{activeStats.cleanedWords.toLocaleString()}</strong> after
+                          cleaning
+                        </span>
+                      </div>
+                      {selectedWord && selectedWordStats ? (
+                        <div className="wordcloud-stats-selected">
+                          <span className="wordcloud-stats-divider">|</span>
+                          <span
+                            className="wordcloud-stats-badge"
+                            title={`${selectedWordStats.count.toLocaleString()} occurrences`}
+                          >
+                            {selectedWord.replace(/-/g, " ")}
+                          </span>
+                          <span className="wordcloud-stats-frequency">
+                            <strong>{selectedWordStats.count.toLocaleString()}</strong>{" "}
+                            {selectedWordStats.count === 1 ? "time" : "times"}
+                          </span>
+                          <span className="wordcloud-stats-pct">
+                            ({selectedWordStats.docPercent} of{" "}
+                            {selectedSection === "all" ? "doc" : "section"} ·{" "}
+                            {selectedWordStats.cleanedPercent} after cleaning)
+                          </span>
+                          <button
+                            type="button"
+                            className="wordcloud-stats-clear"
+                            onClick={() => setSelectedWord(null)}
+                            aria-label="Clear word selection"
+                            title="Clear selection"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="wordcloud-stats-hint">Click a word to inspect</span>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
               {/* Right: Controls & Example Sentences */}
@@ -1156,8 +1217,8 @@ export default function App() {
                   <p>
                     Markdown formatting, list bullets, and typographical punctuation are cleaned and
                     tokenized. Grammatical stop words (like <em>what</em>, <em>are</em>,{" "}
-                    <em>the</em>, and <em>with</em>) are filtered out so substantive housing themes
-                    stand out.
+                    <em>the</em>, and <em>with</em>) are filtered out so substantive themes stand
+                    out.
                   </p>
                 </div>
 
