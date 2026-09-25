@@ -328,6 +328,7 @@ export function getCollocations(text: string, options: CollocationOptions = {}):
   for (const [bg, count] of Object.entries(bigramCounts)) {
     if (count < minCount) continue;
     const [w1, w2] = bg.split("-");
+    if (!w1 || !w2) continue;
     const countW1 = unigramCounts[w1] ?? 0;
     const countW2 = unigramCounts[w2] ?? 0;
     if (!countW1 || !countW2) continue;

@@ -202,11 +202,18 @@ test("getWordFrequencies respects includeTrigrams: false", () => {
   expect(freqs.find((f) => f.text === "cost-of-housing")).toBeUndefined();
 });
 import {
-  parseDocSections,
-  getDocumentWordData,
-  extractSentences,
-  cleanMarkdownFormatting,
   buildTermRegex,
+  cleanMarkdownFormatting,
+  decodeGoogleDocShareCode,
+  encodeGoogleDocShareCode,
+  extractGoogleDocId,
+  extractSentences,
+  fetchAndParseGoogleDoc,
+  getDocumentWordData,
+  getShareableAppUrl,
+  parseDocSections,
+  parseGoogleDocHtml,
+  parsePastedText,
 } from "./src/sections";
 test("parseDocSections extracts the four main aggregate sections in exact order", async () => {
   const content = await Bun.file("./doc.md").text();
@@ -326,6 +333,138 @@ test("buildTermRegex correctly matches unigrams, bigrams, and trigrams", () => {
   expect(trigramRx.test("move to neighborhoods")).toBe(true);
   expect(trigramRx.test("relocate to neighborhoods")).toBe(false);
 });
+test("extractGoogleDocId handles various URL formats and raw IDs", () => {
+  expect(
+    extractGoogleDocId(
+      "https://docs.google.com/document/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/edit?tab=t.0",
+    ),
+  ).toBe("1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA");
+
+  expect(
+    extractGoogleDocId(
+      "https://docs.google.com/document/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/edit",
+    ),
+  ).toBe("1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA");
+
+  expect(
+    extractGoogleDocId(
+      "https://docs.google.com/document/u/0/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/preview",
+    ),
+  ).toBe("1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA");
+
+  expect(extractGoogleDocId("1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA")).toBe(
+    "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA",
+  );
+
+  expect(extractGoogleDocId("https://example.com/not-a-google-doc")).toBeNull();
+  expect(extractGoogleDocId("   ")).toBeNull();
+});
+
+test("parseGoogleDocHtml extracts title, headings, and lists from HTML export", () => {
+  const sampleHtml = `
+  <html>
+    <head>
+      <style>.c-bold { font-weight: 700; }</style>
+      <title>Sample Document Title</title>
+    </head>
+    <body>
+      <p class="c-bold"><span>First Section</span></p>
+      <ul class="lst">
+        <li><span>First item in section one.</span></li>
+        <li><span>Second item in section one.</span></li>
+      </ul>
+      <p class="c-bold"><span>Second Section</span></p>
+      <p><span>Regular paragraph content here.</span></p>
+    </body>
+  </html>`;
+
+  const parsed = parseGoogleDocHtml(sampleHtml);
+  expect(parsed.title).toBe("Sample Document Title");
+  expect(parsed.markdown).toContain("## First Section");
+  expect(parsed.markdown).toContain("- First item in section one.");
+  expect(parsed.markdown).toContain("## Second Section");
+  expect(parsed.markdown).toContain("Regular paragraph content here.");
+});
+
+test("parsePastedText extracts title and creates fallback section for raw text", () => {
+  const markdownWithTitle = `# Urban Planning Principles\n\n## Affordability\nHousing costs should be manageable. Families need secure housing.\n\n## Transit\nTransit should be walkable and convenient.`;
+  const data1 = parsePastedText(markdownWithTitle);
+  expect(data1.title).toBe("Urban Planning Principles");
+  expect(data1.sections.length).toBe(2);
+  expect(data1.sections[0]?.title).toBe("Affordability");
+  expect(data1.sections[1]?.title).toBe("Transit");
+
+  // Raw text without any # or ## headings
+  const plainText =
+    "Housing prices are climbing rapidly. Communities need more affordable homes. Dense developments support local transit.";
+  const data2 = parsePastedText(plainText, "Custom Title");
+  expect(data2.title).toBe("Custom Title");
+  expect(data2.sections.length).toBe(1);
+  expect(data2.sections[0]?.title).toBe("Custom Title");
+  expect(data2.sections[0]?.sentences.length).toBe(3);
+  expect(data2.all.length).toBeGreaterThan(0);
+});
+
+test("fetchAndParseGoogleDoc loads and parses public Google Doc", async () => {
+  const docData = await fetchAndParseGoogleDoc(
+    "https://docs.google.com/document/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/edit?tab=t.0",
+  );
+
+  expect(docData.title).toBeDefined();
+  expect(docData.title).toContain("Housing");
+  expect(docData.sections.length).toBeGreaterThanOrEqual(4);
+  expect(docData.all.length).toBeGreaterThan(0);
+
+  const housingWord = docData.all.find((w) => w.text === "housing");
+  expect(housingWord).toBeDefined();
+  expect(housingWord?.value).toBeGreaterThan(5);
+});
+
+test("fetchAndParseGoogleDoc throws clear error for invalid Google Doc ID", async () => {
+  await expect(fetchAndParseGoogleDoc("https://example.com/not-a-doc")).rejects.toThrow(
+    "Invalid Google Doc link",
+  );
+});
+test("encodeGoogleDocShareCode extracts and compresses Google Doc URL into 44-character doc ID", () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const fullUrl = `https://docs.google.com/document/d/${rawId}/edit?tab=t.0#heading=h.123`;
+  expect(encodeGoogleDocShareCode(fullUrl)).toBe(rawId);
+  expect(encodeGoogleDocShareCode(rawId)).toBe(rawId);
+});
+
+test("getShareableAppUrl generates clean ?doc= share link", () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const shareUrl = getShareableAppUrl(rawId, "https://wordcloud.example.com/app");
+  expect(shareUrl).toBe(`https://wordcloud.example.com/app?doc=${rawId}`);
+});
+
+test("decodeGoogleDocShareCode decodes multiple formats (query, hash, base64, raw ID)", () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const fullUrl = `https://docs.google.com/document/d/${rawId}/edit`;
+
+  // Raw ID
+  expect(decodeGoogleDocShareCode(rawId)).toBe(rawId);
+  // Full Google Doc URL
+  expect(decodeGoogleDocShareCode(fullUrl)).toBe(rawId);
+  // App URL with ?doc=
+  expect(decodeGoogleDocShareCode(`https://wordcloud.example.com/?doc=${rawId}`)).toBe(rawId);
+  // App URL with ?gdoc= or ?share=
+  expect(decodeGoogleDocShareCode(`https://wordcloud.example.com/?share=${rawId}`)).toBe(rawId);
+  // App URL with #doc=
+  expect(decodeGoogleDocShareCode(`https://wordcloud.example.com/#doc=${rawId}`)).toBe(rawId);
+  // Base64 encoded
+  expect(decodeGoogleDocShareCode(btoa(rawId))).toBe(rawId);
+  expect(decodeGoogleDocShareCode(btoa(fullUrl))).toBe(rawId);
+  // Invalid inputs
+  expect(decodeGoogleDocShareCode("")).toBe(null);
+  expect(decodeGoogleDocShareCode("invalid-short-code")).toBe(null);
+});
+
+test("fetchAndParseGoogleDoc sets sourceGoogleDocId on returned data", async () => {
+  const rawId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const data = await fetchAndParseGoogleDoc(rawId);
+  expect(data.sourceGoogleDocId).toBe(rawId);
+});
 test("standalone build includes About button and methodology modal assets", async () => {
   const distFile = Bun.file("./dist/index.html");
   expect(await distFile.exists()).toBe(true);
@@ -355,4 +494,34 @@ test("standalone build includes footer attribution", async () => {
   const html = await distFile.text();
   expect(html).toContain("wordcloud-footer");
   expect(html).toContain("By Dustin Michels, 2026");
+});
+test("standalone build includes Create New Word Cloud page and navigation", async () => {
+  const distFile = Bun.file("./dist/index.html");
+  expect(await distFile.exists()).toBe(true);
+  const html = await distFile.text();
+
+  // Navigation elements
+  expect(html).toContain("app-top-nav");
+  expect(html).toContain("WordCloud Studio");
+  expect(html).toContain("View Word Cloud");
+  expect(html).toContain("+ Create New");
+
+  // Create form elements
+  expect(html).toContain("Google Doc Link");
+  expect(html).toContain("Paste Text / Markdown");
+  expect(html).toContain("Generate Word Cloud");
+  expect(html).toContain("Anyone with the link can view");
+});
+test("standalone build includes Share Word Cloud assets and modal", async () => {
+  const distFile = Bun.file("./dist/index.html");
+  expect(await distFile.exists()).toBe(true);
+  const html = await distFile.text();
+
+  // Share modal and buttons
+  expect(html).toContain("share-btn");
+  expect(html).toContain("share-dialog");
+  expect(html).toContain("Share Word Cloud");
+  expect(html).toContain("Shareable App Link");
+  expect(html).toContain("Copy Link");
+  expect(html).toContain("share-url-input");
 });
