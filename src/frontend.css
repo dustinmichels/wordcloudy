@@ -47,12 +47,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem 1.5rem 2.5rem;
+  padding: 1.25rem 1.5rem 1.25rem;
 }
 
 .wordcloud-header {
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .wordcloud-header h1 {
@@ -75,7 +75,7 @@ body {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: -0.05rem;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.35rem;
   font-size: 0.95rem;
   color: var(--text-secondary);
 }
@@ -110,6 +110,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 0.65rem;
   font-size: 0.95rem;
   color: var(--text-secondary);
@@ -179,6 +180,46 @@ body {
 }
 
 .share-btn-icon {
+  flex-shrink: 0;
+}
+
+.share-btn.copied {
+  background-color: #059669;
+  border-color: #059669;
+  color: #fff;
+}
+
+/* View doc button styles */
+.view-doc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: transparent;
+  color: var(--accent-color);
+  border: 1px solid var(--border-color);
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease-in-out;
+  line-height: 1.4;
+}
+
+.view-doc-btn:hover {
+  background-color: var(--bg-secondary);
+  border-color: var(--accent-color);
+  color: var(--accent-dark);
+  text-decoration: none;
+}
+
+.view-doc-btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.view-doc-btn-icon {
   flex-shrink: 0;
 }
 
@@ -462,7 +503,7 @@ body {
 
 .wordcloud-stage {
   width: 100%;
-  height: 560px;
+  height: clamp(440px, calc(100vh - 350px), 560px);
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -1527,91 +1568,55 @@ mark.highlighted-term {
 .btn-spinner-icon {
   flex-shrink: 0;
 }
-/* Share dialog styles */
-.share-dialog {
-  max-width: 580px;
-}
-
-.share-modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.5rem;
-}
-
-.share-field-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.share-input-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.share-url-input {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.85rem;
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  flex: 1;
-}
-
-.copy-share-btn {
+/* Toast notification styles */
+.wordcloud-toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #0f172a;
+  color: #ffffff;
+  padding: 0.6rem 1.15rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  white-space: nowrap;
-  padding: 0.65rem 1.1rem;
+  gap: 0.5rem;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.25),
+    0 8px 10px -6px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  animation: toast-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.wordcloud-toast .toast-icon {
   flex-shrink: 0;
 }
 
-.copy-share-btn.copied {
-  background-color: #059669;
-  border-color: #059669;
-  color: white;
+.wordcloud-toast .toast-icon-success {
+  color: #34d399;
 }
 
-.share-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+.wordcloud-toast.error {
+  background-color: #7f1d1d;
+  border: 1px solid #b91c1c;
 }
 
-.share-meta-label {
-  font-weight: 500;
+.wordcloud-toast .toast-icon-error {
+  color: #fca5a5;
 }
 
-.share-meta-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  padding: 0.2rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: var(--text-primary);
-}
-
-.share-source-row {
-  font-size: 0.875rem;
-}
-
-.share-source-link {
-  color: var(--accent-color);
-  text-decoration: none;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.share-source-link:hover {
-  text-decoration: underline;
-  color: var(--accent-dark);
+@keyframes toast-fade-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 @media (max-width: 900px) {

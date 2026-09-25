@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   Check,
   Cloud,
-  Copy,
   Download,
   ExternalLink,
   Eye,
@@ -610,8 +609,9 @@ export default function App() {
   const [loadingMessage, setLoadingMessage] = useState<string>("Loading word cloud...");
   const [saving, setSaving] = useState<boolean>(false);
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
-  const [isShareOpen, setIsShareOpen] = useState<boolean>(false);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied">("idle");
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
   const [sharedDocError, setSharedDocError] = useState<string | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const sentencePanelRef = useRef<HTMLDivElement>(null);
@@ -742,13 +742,77 @@ export default function App() {
       );
     }
   }, []);
+  useEffect(() => {
+    return () => {
+      clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
+
+  const handleShare = useCallback(async () => {
+    const url = docData?.sourceGoogleDocId
+      ? getShareableAppUrl(
+          docData.sourceGoogleDocId,
+          undefined,
+          docData.attribution,
+          docData.date,
+          docData.customTitle,
+        )
+      : typeof window !== "undefined"
+        ? window.location.href
+        : "";
+
+    if (!url) return;
+
+    let success = false;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        success = true;
+      }
+    } catch {
+      // Fallback below
+    }
+
+    if (!success && typeof document !== "undefined") {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = url;
+        textArea.style.position = "fixed";
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        success = document.execCommand("copy");
+        document.body.removeChild(textArea);
+      } catch {
+        success = false;
+      }
+    }
+
+    clearTimeout(toastTimeoutRef.current);
+
+    if (success) {
+      setCopyStatus("copied");
+      setToast({ message: "Link copied to clipboard!", type: "success" });
+      toastTimeoutRef.current = setTimeout(() => {
+        setCopyStatus("idle");
+        setToast(null);
+      }, 2500) as unknown as number;
+    } else {
+      setCopyStatus("idle");
+      setToast({ message: "Failed to copy link", type: "error" });
+      toastTimeoutRef.current = setTimeout(() => {
+        setToast(null);
+      }, 2500) as unknown as number;
+    }
+  }, [docData]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" || event.key === "Esc") {
-        if (isShareOpen) {
-          setIsShareOpen(false);
-        } else if (isAboutOpen) {
+        if (isAboutOpen) {
           setIsAboutOpen(false);
         } else {
           setSelectedWord(null);
@@ -759,16 +823,16 @@ export default function App() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isAboutOpen, isShareOpen]);
+  }, [isAboutOpen]);
 
   useEffect(() => {
-    if (!isAboutOpen && !isShareOpen) return;
+    if (!isAboutOpen) return;
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = originalOverflow;
     };
-  }, [isAboutOpen, isShareOpen]);
+  }, [isAboutOpen]);
 
   const activeWords = useMemo(() => {
     if (!docData) return [];
@@ -895,47 +959,52 @@ export default function App() {
       clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
       clone.setAttribute("width", String(width));
       clone.setAttribute("height", String(height));
+      if (!clone.getAttribute("viewBox")) {
+        clone.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      }
 
       const svgData = new XMLSerializer().serializeToString(clone);
-      const svgBlob = new Blob([svgData], {
-        type: "image/svg+xml;charset=utf-8",
-      });
-      const url = URL.createObjectURL(svgBlob);
+      const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgData);
 
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = width * pixelRatio;
-        canvas.height = height * pixelRatio;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          URL.revokeObjectURL(url);
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = width * pixelRatio;
+          canvas.height = height * pixelRatio;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            setSaving(false);
+            return;
+          }
+
+          ctx.fillStyle = "#f8fafc";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          ctx.scale(pixelRatio, pixelRatio);
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const pngUrl = canvas.toDataURL("image/png");
+          const downloadLink = document.createElement("a");
+          downloadLink.href = pngUrl;
+          const slug = docData?.title
+            ?.toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "");
+          const filename = slug ? `${slug}-wordcloud.png` : "wordcloud.png";
+          downloadLink.download = filename;
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
           setSaving(false);
-          return;
+        } catch (err) {
+          console.error("Failed to render canvas to PNG:", err);
+          setSaving(false);
         }
-
-        ctx.fillStyle = "#f8fafc";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.scale(pixelRatio, pixelRatio);
-        ctx.drawImage(img, 0, 0, width, height);
-        URL.revokeObjectURL(url);
-
-        const pngUrl = canvas.toDataURL("image/png");
-        const downloadLink = document.createElement("a");
-        const filename = docData?.title
-          ? `${docData.title
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, "-")
-              .replace(/(^-|-$)/g, "")}-wordcloud.png`
-          : "wordcloud.png";
-        downloadLink.download = filename;
-        downloadLink.click();
-        setSaving(false);
       };
 
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
+      img.onerror = (err) => {
+        console.error("Failed to load SVG into image:", err);
         setSaving(false);
       };
 
@@ -944,7 +1013,7 @@ export default function App() {
       console.error("Failed to export PNG:", e);
       setSaving(false);
     }
-  }, []);
+  }, [docData]);
   return (
     <div className="wordcloud-container">
       {/* Top Application Navigation */}
@@ -1064,16 +1133,35 @@ export default function App() {
                 <>
                   <button
                     type="button"
-                    className="share-btn"
-                    onClick={() => {
-                      setIsShareOpen(true);
-                      setCopyStatus("idle");
-                    }}
-                    title="Share word cloud link"
+                    className={`share-btn ${copyStatus === "copied" ? "copied" : ""}`}
+                    onClick={handleShare}
+                    title="Copy share link to clipboard"
                   >
-                    <Share2 className="share-btn-icon" size={14} aria-hidden="true" />
-                    Share
+                    {copyStatus === "copied" ? (
+                      <>
+                        <Check className="share-btn-icon" size={14} aria-hidden="true" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="share-btn-icon" size={14} aria-hidden="true" />
+                        Share
+                      </>
+                    )}
                   </button>
+                  <span className="meta-separator" aria-hidden="true">
+                    •
+                  </span>
+                  <a
+                    href={`https://docs.google.com/document/d/${docData.sourceGoogleDocId}/edit`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="view-doc-btn"
+                    title="Open original document in new tab"
+                  >
+                    <ExternalLink className="view-doc-btn-icon" size={14} aria-hidden="true" />
+                    View doc
+                  </a>
                   <span className="meta-separator" aria-hidden="true">
                     •
                   </span>
@@ -1434,124 +1522,14 @@ export default function App() {
           </div>
         </div>
       )}
-      {isShareOpen && docData?.sourceGoogleDocId && (
-        <div className="modal-backdrop" onClick={() => setIsShareOpen(false)} role="presentation">
-          <div
-            className="modal-dialog share-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="share-modal-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-header">
-              <div className="modal-title-group">
-                <h2 id="share-modal-title">Share Word Cloud</h2>
-                <p className="modal-subtitle">
-                  Anyone with this link will automatically load and view this word cloud.
-                </p>
-              </div>
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={() => setIsShareOpen(false)}
-                title="Close dialog (Esc)"
-                aria-label="Close dialog"
-              >
-                <X size={18} aria-hidden="true" />
-              </button>
-            </div>
-
-            <div className="modal-body share-modal-body">
-              <div className="share-field-group">
-                <label htmlFor="share-link-input" className="form-label">
-                  Shareable App Link
-                </label>
-                <div className="share-input-row">
-                  <input
-                    id="share-link-input"
-                    type="text"
-                    readOnly
-                    className="form-input share-url-input"
-                    value={getShareableAppUrl(
-                      docData.sourceGoogleDocId,
-                      undefined,
-                      docData.attribution,
-                      docData.date,
-                      docData.customTitle,
-                    )}
-                    onFocus={(e) => e.currentTarget.select()}
-                  />
-                  <button
-                    type="button"
-                    className={`btn-primary copy-share-btn ${copyStatus === "copied" ? "copied" : ""}`}
-                    onClick={async () => {
-                      const url = getShareableAppUrl(
-                        docData.sourceGoogleDocId!,
-                        undefined,
-                        docData.attribution,
-                        docData.date,
-                        docData.customTitle,
-                      );
-                      try {
-                        if (navigator?.clipboard?.writeText) {
-                          await navigator.clipboard.writeText(url);
-                        } else {
-                          const input = document.getElementById(
-                            "share-link-input",
-                          ) as HTMLInputElement | null;
-                          input?.select();
-                          document.execCommand("copy");
-                        }
-                        setCopyStatus("copied");
-                        setTimeout(() => setCopyStatus("idle"), 2500);
-                      } catch (err) {
-                        console.error("Copy failed:", err);
-                      }
-                    }}
-                  >
-                    {copyStatus === "copied" ? (
-                      <>
-                        <Check size={15} aria-hidden="true" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={15} aria-hidden="true" />
-                        Copy Link
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="share-meta-row">
-                <span className="share-meta-label">Encoded Share Code:</span>
-                <code className="share-meta-code">{docData.sourceGoogleDocId}</code>
-              </div>
-
-              <div className="share-source-row">
-                <a
-                  href={`https://docs.google.com/document/d/${docData.sourceGoogleDocId}/edit`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="share-source-link"
-                >
-                  <span>Open original Google Doc</span>
-                  <ExternalLink size={13} aria-hidden="true" />
-                </a>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="modal-action-btn"
-                onClick={() => setIsShareOpen(false)}
-              >
-                Done
-              </button>
-            </div>
-          </div>
+      {toast && (
+        <div className={`wordcloud-toast ${toast.type}`} role="status" aria-live="polite">
+          {toast.type === "success" ? (
+            <Check size={16} className="toast-icon toast-icon-success" aria-hidden="true" />
+          ) : (
+            <AlertCircle size={16} className="toast-icon toast-icon-error" aria-hidden="true" />
+          )}
+          <span>{toast.message}</span>
         </div>
       )}
     </div>

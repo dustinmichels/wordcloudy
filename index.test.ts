@@ -836,18 +836,21 @@ test("standalone build includes Create New Word Cloud page and navigation", asyn
   expect(html).toContain("wordcloud-byline");
   expect(html).toContain("byline-separator");
 });
-test("standalone build includes Share Word Cloud assets and modal", async () => {
+test("standalone build includes Share button, View doc link, and toast indicator", async () => {
   const distFile = Bun.file("./dist/index.html");
   expect(await distFile.exists()).toBe(true);
   const html = await distFile.text();
 
-  // Share modal and buttons
+  // Share and View doc buttons
   expect(html).toContain("share-btn");
-  expect(html).toContain("share-dialog");
-  expect(html).toContain("Share Word Cloud");
-  expect(html).toContain("Shareable App Link");
-  expect(html).toContain("Copy Link");
-  expect(html).toContain("share-url-input");
+  expect(html).toContain("view-doc-btn");
+  expect(html).toContain("View doc");
+  expect(html).toContain("docs.google.com/document/d/");
+  expect(html).toContain("wordcloud-toast");
+  expect(html).toContain("Link copied to clipboard!");
+  // Share modal removed
+  expect(html).not.toContain("share-dialog");
+  expect(html).not.toContain("share-url-input");
 });
 
 test("standalone build includes word count stats widget under the word cloud", async () => {
@@ -1134,4 +1137,20 @@ test("wordcloud-byline styles place attribution and date on the same row with se
   expect(css).toContain(".wordcloud-byline");
   expect(css).toContain(".byline-separator");
   expect(css).toContain("display: flex");
+});
+
+test("wordcloud-stage and container spacing adapt to fit screen with attribution and date", async () => {
+  const css = await Bun.file("./src/frontend.css").text();
+  expect(css).toContain("height: clamp(");
+  expect(css).toContain(".wordcloud-content");
+  expect(css).toContain("padding: 1.25rem 1.5rem 1.25rem;");
+});
+
+test("frontend.tsx contains valid PNG download logic with href and click trigger", async () => {
+  const frontendSrc = await Bun.file("./src/frontend.tsx").text();
+  expect(frontendSrc).toContain("downloadLink.href = pngUrl;");
+  expect(frontendSrc).toContain("downloadLink.download = filename;");
+  expect(frontendSrc).toContain("document.body.appendChild(downloadLink);");
+  expect(frontendSrc).toContain("downloadLink.click();");
+  expect(frontendSrc).toContain("document.body.removeChild(downloadLink);");
 });
