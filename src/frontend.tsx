@@ -181,6 +181,7 @@ export default function App() {
   const [withRotation, setWithRotation] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(!initialDocData);
   const [saving, setSaving] = useState<boolean>(false);
+  const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const sentencePanelRef = useRef<HTMLDivElement>(null);
 
@@ -200,6 +201,30 @@ export default function App() {
         setLoading(false);
       });
   }, [initialDocData]);
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" || event.key === "Esc") {
+        if (isAboutOpen) {
+          setIsAboutOpen(false);
+        } else {
+          setSelectedWord(null);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isAboutOpen]);
+
+  useEffect(() => {
+    if (!isAboutOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isAboutOpen]);
 
   const activeWords = useMemo(() => {
     if (!docData) return [];
@@ -322,143 +347,357 @@ export default function App() {
   }, []);
   return (
     <div className="wordcloud-container">
-      <div className="wordcloud-header">
-        <h1>
-          WordCloud of "Our Experiences of Housing, What Housing Does, and Sense of Being 'At Home'"
-        </h1>
-        <p>September 2026</p>
-      </div>
-
-      <div className="wordcloud">
-        {loading ? (
-          <div className="wordcloud-message">Loading word cloud...</div>
-        ) : activeWords.length === 0 ? (
-          <div className="wordcloud-message">No words found.</div>
-        ) : (
-          <div className="wordcloud-stage" ref={stageRef}>
-            <ParentSize debounceTime={60}>
-              {({ width, height }) =>
-                width > 0 && height > 0 ? (
-                  <CloudView
-                    words={activeWords}
-                    width={width}
-                    height={height}
-                    spiralType={spiralType}
-                    withRotation={withRotation}
-                    selectedWord={selectedWord}
-                    onWordClick={handleWordClick}
-                  />
-                ) : null
-              }
-            </ParentSize>
+      {selectedWord && (
+        <button
+          type="button"
+          className="page-close-btn"
+          onClick={() => setSelectedWord(null)}
+          title="Clear selection (Esc)"
+          aria-label="Clear selection (Esc)"
+        >
+          <svg
+            className="page-close-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+          </svg>
+        </button>
+      )}
+      <main className="wordcloud-content">
+        <div className="wordcloud-header">
+          <h1>
+            WordCloud of "Our Experiences of Housing, What Housing Does, and Sense of Being 'At
+            Home'"
+          </h1>
+          <div className="wordcloud-header-meta">
+            <span>September 2026</span>
+            <span className="meta-separator" aria-hidden="true">
+              •
+            </span>
+            <button
+              type="button"
+              className="about-btn"
+              onClick={() => setIsAboutOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={isAboutOpen}
+            >
+              <svg
+                className="about-btn-icon"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              About
+            </button>
           </div>
-        )}
+        </div>
+        <div className="wordcloud">
+          <div className="wordcloud-main">
+            {/* Left: Word Cloud */}
+            <div className="wordcloud-left">
+              {loading ? (
+                <div className="wordcloud-message">Loading word cloud...</div>
+              ) : activeWords.length === 0 ? (
+                <div className="wordcloud-message">No words found.</div>
+              ) : (
+                <div className="wordcloud-stage" ref={stageRef}>
+                  <ParentSize debounceTime={60}>
+                    {({ width, height }) =>
+                      width > 0 && height > 0 ? (
+                        <CloudView
+                          words={activeWords}
+                          width={width}
+                          height={height}
+                          spiralType={spiralType}
+                          withRotation={withRotation}
+                          selectedWord={selectedWord}
+                          onWordClick={handleWordClick}
+                        />
+                      ) : null
+                    }
+                  </ParentSize>
+                </div>
+              )}
+            </div>
+            {/* Right: Controls & Example Sentences */}
+            <div className="wordcloud-right">
+              <div className="controls">
+                <div className="control-field">
+                  <label htmlFor="section-select">Section</label>
+                  <select
+                    id="section-select"
+                    value={selectedSection}
+                    onChange={(e) => handleSectionChange(e.target.value)}
+                    disabled={loading || !docData}
+                  >
+                    <option value="all">ALL</option>
+                    {docData?.sections.map((sec) => (
+                      <option key={sec.id} value={sec.id}>
+                        {sec.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="controls-options-row">
+                  <div className="control-field">
+                    <label htmlFor="spiral-select">Spiral type</label>
+                    <select
+                      id="spiral-select"
+                      value={spiralType}
+                      onChange={(e) => setSpiralType(e.target.value as SpiralType)}
+                    >
+                      <option value="archimedean">archimedean</option>
+                      <option value="rectangular">rectangular</option>
+                    </select>
+                  </div>
+                  <div className="control-field control-field-checkbox">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={withRotation}
+                        onChange={(e) => setWithRotation(e.target.checked)}
+                      />
+                      With rotation
+                    </label>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="save-btn"
+                  onClick={handleSavePng}
+                  disabled={saving || loading || activeWords.length === 0}
+                >
+                  {saving ? "Saving..." : "Save as PNG"}
+                </button>
+              </div>
 
-        {!loading && (
-          <div className="wordcloud-hint">
-            <span className="hint-icon">💡</span>
-            <span>
-              Click any word or phrase in the cloud to view sentence fragments from this category.
+              <div className="sentence-panel" ref={sentencePanelRef}>
+                {selectedWord ? (
+                  <>
+                    <div className="sentence-panel-header">
+                      <div className="sentence-panel-title">
+                        <span className="sentence-badge">{selectedWord.replace(/-/g, " ")}</span>
+                        <span className="sentence-count">
+                          {matchingSentences.length}{" "}
+                          {matchingSentences.length === 1 ? "sentence" : "sentences"} in{" "}
+                          <strong>
+                            {selectedSection === "all"
+                              ? "All Sections"
+                              : (docData?.sections.find((s) => s.id === selectedSection)?.title ??
+                                "Current Section")}
+                          </strong>
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="sentence-close-btn"
+                        onClick={() => setSelectedWord(null)}
+                        title="Clear selection"
+                      >
+                        ✕ Clear
+                      </button>
+                    </div>
+
+                    {matchingSentences.length === 0 ? (
+                      <div className="sentence-empty">
+                        No sentence fragments found containing “{selectedWord.replace(/-/g, " ")}”
+                        in this category.
+                      </div>
+                    ) : (
+                      <ul className="sentence-list">
+                        {matchingSentences.map((match, idx) => (
+                          <li key={idx} className="sentence-item">
+                            {selectedSection === "all" && (
+                              <span className="sentence-category-tag">{match.sectionTitle}</span>
+                            )}
+                            <p className="sentence-text">
+                              “<HighlightedText text={match.text} term={selectedWord} />”
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                ) : (
+                  <div className="sentence-placeholder">
+                    <span className="sentence-placeholder-icon">💬</span>
+                    <h3 className="sentence-placeholder-title">Example Sentences</h3>
+                    <p className="sentence-placeholder-desc">
+                      Click any word or phrase in the word cloud to view sentence fragments from
+                      this category.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <footer className="wordcloud-footer">
+        <div className="wordcloud-footer-inner">
+          <div className="footer-left">
+            <span className="footer-attribution">By: Dustin Michels, 2026</span>
+            <span className="footer-divider" aria-hidden="true">
+              •
+            </span>
+            <span className="footer-source">
+              "Our Experiences of Housing, What Housing Does, and Sense of Being 'At Home'"
             </span>
           </div>
-        )}
-
-        {selectedWord && (
-          <div className="sentence-panel" ref={sentencePanelRef}>
-            <div className="sentence-panel-header">
-              <div className="sentence-panel-title">
-                <span className="sentence-badge">{selectedWord.replace(/-/g, " ")}</span>
-                <span className="sentence-count">
-                  {matchingSentences.length}{" "}
-                  {matchingSentences.length === 1 ? "sentence" : "sentences"} in{" "}
-                  <strong>
-                    {selectedSection === "all"
-                      ? "All Sections"
-                      : (docData?.sections.find((s) => s.id === selectedSection)?.title ??
-                        "Current Section")}
-                  </strong>
-                </span>
+          <div className="footer-right">
+            <button
+              type="button"
+              className="footer-btn"
+              onClick={() => setIsAboutOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={isAboutOpen}
+            >
+              <svg
+                className="footer-btn-icon"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              Methodology
+            </button>
+            <span className="footer-badge">Visx · React · Bun</span>
+          </div>
+        </div>
+      </footer>
+      {isAboutOpen && (
+        <div className="modal-backdrop" onClick={() => setIsAboutOpen(false)} role="presentation">
+          <div
+            className="modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="about-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <div className="modal-title-group">
+                <h2 id="about-modal-title">Word Cloud Methodology</h2>
+                <p className="modal-subtitle">
+                  How words, phrases, and collocations are extracted from the text
+                </p>
               </div>
               <button
                 type="button"
-                className="sentence-close-btn"
-                onClick={() => setSelectedWord(null)}
-                title="Clear selection"
+                className="modal-close-btn"
+                onClick={() => setIsAboutOpen(false)}
+                title="Close modal (Esc)"
+                aria-label="Close modal"
               >
-                ✕ Clear
+                ✕
               </button>
             </div>
 
-            {matchingSentences.length === 0 ? (
-              <div className="sentence-empty">
-                No sentence fragments found containing “{selectedWord.replace(/-/g, " ")}” in this
-                category.
-              </div>
-            ) : (
-              <ul className="sentence-list">
-                {matchingSentences.map((match, idx) => (
-                  <li key={idx} className="sentence-item">
-                    {selectedSection === "all" && (
-                      <span className="sentence-category-tag">{match.sectionTitle}</span>
-                    )}
-                    <p className="sentence-text">
-                      “<HighlightedText text={match.text} term={selectedWord} />”
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+            <div className="modal-body">
+              <div className="methodology-grid">
+                <div className="methodology-card">
+                  <div className="methodology-card-header">
+                    <span className="methodology-step">1</span>
+                    <h3>Text Normalization &amp; Stop Words</h3>
+                  </div>
+                  <p>
+                    Markdown formatting, list bullets, and typographical punctuation are cleaned and
+                    tokenized. Grammatical stop words (like <em>what</em>, <em>are</em>,{" "}
+                    <em>the</em>, and <em>with</em>) are filtered out so substantive housing themes
+                    stand out.
+                  </p>
+                </div>
 
-        <div className="controls">
-          <label>
-            Section &nbsp;
-            <select
-              value={selectedSection}
-              onChange={(e) => handleSectionChange(e.target.value)}
-              disabled={loading || !docData}
-            >
-              <option value="all">ALL</option>
-              {docData?.sections.map((sec) => (
-                <option key={sec.id} value={sec.id}>
-                  {sec.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Spiral type &nbsp;
-            <select
-              value={spiralType}
-              onChange={(e) => setSpiralType(e.target.value as SpiralType)}
-            >
-              <option value="archimedean">archimedean</option>
-              <option value="rectangular">rectangular</option>
-            </select>
-          </label>
-          <label>
-            With rotation &nbsp;
-            <input
-              type="checkbox"
-              checked={withRotation}
-              onChange={(e) => setWithRotation(e.target.checked)}
-            />
-          </label>
-          <button
-            type="button"
-            className="save-btn"
-            onClick={handleSavePng}
-            disabled={saving || loading || activeWords.length === 0}
-          >
-            {saving ? "Saving..." : "Save as PNG"}
-          </button>
+                <div className="methodology-card">
+                  <div className="methodology-card-header">
+                    <span className="methodology-step">2</span>
+                    <h3>Keyphrases &amp; Multi-Word N-Grams</h3>
+                  </div>
+                  <p>Meaningful concepts often span multiple words. The extractor identifies:</p>
+                  <ul className="methodology-list">
+                    <li>
+                      <strong>Edge-Filtered Bigrams:</strong> Two-word pairs occurring at least
+                      twice without crossing clause boundaries, requiring content words at both
+                      ends.
+                    </li>
+                    <li>
+                      <strong>Interior-Stop Trigrams:</strong> Natural phrases bridging across a
+                      preposition (<code>[content] + [stop] + [content]</code>), such as{" "}
+                      <em>cost of housing</em> or <em>sense of uncertainty</em>.
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="methodology-card">
+                  <div className="methodology-card-header">
+                    <span className="methodology-step">3</span>
+                    <h3>Collocation Scoring (PMI)</h3>
+                  </div>
+                  <p>
+                    Pointwise Mutual Information (<strong>PMI</strong> / <strong>NPMI</strong>)
+                    measures statistical association strength to ensure multi-word terms reflect
+                    true conceptual partnerships rather than accidental juxtapositions of common
+                    words.
+                  </p>
+                </div>
+
+                <div className="methodology-card">
+                  <div className="methodology-card-header">
+                    <span className="methodology-step">4</span>
+                    <h3>Section Breakdown &amp; Exploration</h3>
+                  </div>
+                  <p>
+                    Text is segmented by major discussion themes. Word sizes scale logarithmically
+                    with frequency. Clicking any term highlights matching sentence fragments across
+                    sections for contextual reading.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="modal-action-btn"
+                onClick={() => setIsAboutOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
-const rootElement = document.getElementById("root");
-if (rootElement) {
-  createRoot(rootElement).render(<App />);
+if (typeof document !== "undefined") {
+  const rootElement = document.getElementById("root");
+  if (rootElement) {
+    createRoot(rootElement).render(<App />);
+  }
 }

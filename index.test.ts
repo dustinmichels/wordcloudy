@@ -326,3 +326,33 @@ test("buildTermRegex correctly matches unigrams, bigrams, and trigrams", () => {
   expect(trigramRx.test("move to neighborhoods")).toBe(true);
   expect(trigramRx.test("relocate to neighborhoods")).toBe(false);
 });
+test("standalone build includes About button and methodology modal assets", async () => {
+  const distFile = Bun.file("./dist/index.html");
+  expect(await distFile.exists()).toBe(true);
+  const html = await distFile.text();
+
+  // About button present in bundle
+  expect(html).toContain("about-btn");
+  expect(html).toContain("About");
+
+  // Modal dialog and accessibility attributes present in bundled client code
+  expect(html).toContain('role:"dialog"');
+  expect(html).toContain('"aria-modal":"true"');
+  expect(html).toContain('"aria-labelledby":"about-modal-title"');
+
+  // Methodology content highlights
+  expect(html).toContain("Word Cloud Methodology");
+  expect(html).toContain("Text Normalization");
+  expect(html).toContain("N-Grams");
+  expect(html).toContain("Collocation Scoring");
+
+  // Security constraint: doc.md must not appear in HTML
+  expect(html.includes("doc.md")).toBe(false);
+});
+test("standalone build includes footer attribution", async () => {
+  const distFile = Bun.file("./dist/index.html");
+  expect(await distFile.exists()).toBe(true);
+  const html = await distFile.text();
+  expect(html).toContain("wordcloud-footer");
+  expect(html).toContain("By: Dustin Michels, 2026");
+});
