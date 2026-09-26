@@ -226,6 +226,7 @@ import {
   getGoogleDocWebUrl,
   getInitialEditValuesFromUrl,
   getShareableAppUrl,
+  linkifyAttribution,
   parseDocSections,
   parseGoogleDocHtml,
   parsePastedText,
@@ -493,6 +494,18 @@ test("getShareableAppUrl includes encoded attribution when provided", () => {
   expect(shareUrl).toBe(
     `https://wordcloud.example.com/app?doc=${rawId}&attribution=By+Dustin+Michels`,
   );
+});
+
+test("linkifyAttribution preserves plain text and links only HTTP(S) URLs", () => {
+  expect(linkifyAttribution("By Laurie https://example.com/about.")).toEqual([
+    { text: "By Laurie " },
+    { text: "https://example.com/about", href: "https://example.com/about" },
+    { text: "." },
+  ]);
+  expect(linkifyAttribution("Laurie's Housing Class")).toEqual([
+    { text: "Laurie's Housing Class" },
+  ]);
+  expect(linkifyAttribution("javascript:alert(1)")).toEqual([{ text: "javascript:alert(1)" }]);
 });
 
 test("getShareableAppUrl includes encoded date when provided", () => {
@@ -857,13 +870,17 @@ test("parseGoogleDocHtml parses local copy of Housing doc export correctly", asy
   expect(senseOfHome?.words.some((w) => w.text === "cultivate")).toBe(false);
 });
 
-test("parseGoogleDocHtml parses local Resistance and Response in Planning export", async () => {
+test("parseGoogleDocHtml preserves Guåhan as a searchable word", async () => {
   const html = await Bun.file("./samples/planning/resistance-and-response-in-planning.html").text();
   const parsed = parseGoogleDocHtml(html);
-  expect(parsed.markdown).toContain("## Introduction: Resistance and Response in Planning");
-  expect(parsed.markdown).toContain(
-    "## Indigenous Resistance as Multiscalar, Insurgent Planning under Empire",
-  );
+  const frequencies = getWordFrequencies(parsed.markdown);
+  const docData = getDocumentWordData(parsed.markdown);
+  const sentences = docData.sections.flatMap((section) => section.sentences);
+
+  expect(frequencies.some((word) => word.text === "guahan")).toBe(true);
+  expect(frequencies.some((word) => word.text === "gu-aring")).toBe(false);
+  const matchingSentences = sentences.filter((sentence) => buildTermRegex("guahan").test(sentence));
+  expect(matchingSentences.length).toBeGreaterThan(0);
 });
 
 test("fetchAndParseGoogleDoc loads and parses live US Constitution Google Doc", async () => {

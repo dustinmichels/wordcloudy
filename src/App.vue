@@ -33,6 +33,7 @@ import {
   fetchAndParseGoogleDoc,
   getInitialEditValuesFromUrl,
   getShareableAppUrl,
+  linkifyAttribution,
 } from "./sections";
 import type { ParsedDocumentData, SpiralType, WordData } from "./types";
 import HomeView from "./components/HomeView.vue";
@@ -49,6 +50,12 @@ const initialDocData: ParsedDocumentData | null =
 
 const hasSharedDocInUrl =
   typeof window !== "undefined" && Boolean(decodeGoogleDocShareCode(window.location.href));
+const sharedTitleFromUrl =
+  typeof window !== "undefined" ? extractTitleFromUrl(window.location.href) : null;
+const sharedAttributionFromUrl =
+  typeof window !== "undefined" ? extractAttributionFromUrl(window.location.href) : null;
+const sharedDateFromUrl =
+  typeof window !== "undefined" ? extractDateFromUrl(window.location.href) : null;
 
 const currentPage = ref<"home" | "view" | "edit" | "create" | "load">(
   hasSharedDocInUrl ? "view" : "home",
@@ -69,6 +76,12 @@ const toast = ref<{ message: string; type: "success" | "error" } | null>(null);
 let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 const sharedDocError = ref<string | null>(null);
 const stageRef = ref<HTMLDivElement | null>(null);
+
+const displayedAttribution = computed(
+  () => docData.value?.attribution ?? sharedAttributionFromUrl ?? "",
+);
+const displayedDate = computed(() => docData.value?.date ?? sharedDateFromUrl ?? "");
+const attributionParts = computed(() => linkifyAttribution(displayedAttribution.value));
 
 const isBrandJiggling = ref<boolean>(false);
 const brandJiggleKey = ref<number>(0);
@@ -764,34 +777,44 @@ onUnmounted(() => {
       </div>
 
       <div class="wordcloud-header">
-        <h1>{{ docData?.title || "The Constitution of the United States" }}</h1>
-        <p v-if="docData?.attribution || docData?.date" class="wordcloud-byline">
-          <span v-if="docData.attribution" class="wordcloud-attribution">{{
-            docData.attribution
-          }}</span>
+        <h1>{{ docData?.title || sharedTitleFromUrl || "" }}</h1>
+        <p v-if="displayedAttribution || displayedDate" class="wordcloud-byline">
+          <span v-if="displayedAttribution" class="wordcloud-attribution">
+            <template v-for="(part, index) in attributionParts" :key="index">
+              <a
+                v-if="part.href"
+                :href="part.href"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="wordcloud-attribution-link"
+                >{{ part.text }}</a
+              >
+              <template v-else>{{ part.text }}</template>
+            </template>
+          </span>
           <span
-            v-if="docData.attribution && docData.date"
+            v-if="displayedAttribution && displayedDate"
             class="byline-separator"
             aria-hidden="true"
           >
             •
           </span>
-          <span v-if="docData.date" class="wordcloud-date">{{ docData.date }}</span>
+          <span v-if="displayedDate" class="wordcloud-date">{{ displayedDate }}</span>
         </p>
         <div class="wordcloud-header-meta">
           <template v-if="docData?.sourceGoogleDocId">
             <button
               type="button"
-              :class="['share-btn', copyStatus === 'copied' ? 'copied' : '']"
+              :class="['header-action-btn', 'share-btn', copyStatus === 'copied' ? 'copied' : '']"
               title="Copy share link to clipboard"
               @click="handleShare"
             >
               <template v-if="copyStatus === 'copied'">
-                <Check class="share-btn-icon" :size="14" aria-hidden="true" />
+                <Check class="header-action-btn-icon" :size="14" aria-hidden="true" />
                 Copied!
               </template>
               <template v-else>
-                <Share2 class="share-btn-icon" :size="14" aria-hidden="true" />
+                <Share2 class="header-action-btn-icon" :size="14" aria-hidden="true" />
                 Share
               </template>
             </button>
@@ -800,22 +823,22 @@ onUnmounted(() => {
               :href="`https://docs.google.com/document/d/${docData.sourceGoogleDocId}/edit`"
               target="_blank"
               rel="noopener noreferrer"
-              class="view-doc-btn"
+              class="header-action-btn"
               title="Open original document in new tab"
             >
-              <ExternalLink class="view-doc-btn-icon" :size="14" aria-hidden="true" />
+              <ExternalLink class="header-action-btn-icon" :size="14" aria-hidden="true" />
               View doc
             </a>
             <span class="meta-separator" aria-hidden="true">•</span>
           </template>
           <button
             type="button"
-            class="about-btn"
+            class="header-action-btn"
             aria-haspopup="dialog"
             :aria-expanded="isAboutOpen"
             @click="isAboutOpen = true"
           >
-            <Info class="about-btn-icon" :size="14" aria-hidden="true" />
+            <Info class="header-action-btn-icon" :size="14" aria-hidden="true" />
             About
           </button>
         </div>

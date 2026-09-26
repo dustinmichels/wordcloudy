@@ -88,6 +88,29 @@ export function extractSentences(markdown: string): string[] {
   return sentences;
 }
 
+const DIACRITIC_REGEX_PARTS: Readonly<Record<string, string>> = {
+  a: "[aàáâãäåāăą]",
+  c: "[cçćĉċč]",
+  e: "[eèéêëēĕėęě]",
+  i: "[iìíîïĩīĭįı]",
+  n: "[nñńņňŋ]",
+  o: "[oòóôõöøōŏő]",
+  s: "[sśŝşš]",
+  u: "[uùúûüũūŭůűų]",
+  y: "[yýÿŷ]",
+  z: "[zźżž]",
+};
+
+function escapeTermPart(part: string): string {
+  return [...part]
+    .map(
+      (char) =>
+        DIACRITIC_REGEX_PARTS[char.toLowerCase()] ??
+        char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    )
+    .join("");
+}
+
 /**
  * Builds a case-insensitive regular expression to match a word, bigram, or trigram in text.
  * Handles hyphenated bigrams/trigrams (e.g. "desired-outcomes") against either spaces or hyphens in text.
@@ -96,8 +119,8 @@ export function buildTermRegex(term: string, global = false): RegExp {
   const escaped = term
     .trim()
     .split(/[-\s]+/)
-    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-    .join("[\\s\\-]+");
+    .map(escapeTermPart)
+    .join("[\\s\\-–—]+");
   return new RegExp(`\\b${escaped}\\b`, global ? "gi" : "i");
 }
 
@@ -237,6 +260,8 @@ export function decodeHtmlEntities(str: string): string {
     .replace(/&mdash;/g, "—")
     .replace(/&ndash;/g, "–")
     .replace(/&hellip;/g, "…")
+    .replace(/&aring;/g, "å")
+    .replace(/&Aring;/g, "Å")
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
     .replace(/&lt;/g, "<")
@@ -621,6 +646,48 @@ export function encodeGoogleDocShareCode(docIdOrUrl: string): string {
   }
   return docId;
 }
+
+export interface AttributionPart {
+  text: string;
+  href?: string;
+}
+
+const ATTRIBUTION_URL_REGEX = /https?:\/\/[^\s<>"']+/g;
+const TRAILING_URL_PUNCTUATION_REGEX = /[.,;:!?]+$/;
+
+/**
+ * Splits attribution text into safe HTTP(S) links and plain text.
+ */
+export function linkifyAttribution(attribution: string): AttributionPart[] {
+  const parts: AttributionPart[] = [];
+  let lastIndex = 0;
+
+  for (const match of attribution.matchAll(ATTRIBUTION_URL_REGEX)) {
+    const matchIndex = match.index ?? 0;
+    const rawUrl = match[0];
+    const url = rawUrl.replace(TRAILING_URL_PUNCTUATION_REGEX, "");
+    if (!url) continue;
+
+    try {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") continue;
+
+      if (matchIndex > lastIndex) {
+        parts.push({ text: attribution.slice(lastIndex, matchIndex) });
+      }
+      parts.push({ text: url, href: parsedUrl.href });
+      lastIndex = matchIndex + url.length;
+    } catch {}
+  }
+
+  if (lastIndex < attribution.length || parts.length === 0) {
+    parts.push({ text: attribution.slice(lastIndex) });
+  }
+
+  return parts;
+}
+
+
 
 /**
  * Generates a full shareable application URL containing the encoded share code.

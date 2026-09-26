@@ -250,6 +250,8 @@ export function cleanText(text: string): string {
     .replace(/[*_#`~>•]/g, " ") // markdown markers
     .replace(/\\--|--|—/g, " ") // dashes
     .replace(/\\!/g, " ") // escaped punctuation
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
     .toLowerCase();
 }
 
