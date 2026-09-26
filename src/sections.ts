@@ -3,7 +3,7 @@ import {
   getWordFrequencies,
   type DocumentWordStats,
   type WordFrequency,
-} from "./stopwords";
+} from "./stopwords.ts";
 
 export type { DocumentWordStats };
 

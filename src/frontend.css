@@ -1126,21 +1126,23 @@ mark.highlighted-term {
 .footer-attribution {
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap;
 }
 
-.footer-link {
+.footer-link,
+.footer-author-link {
   color: var(--accent-color);
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: color 0.15s ease;
 }
 
-.footer-link:hover {
+.footer-link:hover,
+.footer-author-link:hover {
   color: var(--accent-dark);
 }
 
-.footer-link:focus-visible {
+.footer-link:focus-visible,
+.footer-author-link:focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: 2px;
   border-radius: 2px;
@@ -1341,6 +1343,30 @@ mark.highlighted-term {
   outline: 2px solid var(--accent-color);
   outline-offset: 2px;
   border-radius: 6px;
+}
+
+.page-close-btn {
+  position: absolute;
+  top: 4.75rem;
+  right: 1.5rem;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.15s ease;
+}
+
+.page-close-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 .top-nav-actions {
   display: flex;
@@ -2296,7 +2322,11 @@ button.url-status-icon.url-status-error:active {
   }
 
   .wordcloud-footer-inner {
-    padding: 0.5rem 1rem;
+    padding: 0.75rem 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+    text-align: center;
   }
 
   .footer-attribution {

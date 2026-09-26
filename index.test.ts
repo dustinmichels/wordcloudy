@@ -1,4 +1,10 @@
 import { test, expect } from "bun:test";
+import { createSSRApp } from "vue";
+import { renderToString } from "@vue/server-renderer";
+import CreateCloudView from "./src/components/CreateCloudView.vue";
+import HomeView from "./src/components/HomeView.vue";
+import LoadRecentView from "./src/components/LoadRecentView.vue";
+import RecentDocumentsList from "./src/components/RecentDocumentsList.vue";
 import {
   countDocumentWords,
   tokenize,
@@ -774,9 +780,9 @@ test("standalone build includes About button and methodology modal assets", asyn
   expect(html).toContain("About");
 
   // Modal dialog and accessibility attributes present in bundled client code
-  expect(html).toContain('role:"dialog"');
-  expect(html).toContain('"aria-modal":"true"');
-  expect(html).toContain('"aria-labelledby":"about-modal-title"');
+  expect(html).toMatch(/role:[`"]dialog[`"]/);
+  expect(html).toMatch(/aria-modal[`"]?:[`"]true[`"]/);
+  expect(html).toMatch(/aria-labelledby[`"]?:[`"]about-modal-title[`"]/);
 
   // Methodology content highlights
   expect(html).toContain("Word Cloud Methodology");
@@ -796,6 +802,9 @@ test("standalone build includes footer attribution and github link", async () =>
   expect(html).toContain("Made by");
   expect(html).toContain("Dustin Michels");
   expect(html).toContain("https://dustinmichels.com/");
+  expect(html).toContain("Tufts UEP");
+  expect(html).toContain("https://as.tufts.edu/uep/");
+  expect(html).toContain("and beyond!");
   expect(html).toContain("https://github.com/dustinmichels/wordcloudy");
   expect(html).toContain("footer-github-link");
   expect(html).toContain("View Source Code");
@@ -826,7 +835,7 @@ test("standalone build includes Create New Word Cloud page and navigation", asyn
   // Verify Lucide icons for View, Edit, and Load are included in bundle
   expect(html).toContain("M2.062 12.348"); // Eye icon path
   expect(html).toContain("M21.174 6.812"); // Pencil icon path
-  expect(html).toContain("margin-left: auto");
+  expect(html).toMatch(/margin-left:\s*auto/);
   // Create form elements
   expect(html).toContain("Google Doc Link");
   expect(html).toContain("Paste Text / Markdown");
@@ -1010,13 +1019,9 @@ test("fetchAndParseGoogleDoc loads and parses live Housing Google Doc", async ()
   expect(senseOfHome?.words[0]?.text).toBe("power");
 });
 
-test("CreateCloudView does not display public warning callout when Google Doc is selected", () => {
-  const { renderToString } = require("react-dom/server");
-  const React = require("react");
-  const { CreateCloudView } = require("./src/frontend");
-
-  const html = renderToString(
-    React.createElement(CreateCloudView, {
+test("CreateCloudView does not display public warning callout when Google Doc is selected", async () => {
+  const html = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "gdoc",
     }),
@@ -1027,13 +1032,9 @@ test("CreateCloudView does not display public warning callout when Google Doc is
   expect(html).not.toContain("Only word clouds created from a google doc will be shareable");
 });
 
-test("CreateCloudView displays shareable callout when custom text pane is selected", () => {
-  const { renderToString } = require("react-dom/server");
-  const React = require("react");
-  const { CreateCloudView } = require("./src/frontend");
-
-  const html = renderToString(
-    React.createElement(CreateCloudView, {
+test("CreateCloudView displays shareable callout when custom text pane is selected", async () => {
+  const html = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "paste",
     }),
@@ -1044,13 +1045,9 @@ test("CreateCloudView displays shareable callout when custom text pane is select
   expect(html).not.toContain("Google Doc Must be Public!");
 });
 
-test("CreateCloudView renders lucide icons for tabs", () => {
-  const { renderToString } = require("react-dom/server");
-  const React = require("react");
-  const { CreateCloudView } = require("./src/frontend");
-
-  const html = renderToString(
-    React.createElement(CreateCloudView, {
+test("CreateCloudView renders lucide icons for tabs", async () => {
+  const html = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "gdoc",
     }),
@@ -1061,13 +1058,9 @@ test("CreateCloudView renders lucide icons for tabs", () => {
   expect(html).not.toContain("lucide-alert-triangle");
 });
 
-test("CreateCloudView displays lucide loading icon and parsing message when google doc is being parsed", () => {
-  const { renderToString } = require("react-dom/server");
-  const React = require("react");
-  const { CreateCloudView } = require("./src/frontend");
-
-  const html = renderToString(
-    React.createElement(CreateCloudView, {
+test("CreateCloudView displays lucide loading icon and parsing message when google doc is being parsed", async () => {
+  const html = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "gdoc",
       initialLoading: true,
@@ -1081,13 +1074,9 @@ test("CreateCloudView displays lucide loading icon and parsing message when goog
   expect(html).toContain("Parsing Google Doc...");
 });
 
-test("CreateCloudView displays lucide loading icon when analyzing pasted text", () => {
-  const { renderToString } = require("react-dom/server");
-  const React = require("react");
-  const { CreateCloudView } = require("./src/frontend");
-
-  const html = renderToString(
-    React.createElement(CreateCloudView, {
+test("CreateCloudView displays lucide loading icon when analyzing pasted text", async () => {
+  const html = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "paste",
       initialLoading: true,
@@ -1107,13 +1096,9 @@ test("standalone build includes lucide icons and loading states", async () => {
   expect(distHtml).toContain("create-loading-banner");
 });
 
-test("CreateCloudView renders plain text date input for both google doc and paste text modes", () => {
-  const { renderToString } = require("react-dom/server");
-  const React = require("react");
-  const { CreateCloudView } = require("./src/frontend");
-
-  const gdocHtml = renderToString(
-    React.createElement(CreateCloudView, {
+test("CreateCloudView renders plain text date input for both google doc and paste text modes", async () => {
+  const gdocHtml = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "gdoc",
     }),
@@ -1122,8 +1107,8 @@ test("CreateCloudView renders plain text date input for both google doc and past
   expect(gdocHtml).toContain('type="text"');
   expect(gdocHtml).toContain("Date");
 
-  const pasteHtml = renderToString(
-    React.createElement(CreateCloudView, {
+  const pasteHtml = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "paste",
     }),
@@ -1154,13 +1139,13 @@ test("wordcloud-stage and container spacing adapt to fit screen with attribution
   expect(css).toContain("padding: 1.25rem 1.5rem 1.25rem;");
 });
 
-test("frontend.tsx contains valid PNG download logic with href and click trigger", async () => {
-  const frontendSrc = await Bun.file("./src/frontend.tsx").text();
-  expect(frontendSrc).toContain("downloadLink.href = pngUrl;");
-  expect(frontendSrc).toContain("downloadLink.download = filename;");
-  expect(frontendSrc).toContain("document.body.appendChild(downloadLink);");
-  expect(frontendSrc).toContain("downloadLink.click();");
-  expect(frontendSrc).toContain("document.body.removeChild(downloadLink);");
+test("App.vue contains valid PNG download logic with href and click trigger", async () => {
+  const appSrc = await Bun.file("./src/App.vue").text();
+  expect(appSrc).toContain("downloadLink.href = pngUrl;");
+  expect(appSrc).toContain("downloadLink.download = filename;");
+  expect(appSrc).toContain("document.body.appendChild(downloadLink);");
+  expect(appSrc).toContain("downloadLink.click();");
+  expect(appSrc).toContain("document.body.removeChild(downloadLink);");
 });
 
 test("fetchAndParseGoogleDoc throws clear error when Google Doc returns 401 (mock)", async () => {
@@ -1328,13 +1313,9 @@ test("saveRecentDocument and getRecentDocuments degrade gracefully when localSto
   }
 });
 
-test("CreateCloudView renders create form without recent pane", () => {
-  const React = require("react");
-  const { renderToString } = require("react-dom/server");
-  const { CreateCloudView } = require("./src/frontend");
-
-  const html = renderToString(
-    React.createElement(CreateCloudView, {
+test("CreateCloudView renders create form without recent pane", async () => {
+  const html = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "gdoc",
     }),
@@ -1346,13 +1327,9 @@ test("CreateCloudView renders create form without recent pane", () => {
   expect(html).not.toContain("load-recent-card");
 });
 
-test("HomeView renders 'Create New' button and 'Load Recent' list with Constitution sample", () => {
-  const React = require("react");
-  const { renderToString } = require("react-dom/server");
-  const { HomeView } = require("./src/frontend");
-
-  const html = renderToString(
-    React.createElement(HomeView, {
+test("HomeView renders 'Create New' button and 'Load Recent' list with Constitution sample", async () => {
+  const html = await renderToString(
+    createSSRApp(HomeView, {
       onCreate: () => {},
       onLoadSample: () => {},
       onGoCreate: () => {},
@@ -1368,13 +1345,9 @@ test("HomeView renders 'Create New' button and 'Load Recent' list with Constitut
   expect(html).toContain("September 1787");
 });
 
-test("LoadRecentView renders 'Load Document' modal with Constitution sample", () => {
-  const React = require("react");
-  const { renderToString } = require("react-dom/server");
-  const { LoadRecentView } = require("./src/frontend");
-
-  const html = renderToString(
-    React.createElement(LoadRecentView, {
+test("LoadRecentView renders 'Load Document' modal with Constitution sample", async () => {
+  const html = await renderToString(
+    createSSRApp(LoadRecentView, {
       onCreate: () => {},
       onLoadSample: () => {},
     }),
@@ -1387,17 +1360,14 @@ test("LoadRecentView renders 'Load Document' modal with Constitution sample", ()
   expect(html).toContain("September 1787");
 });
 
-test("RecentDocumentsList puts local docs first and samples at bottom", () => {
-  const React = require("react");
-  const { renderToString } = require("react-dom/server");
-  const { RecentDocumentsList } = require("./src/frontend");
+test("RecentDocumentsList puts local docs first and samples at bottom", async () => {
   const { saveRecentDocument, clearRecentDocuments } = require("./src/storage");
 
   clearRecentDocuments();
   saveRecentDocument({ id: "otherDoc1", title: "My Custom Doc" });
 
-  const html = renderToString(
-    React.createElement(RecentDocumentsList, {
+  const html = await renderToString(
+    createSSRApp(RecentDocumentsList, {
       onCreate: () => {},
       onLoadSample: () => {},
     }),
@@ -1417,16 +1387,13 @@ test("RecentDocumentsList puts local docs first and samples at bottom", () => {
   clearRecentDocuments();
 });
 
-test("RecentDocumentsList shows empty state and sample when no local docs exist", () => {
-  const React = require("react");
-  const { renderToString } = require("react-dom/server");
-  const { RecentDocumentsList } = require("./src/frontend");
+test("RecentDocumentsList shows empty state and sample when no local docs exist", async () => {
   const { clearRecentDocuments } = require("./src/storage");
 
   clearRecentDocuments();
 
-  const html = renderToString(
-    React.createElement(RecentDocumentsList, {
+  const html = await renderToString(
+    createSSRApp(RecentDocumentsList, {
       onCreate: () => {},
       onLoadSample: () => {},
     }),
@@ -1479,8 +1446,8 @@ test("standalone build header WordCloudy brand click clears URL params and navig
   expect(html).toContain("WordCloudy Home");
   expect(html).toContain("window.location.pathname");
 
-  const frontendSrc = await Bun.file("./src/frontend.tsx").text();
-  expect(frontendSrc).toMatch(/handleGoHome[\s\S]*?setCurrentPage\("home"\)/);
+  const appSrc = await Bun.file("./src/App.vue").text();
+  expect(appSrc).toMatch(/handleGoHome[\s\S]*?currentPage\.value\s*=\s*"home"/);
 });
 
 test("WordCloudy title jiggles when pressed via CSS animation and interactive triggers", async () => {
@@ -1489,10 +1456,10 @@ test("WordCloudy title jiggles when pressed via CSS animation and interactive tr
   expect(css).toContain(".brand-name.jiggling");
   expect(css).toContain(".top-nav-brand:active .brand-name");
 
-  const frontendSrc = await Bun.file("./src/frontend.tsx").text();
-  expect(frontendSrc).toContain("triggerBrandJiggle");
-  expect(frontendSrc).toContain("isBrandJiggling");
-  expect(frontendSrc).toContain("onPointerDown");
+  const appSrc = await Bun.file("./src/App.vue").text();
+  expect(appSrc).toContain("triggerBrandJiggle");
+  expect(appSrc).toContain("isBrandJiggling");
+  expect(appSrc).toContain("onPointerDown");
 
   const distFile = Bun.file("./dist/index.html");
   expect(await distFile.exists()).toBe(true);
@@ -1572,14 +1539,10 @@ test("getGoogleDocWebUrl handles full URLs, raw IDs, spreadsheets, and invalid l
   expect(getGoogleDocWebUrl("")).toBeNull();
 });
 
-test("CreateCloudView renders URL input container, checkmark, and external link icon when valid link provided", () => {
-  const React = require("react");
-  const { renderToString } = require("react-dom/server");
-  const { CreateCloudView } = require("./src/frontend");
-
+test("CreateCloudView renders URL input container, checkmark, and external link icon when valid link provided", async () => {
   // 1. Create mode with empty URL: has container, no spinner, no checkmark, no red X, no external link icon
-  const createHtml = renderToString(
-    React.createElement(CreateCloudView, {
+  const createHtml = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "gdoc",
       initialGdocUrl: "",
@@ -1594,8 +1557,8 @@ test("CreateCloudView renders URL input container, checkmark, and external link 
   // 2. Edit mode with valid Google Doc URL: renders checkmark icon and external link icon next to textbox
   const editDocUrl =
     "https://docs.google.com/document/d/1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA/edit";
-  const editHtml = renderToString(
-    React.createElement(CreateCloudView, {
+  const editHtml = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "gdoc",
       initialGdocUrl: editDocUrl,
@@ -1616,8 +1579,8 @@ test("CreateCloudView renders URL input container, checkmark, and external link 
   // 3. Edit mode with Spreadsheet URL: renders checkmark and external link pointing to sheet
   const sheetUrl =
     "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit";
-  const sheetHtml = renderToString(
-    React.createElement(CreateCloudView, {
+  const sheetHtml = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "gdoc",
       initialGdocUrl: sheetUrl,
@@ -1631,28 +1594,28 @@ test("CreateCloudView renders URL input container, checkmark, and external link 
 });
 
 test("CreateCloudView live link logic handles validation, loading, checkmark, red X, and errors", async () => {
-  const frontendSrc = await Bun.file("./src/frontend.tsx").text();
+  const compSrc = await Bun.file("./src/components/CreateCloudView.vue").text();
 
-  // Check that useEffect is attached to gdocUrl changes for immediate link handling
-  expect(frontendSrc).toMatch(/useEffect\(\(\)\s*=>\s*\{[\s\S]*?\},?\s*\[gdocUrl\]\)/);
+  // Check that watch is attached to gdocUrl changes for immediate link handling
+  expect(compSrc).toMatch(/watch\(\s*\(\)\s*=>\s*gdocUrl\.value/);
 
   // Check that invalid links show an error right away without loading
-  expect(frontendSrc).toMatch(/if\s*\(!docId\)\s*\{[\s\S]*?setErrorMessage\([\s\S]*?return;/);
+  expect(compSrc).toMatch(/if\s*\(!docId\)\s*\{[\s\S]*?errorMessage\.value\s*=/);
 
   // Check that valid Google Doc links set isUrlLoading and fetch right away
-  expect(frontendSrc).toMatch(
-    /setIsUrlLoading\(true\)[\s\S]*?fetchAndParseGoogleDoc\(requestUrl\)/,
+  expect(compSrc).toMatch(
+    /isUrlLoading\.value\s*=\s*true[\s\S]*?fetchAndParseGoogleDoc\(requestUrl\)/,
   );
 
   // Check that on success, custom title is populated right away
-  expect(frontendSrc).toMatch(/setCustomTitle\(data\.title\)/);
+  expect(compSrc).toMatch(/customTitle\.value\s*=\s*data\.title/);
 
   // Check that on success, checkmark icon and external link are displayed
-  expect(frontendSrc).toMatch(/url-status-success/);
-  expect(frontendSrc).toMatch(/url-external-link/);
+  expect(compSrc).toMatch(/url-status-success/);
+  expect(compSrc).toMatch(/url-external-link/);
 
   // Check that on error/failure, red X icon is displayed
-  expect(frontendSrc).toMatch(/url-status-error/);
+  expect(compSrc).toMatch(/url-status-error/);
 });
 
 test("standalone build includes URL input styling, checkmark, red X, and live status icon classes", async () => {
@@ -1668,15 +1631,11 @@ test("standalone build includes URL input styling, checkmark, red X, and live st
   expect(distHtml).toContain(".url-feedback");
 });
 
-test("CreateCloudView renders red X clear button and displays invalid link error only once", () => {
-  const React = require("react");
-  const { renderToString } = require("react-dom/server");
-  const { CreateCloudView } = require("./src/frontend");
-
+test("CreateCloudView renders red X clear button and displays invalid link error only once", async () => {
   const invalidMsg =
     "Link does not look like a valid Google Doc or Sheet link. Please paste a link like https://docs.google.com/document/d/... or a Google Doc ID.";
-  const html = renderToString(
-    React.createElement(CreateCloudView, {
+  const html = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "gdoc",
       initialGdocUrl: "https://example.com/not-a-google-doc",
@@ -1703,14 +1662,10 @@ test("CreateCloudView renders red X clear button and displays invalid link error
   expect(count).toBe(1);
 });
 
-test("CreateCloudView renders bottom error banner when not displaying inline error", () => {
-  const React = require("react");
-  const { renderToString } = require("react-dom/server");
-  const { CreateCloudView } = require("./src/frontend");
-
+test("CreateCloudView renders bottom error banner when not displaying inline error", async () => {
   const emptyMsg = "Please enter a Google Doc link or document ID.";
-  const html = renderToString(
-    React.createElement(CreateCloudView, {
+  const html = await renderToString(
+    createSSRApp(CreateCloudView, {
       onCreate: () => {},
       initialSourceMode: "gdoc",
       initialGdocUrl: "",
