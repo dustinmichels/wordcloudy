@@ -238,7 +238,7 @@ import {
   SAMPLE_DOC_DATE,
 } from "./src/storage";
 test("parseDocSections extracts the four main aggregate sections in exact order", async () => {
-  const content = await Bun.file("./samples/housing-doc.md").text();
+  const content = await Bun.file("./samples/housing/housing-doc.md").text();
   const sections = parseDocSections(content);
 
   expect(sections.map((s) => s.id)).toEqual([
@@ -286,8 +286,25 @@ test("parseDocSections dynamically turns any new H2 into a section and aggregate
   expect(sections[1]?.content).toContain("### Nested Detail B");
 });
 
+test("parseDocSections descends from a lone H2 title to H3 sections", () => {
+  const markdown = `
+## Document Title
+
+### First Topic
+First topic details.
+
+### Second Topic
+Second topic details.
+`;
+
+  const sections = parseDocSections(markdown);
+
+  expect(sections.map((s) => s.title)).toEqual(["First Topic", "Second Topic"]);
+  expect(sections.map((s) => s.content)).toEqual(["First topic details.", "Second topic details."]);
+});
+
 test("getDocumentWordData computes overall and section-specific frequencies and sentences", async () => {
-  const content = await Bun.file("./samples/housing-doc.md").text();
+  const content = await Bun.file("./samples/housing/housing-doc.md").text();
   const data = getDocumentWordData(content);
 
   expect(data.all.length).toBeGreaterThan(0);
@@ -787,7 +804,7 @@ Another line.`;
 });
 
 test("parseGoogleDocHtml parses local copy of US Constitution export correctly", async () => {
-  const html = await Bun.file("./samples/us-constitution.html").text();
+  const html = await Bun.file("./samples/constituion/us-constitution.html").text();
   const parsed = parseGoogleDocHtml(html);
   expect(parsed.title).toBe("The Constitution of the United States");
   expect(parsed.markdown).toContain("## Article. I.");
@@ -812,7 +829,7 @@ test("parseGoogleDocHtml parses local copy of US Constitution export correctly",
 });
 
 test("parseGoogleDocHtml parses local copy of Housing doc export correctly", async () => {
-  const html = await Bun.file("./samples/housing-doc.html").text();
+  const html = await Bun.file("./samples/housing/housing-doc.html").text();
   const parsed = parseGoogleDocHtml(html);
   expect(parsed.title).toBe(
     "Gleanings and Questions from Our Experiences of Housing, What Housing Does, and Sense of Being “At Home”",
@@ -838,6 +855,15 @@ test("parseGoogleDocHtml parses local copy of Housing doc export correctly", asy
   expect(senseOfHome?.words[0]?.text).toBe("power");
   // Subheaders are excluded from words
   expect(senseOfHome?.words.some((w) => w.text === "cultivate")).toBe(false);
+});
+
+test("parseGoogleDocHtml parses local Resistance and Response in Planning export", async () => {
+  const html = await Bun.file(
+    "./samples/planning/resistance-and-response-in-planning.html",
+  ).text();
+  const parsed = parseGoogleDocHtml(html);
+  expect(parsed.markdown).toContain("## Introduction: Resistance and Response in Planning");
+  expect(parsed.markdown).toContain("## Indigenous Resistance as Multiscalar, Insurgent Planning under Empire");
 });
 
 test("fetchAndParseGoogleDoc loads and parses live US Constitution Google Doc", async () => {
@@ -879,6 +905,25 @@ test("fetchAndParseGoogleDoc loads and parses live Housing Google Doc", async ()
   expect(senseOfHome?.words[0]?.text).toBe("power");
 });
 
+test("fetchAndParseGoogleDoc uses the first document line when no Google Doc title exists", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = (async () =>
+      new Response(
+        "<html><head><title></title></head><body><p>Neighborhood Housing Survey</p><p>Residents described housing costs and community needs.</p></body></html>",
+        { status: 200 },
+      )) as typeof fetch;
+
+    const docData = await fetchAndParseGoogleDoc(
+      "https://docs.google.com/document/d/1LOEtTJ5nlqRS8gBByySi8csu8c4WV6ngIRjPF3upB3E/edit",
+    );
+
+    expect(docData.title).toBe("Neighborhood Housing Survey");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("fetchAndParseGoogleDoc throws clear error when Google Doc returns 401 (mock)", async () => {
   const originalFetch = globalThis.fetch;
   let callCount = 0;
@@ -908,6 +953,13 @@ testLive("fetchAndParseGoogleDoc throws clear error for private Google Doc (:liv
       "https://docs.google.com/document/d/1LOEtTJ5nlqRS8gBByySi8csu8c4WV6ngIRjPF3upB3E/edit?tab=t.0",
     ),
   ).rejects.toThrow("Google doc has not been made public!");
+});
+
+testLive("fetchAndParseGoogleDoc loads Resistance and Response in Planning (:live)", async () => {
+  const docData = await fetchAndParseGoogleDoc(
+    "https://docs.google.com/document/d/1F409GdnlGKuQ5kt9JDRenKce01uZR_kYb5BKXOELJYQ/edit?tab=t.0#heading=h.ivvs7sv2amgl",
+  );
+  expect(docData.title).toBe("Planning Theory & Practice, 2023, Vol. 24, No. 2, 245-283");
 });
 // ============================================================================
 // 7. Recent Documents Storage & Home / Load Navigation

@@ -74,7 +74,6 @@ const preloadedData = ref<ParsedDocumentData | null>(null);
 
 const urlInputRef = ref<HTMLInputElement | null>(null);
 const hasUserEditedTitle = ref(Boolean(props.initialCustomTitle));
-const isFirstMount = ref(true);
 let inFlightPromise: Promise<ParsedDocumentData> | null = null;
 
 function handleClearUrl() {
@@ -86,10 +85,6 @@ function handleClearUrl() {
 watch(
   () => gdocUrl.value,
   (newUrl) => {
-    if (isFirstMount.value) {
-      isFirstMount.value = false;
-      return;
-    }
 
     const trimmed = newUrl.trim();
     if (!trimmed) {

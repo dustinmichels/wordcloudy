@@ -2,7 +2,7 @@
 
 Interactive word cloud and phrase frequency analysis tool built with Bun, React 19, and `@visx/wordcloud`. Extracts topical keywords, collocations, bigrams, and trigrams from Google Docs or pasted text.
 
-Default dataset: _The Constitution of the United States_ (`samples/us-constitution.html`).
+Default dataset: _The Constitution of the United States_ (`samples/constituion/us-constitution.html`).
 
 ---
 

@@ -102,20 +102,21 @@ export function buildTermRegex(term: string, global = false): RegExp {
 }
 
 /**
- * Parses markdown source into sections based on H2 headers (`## `).
- * Any deeper headers (like `### ` subheadings) and subsequent content
- * are aggregated into their parent H2 section.
+ * Parses markdown source into sections at the given heading level.
+ * Deeper headings and their content remain aggregated into their parent section.
  */
-export function parseDocSections(markdown: string): Section[] {
+function parseSectionsAtHeadingLevel(markdown: string, headingLevel: number): Section[] {
   const lines = markdown.split("\n");
   const sections: Section[] = [];
+  const headingPrefix = "#".repeat(headingLevel);
+  const headingPattern = new RegExp(`^${headingPrefix}\\s+(?!#)(.+)$`);
   let current: { id: string; title: string; lines: string[] } | null = null;
 
   for (const line of lines) {
     const trimmed = line.trim();
-    const h2Match = trimmed.match(/^##\s+(?!#)(.+)$/);
+    const headingMatch = trimmed.match(headingPattern);
 
-    if (h2Match && h2Match[1]) {
+    if (headingMatch?.[1]) {
       if (current) {
         sections.push({
           id: current.id,
@@ -123,7 +124,7 @@ export function parseDocSections(markdown: string): Section[] {
           content: current.lines.join("\n").trim(),
         });
       }
-      const rawTitle = h2Match[1].trim();
+      const rawTitle = headingMatch[1].trim();
       current = {
         id: slugify(rawTitle),
         title: rawTitle,
@@ -149,48 +150,20 @@ export function parseDocSections(markdown: string): Section[] {
 }
 
 /**
+ * Parses markdown source into sections based on H2 headers (`## `).
+ * If H2 yields only one section, treats it as a document title and parses H3
+ * headers instead.
+ */
+export function parseDocSections(markdown: string): Section[] {
+  const h2Sections = parseSectionsAtHeadingLevel(markdown, 2);
+  return h2Sections.length === 1 ? parseSectionsAtHeadingLevel(markdown, 3) : h2Sections;
+}
+
+/**
  * Computes word frequencies for the whole document (ALL) and each individual section.
  */
 function parseH1Sections(markdown: string): Section[] {
-  const lines = markdown.split("\n");
-  const sections: Section[] = [];
-  let current: { id: string; title: string; lines: string[] } | null = null;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    const h1Match = trimmed.match(/^#\s+(?!#)(.+)$/);
-
-    if (h1Match && h1Match[1]) {
-      if (current) {
-        sections.push({
-          id: current.id,
-          title: current.title,
-          content: current.lines.join("\n").trim(),
-        });
-      }
-      const rawTitle = h1Match[1].trim();
-      current = {
-        id: slugify(rawTitle),
-        title: rawTitle,
-        lines: [],
-      };
-      continue;
-    }
-
-    if (current) {
-      current.lines.push(line);
-    }
-  }
-
-  if (current) {
-    sections.push({
-      id: current.id,
-      title: current.title,
-      content: current.lines.join("\n").trim(),
-    });
-  }
-
-  return sections;
+  return parseSectionsAtHeadingLevel(markdown, 1);
 }
 
 /**
@@ -485,6 +458,14 @@ export function parseGoogleDocHtml(html: string): { title?: string; markdown: st
   };
 }
 
+function getFirstDocumentLine(text: string): string | undefined {
+  const firstLine = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean);
+  return firstLine?.replace(/^#{1,6}\s+/, "").trim() || undefined;
+}
+
 /**
  * Parses pasted raw text or Markdown into structured ParsedDocumentData.
  */
@@ -503,6 +484,8 @@ export function parsePastedText(
     if (firstLineMatch && firstLineMatch[1]) {
       title = firstLineMatch[1].trim();
       content = content.replace(/^\s*#\s+[^\n]+\n?/, "");
+    } else {
+      title = getFirstDocumentLine(content);
     }
   }
 
@@ -560,7 +543,9 @@ export async function fetchAndParseGoogleDoc(
     if (htmlSuccess && html) {
       const parsed = parseGoogleDocHtml(html);
       const isCustomTitle = Boolean(customTitle && customTitle.trim());
-      const finalTitle = isCustomTitle ? customTitle!.trim() : parsed.title;
+      const finalTitle = isCustomTitle
+        ? customTitle!.trim()
+        : parsed.title || getFirstDocumentLine(parsed.markdown);
       const result = getDocumentWordData(parsed.markdown, 100, finalTitle);
       result.sourceGoogleDocId = docId;
       if (isCustomTitle) {
