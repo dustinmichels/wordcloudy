@@ -366,13 +366,13 @@ Keith’s London case suggests that when planners and politicians work together 
 
 <div role="paragraph">
 
-***Susan S. Fainstein*** is a Senior Research Fellow in the Harvard Graduate School of Design, where she previously was a professor of urban planning. She has received the Distinguished Educator Award of the Association of American Collegiate Schools of Planning (ACSP) and her book *The Just City* won its Davidoff award. Email: <sfainstein@aol.com>
+_**Susan S. Fainstein**_ is a Senior Research Fellow in the Harvard Graduate School of Design, where she previously was a professor of urban planning. She has received the Distinguished Educator Award of the Association of American Collegiate Schools of Planning (ACSP) and her book _The Just City_ won its Davidoff award. Email: <sfainstein@aol.com>
 
 </div>
 
 <div role="paragraph">
 
-***John Forester*** is Professor Emeritus of City and Regional Planning, Cornell University. His best teaching materials (practice-focused oral histories) include *Planning in the Face of Conflict* (2013) and *How Spaces Become Places* (2021). His “Options Analysis as Context-Responsiveness in Practice: Integrating Diagnosis, Expertise, and Negotiation” appears in this journal (2022). Email: <jff1@cornell.edu>
+_**John Forester**_ is Professor Emeritus of City and Regional Planning, Cornell University. His best teaching materials (practice-focused oral histories) include _Planning in the Face of Conflict_ (2013) and _How Spaces Become Places_ (2021). His “Options Analysis as Context-Responsiveness in Practice: Integrating Diagnosis, Expertise, and Negotiation” appears in this journal (2022). Email: <jff1@cornell.edu>
 
 </div>
 
@@ -400,7 +400,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0001" class="citations">
 
-<span class="citation">Arnstein, S. R. (1969). A ladder of citizen participation. *Journal of the American Institute of Planners*, *35*(4), 216–224. [Crossref](https://doi.org/10.1080/01944366908977225). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=A1969Y429300002).</span>
+<span class="citation">Arnstein, S. R. (1969). A ladder of citizen participation. _Journal of the American Institute of Planners_, _35_(4), 216–224. [Crossref](https://doi.org/10.1080/01944366908977225). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=A1969Y429300002).</span>
 
 </div>
 
@@ -410,7 +410,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0002" class="citations">
 
-<span class="citation">Davy, B. (1997). *Essential injustice: When legal institutions cannot resolve environmental and land use disputes*. Springer. [Crossref](https://doi.org/10.1007/978-3-7091-6515-7).</span>
+<span class="citation">Davy, B. (1997). _Essential injustice: When legal institutions cannot resolve environmental and land use disputes_. Springer. [Crossref](https://doi.org/10.1007/978-3-7091-6515-7).</span>
 
 </div>
 
@@ -420,7 +420,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0003" class="citations">
 
-<span class="citation">Frenkel, S. (2021). Proud Boys regroup, focusing on school boards and town councils, *New York Times*, December 14. <https://www.nytimes.com/2021/12/14/us/proud-boys-local-issues.html></span>
+<span class="citation">Frenkel, S. (2021). Proud Boys regroup, focusing on school boards and town councils, _New York Times_, December 14. <https://www.nytimes.com/2021/12/14/us/proud-boys-local-issues.html></span>
 
 </div>
 
@@ -430,7 +430,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0004" class="citations">
 
-<span class="citation">Inch, A., Laurian, L., Mouat, C., Davies, R., Davy, B., Legacy, C., & Symonds, C. (2017). Planning in the face of immovable subjects: A dialogue about resistance to development forces. *Planning.* *Theory & Practice*, *18*(3), 469–488. [Crossref](https://doi.org/10.1080/14649357.2017.1328811). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=WOS%3A000418328700009).</span>
+<span class="citation">Inch, A., Laurian, L., Mouat, C., Davies, R., Davy, B., Legacy, C., & Symonds, C. (2017). Planning in the face of immovable subjects: A dialogue about resistance to development forces. _Planning._ _Theory & Practice_, _18_(3), 469–488. [Crossref](https://doi.org/10.1080/14649357.2017.1328811). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=WOS%3A000418328700009).</span>
 
 </div>
 
@@ -460,7 +460,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0007" class="citations">
 
-<span class="citation">Popper, F. J. (1985). The environmentalist and the LULU. *Environment*, *27*(2), 7–40. [Crossref](https://doi.org/10.1080/00139157.1985.9933448). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=A1985ADZ5300002).</span>
+<span class="citation">Popper, F. J. (1985). The environmentalist and the LULU. _Environment_, _27_(2), 7–40. [Crossref](https://doi.org/10.1080/00139157.1985.9933448). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=A1985ADZ5300002).</span>
 
 </div>
 
@@ -470,7 +470,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0008" class="citations">
 
-<span class="citation">Rittel, H. W., & Webber, M. M. (1973). Dilemmas in a general theory of planning. *Policy Sciences*, *4*(2), 155–169. [Crossref](https://doi.org/10.1007/BF01405730). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=WOS%3AA1973P871700002).</span>
+<span class="citation">Rittel, H. W., & Webber, M. M. (1973). Dilemmas in a general theory of planning. _Policy Sciences_, _4_(2), 155–169. [Crossref](https://doi.org/10.1007/BF01405730). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=WOS%3AA1973P871700002).</span>
 
 </div>
 
@@ -480,7 +480,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0009" class="citations">
 
-<span class="citation">Trapenberg Frick, K., Weinzimmer, D., & Waddell, P. (2015). The politics of sustainable development opposition: State legislative efforts to stop the United Nations’ Agenda 21 in the United States. *Urban Studies*, *52*(2), 209–232. [Crossref](https://doi.org/10.1177/0042098014528397). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=000347058700001).</span>
+<span class="citation">Trapenberg Frick, K., Weinzimmer, D., & Waddell, P. (2015). The politics of sustainable development opposition: State legislative efforts to stop the United Nations’ Agenda 21 in the United States. _Urban Studies_, _52_(2), 209–232. [Crossref](https://doi.org/10.1177/0042098014528397). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=000347058700001).</span>
 
 </div>
 
@@ -544,7 +544,7 @@ This colonial situation has created multiple injustices for Chamorus, most perti
 
 <div role="paragraph">
 
-As two Chamoru scholars with ancestral roots in Guåhan, we theorize ongoing Indigenous resistance to militarization of our homeland by the U.S. as *multiscalar, insurgent planning*. Analyzing Indigenous resistance against 21st-century imperialism matters for two crucial reasons. First, it moves beyond the persistent localism haunting Indigenous planning scholarship. This subfield helpfully assesses how multiscalar legal and policy mechanisms constrain Indigenous planning practice, but often neglects how Indigenous peoples *also* leverage these mechanisms in mounting resistance. We need to understand how multiscalar law and policy simultaneously serve both as sites of constraint, and as sites of resistance and transformation. Second, it builds on Indigenous planning scholarship “taking Indigenous political authority seriously” (Dorries, <a href="#index.xhtml_CIT0011" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0011">2012</a>, p. iii) by centering already-existing Indigenous practices of resistance. Such practices can extend beyond state and/or professional planning, and may maintain an agonistic relationship with them, but are critical as they strengthen Indigenous sovereignty over our own tåno’ (land) and tåsi (ocean).
+As two Chamoru scholars with ancestral roots in Guåhan, we theorize ongoing Indigenous resistance to militarization of our homeland by the U.S. as _multiscalar, insurgent planning_. Analyzing Indigenous resistance against 21st-century imperialism matters for two crucial reasons. First, it moves beyond the persistent localism haunting Indigenous planning scholarship. This subfield helpfully assesses how multiscalar legal and policy mechanisms constrain Indigenous planning practice, but often neglects how Indigenous peoples _also_ leverage these mechanisms in mounting resistance. We need to understand how multiscalar law and policy simultaneously serve both as sites of constraint, and as sites of resistance and transformation. Second, it builds on Indigenous planning scholarship “taking Indigenous political authority seriously” (Dorries, <a href="#index.xhtml_CIT0011" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0011">2012</a>, p. iii) by centering already-existing Indigenous practices of resistance. Such practices can extend beyond state and/or professional planning, and may maintain an agonistic relationship with them, but are critical as they strengthen Indigenous sovereignty over our own tåno’ (land) and tåsi (ocean).
 
 </div>
 
@@ -572,7 +572,7 @@ Drawing from our archipelago’s five-century-long experiences with imperialism 
 
 <div role="paragraph">
 
-Core to the *insurgent* character of Chamoru-led community organizations are the culturally-specific ways that they discursively and materially position their advocacy efforts as acts of Indigenous sovereignty. They seek not only to disrupt colonial governmentalities that manufacture Indigenous consent to land dispossession and cultural erasure but also to reaffirm the sacredness of Indigenous values and worldviews. These practices of Chamoru values thus provide crucial resources for challenging the looming, corrupted shadows of 21st-century U.S. empire.
+Core to the _insurgent_ character of Chamoru-led community organizations are the culturally-specific ways that they discursively and materially position their advocacy efforts as acts of Indigenous sovereignty. They seek not only to disrupt colonial governmentalities that manufacture Indigenous consent to land dispossession and cultural erasure but also to reaffirm the sacredness of Indigenous values and worldviews. These practices of Chamoru values thus provide crucial resources for challenging the looming, corrupted shadows of 21st-century U.S. empire.
 
 </div>
 
@@ -618,13 +618,13 @@ To strengthen legal constraints and political pressure on U.S. military expansio
 
 <div role="paragraph">
 
-***Kevin Lujan Lee*** is a Chamoru PhD candidate in urban planning and politics at MIT, incoming Killam Postdoctoral Research Fellow at the University of British Columbia’s Department of Political Science (2023-24), and Assistant Professor of Indigenous Studies at the University of Buffalo (starting Fall 2024). His research centers on Indigenous politics, low-wage work and migration in comparative and global perspective. Email: <kevinjl@mit.edu>
+_**Kevin Lujan Lee**_ is a Chamoru PhD candidate in urban planning and politics at MIT, incoming Killam Postdoctoral Research Fellow at the University of British Columbia’s Department of Political Science (2023-24), and Assistant Professor of Indigenous Studies at the University of Buffalo (starting Fall 2024). His research centers on Indigenous politics, low-wage work and migration in comparative and global perspective. Email: <kevinjl@mit.edu>
 
 </div>
 
 <div role="paragraph">
 
-***Tiara R. Na’puti*** is an Assistant Professor of Global & International Studies at the University of California, Irvine. A Chamoru scholar (Guåhan/Guam), her research addresses Indigenous rhetoric and resistance in/of Oceania, focusing on issues of militarism, environmental justice, and colonialism. She was assisted by a Mellon/ACLS Scholars and Society Fellowship from the American Council of Learned Societies. Email: <tnaputi@uci.edu>
+_**Tiara R. Na’puti**_ is an Assistant Professor of Global & International Studies at the University of California, Irvine. A Chamoru scholar (Guåhan/Guam), her research addresses Indigenous rhetoric and resistance in/of Oceania, focusing on issues of militarism, environmental justice, and colonialism. She was assisted by a Mellon/ACLS Scholars and Society Fellowship from the American Council of Learned Societies. Email: <tnaputi@uci.edu>
 
 </div>
 
@@ -652,7 +652,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0010" class="citations">
 
-<span class="citation">Delgado, N. (2022). Prutehi Litekyan files federal lawsuit against Air Force. *Guam Daily Post.* Retrieved October 28, 2022, from <https://www.postguam.com/news/local/prutehi-litekyan-files-federal-lawsuit-against-air-force/article_abe33c56-7d86-11ec-93af-133c39889221.html></span>
+<span class="citation">Delgado, N. (2022). Prutehi Litekyan files federal lawsuit against Air Force. _Guam Daily Post._ Retrieved October 28, 2022, from <https://www.postguam.com/news/local/prutehi-litekyan-files-federal-lawsuit-against-air-force/article_abe33c56-7d86-11ec-93af-133c39889221.html></span>
 
 </div>
 
@@ -662,7 +662,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0011" class="citations">
 
-<span class="citation">Dorries, H. J. (2012). *Rejecting the ‘false choice’: Foregrounding indigenous sovereignty in planning theory and practice*. University of Toronto. [http://sfx.scholarsportal.info/guelph/docview/1634343607?accountid=11233%5Cnhttp://sfx.scholarsportal.info/guelph?url_ver=Z39.88-2004&rft_val_fmt=info:ofi/fmt:kev:mtx:dissertation&genre=dissertations±%26±theses&sid=ProQ:ProQuest±Dissertations±%26±Theses±A](http://sfx.scholarsportal.info/guelph/docview/1634343607?accountid=11233%5Cnhttp://sfx.scholarsportal.info/guelph?url_ver=Z39.88-2004&rft_val_fmt=info:ofi/fmt:kev:mtx:dissertation&genre=dissertations%C2%B1%26%C2%B1theses&sid=ProQ:ProQuest%C2%B1Dissertations%C2%B1%26%C2%B1Theses%C2%B1A)</span>
+<span class="citation">Dorries, H. J. (2012). _Rejecting the ‘false choice’: Foregrounding indigenous sovereignty in planning theory and practice_. University of Toronto. [http://sfx.scholarsportal.info/guelph/docview/1634343607?accountid=11233%5Cnhttp://sfx.scholarsportal.info/guelph?url_ver=Z39.88-2004&rft_val_fmt=info:ofi/fmt:kev:mtx:dissertation&genre=dissertations±%26±theses&sid=ProQ:ProQuest±Dissertations±%26±Theses±A](http://sfx.scholarsportal.info/guelph/docview/1634343607?accountid=11233%5Cnhttp://sfx.scholarsportal.info/guelph?url_ver=Z39.88-2004&rft_val_fmt=info:ofi/fmt:kev:mtx:dissertation&genre=dissertations%C2%B1%26%C2%B1theses&sid=ProQ:ProQuest%C2%B1Dissertations%C2%B1%26%C2%B1Theses%C2%B1A)</span>
 
 </div>
 
@@ -672,7 +672,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0012" class="citations">
 
-<span class="citation">Kuper, K. G., Bradley, J. (2021). Giha Mo’na: *A self-determination study for Guåhan, part II: The political statuses of statehood, free association, and independence.* Guam Commission on Decolonization, Hagåtña, Guam. Retrieved October 28, 2022, from<https://decol.guam.gov/wp-decol-content/uploads/2021/12/Giha-Mona-SD-Study_Part-II-Digital-1.pdf></span>
+<span class="citation">Kuper, K. G., Bradley, J. (2021). Giha Mo’na: _A self-determination study for Guåhan, part II: The political statuses of statehood, free association, and independence._ Guam Commission on Decolonization, Hagåtña, Guam. Retrieved October 28, 2022, from<https://decol.guam.gov/wp-decol-content/uploads/2021/12/Giha-Mona-SD-Study_Part-II-Digital-1.pdf></span>
 
 </div>
 
@@ -682,7 +682,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0013" class="citations">
 
-<span class="citation">Na’puti, T. R. (2019). Archipelagic rhetoric: Remapping the Mianas and challenging militarization from ‘a stirring place. *Communication and Critical/Cultural Studies*, *16* (1), 4–25. [Crossref](https://doi.org/10.1080/14791420.2019.1572905). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=000469264100002).</span>
+<span class="citation">Na’puti, T. R. (2019). Archipelagic rhetoric: Remapping the Mianas and challenging militarization from ‘a stirring place. _Communication and Critical/Cultural Studies_, _16_ (1), 4–25. [Crossref](https://doi.org/10.1080/14791420.2019.1572905). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=000469264100002).</span>
 
 </div>
 
@@ -692,7 +692,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0014" class="citations">
 
-<span class="citation">Phillips, M., & Aguon, J. (2022). Legal victory secures habitat protection for 23 imperiled Micronesian species. *Center for Biological Diversity*, April 18, 2022. Retrieved October 28, 2022, from <https://biologicaldiversity.org/w/news/press-releases/legal-victory-secures-habitat-protection-for-23-imperiled-micronesian-species-2022-04-18/></span>
+<span class="citation">Phillips, M., & Aguon, J. (2022). Legal victory secures habitat protection for 23 imperiled Micronesian species. _Center for Biological Diversity_, April 18, 2022. Retrieved October 28, 2022, from <https://biologicaldiversity.org/w/news/press-releases/legal-victory-secures-habitat-protection-for-23-imperiled-micronesian-species-2022-04-18/></span>
 
 </div>
 
@@ -760,19 +760,19 @@ We argue both that resistance must address these specific injuries – requiring
 
 <div role="paragraph">
 
-Even though the dominant mode of planning has reinforced racial injustice, members of the profession have since the 1960s resisted planning approaches that discriminated against African Americans. Advocacy and equity planners have tried to block displacement and encourage housing and economic development in low-income neighborhoods. Recently, calls for reparative planning have arisen as a form of resistance within the profession. It differs from the earlier demands for racial equity that arose from 1960s racial unrest and the Civil Rights movement by calling for targeted investment to redress previous racial injustices (Williams, <a href="#index.xhtml_CIT0028" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0028">2020</a>). The federal government has responded with the Reconnecting Communities initiative, aimed at removing racist infrastructures such as freeways. Planning directors of over 30 U.S. cities have mobilized and launched a manifesto, *Commitment to Change* (Planning Directors, <a href="#index.xhtml_CIT0023" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0023">2022</a>), aimed at healing the wounds of history. Mayors have formed an organization, MORE (Mayors Organize for Reparations and Equity), which is encouraging reparative practices within their constituencies. The MORE (<a href="#index.xhtml_CIT0021" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0021">2022</a>) coalition is committed to supporting Congressional action proposed in a bill (US Congress, <a href="#index.xhtml_CIT0027" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0027">2023</a>) that would establish a *Commission to Study and Develop Reparation Proposals for African Americans*. The commission would identify (1) the role of the federal and state governments in supporting the institution of slavery; (2) the forms of discrimination in the public and private sectors against freed slaves and their descendants; and (3) the lingering negative effects of slavery on living African Americans and society. The formation of a Commission with these goals represents a reparative approach to confronting and dismantling institutional and structural racism. Undergirding and buoying this collective shift in planning *intent* has been the profound impact of the \#BlackLivesMatter movement.
+Even though the dominant mode of planning has reinforced racial injustice, members of the profession have since the 1960s resisted planning approaches that discriminated against African Americans. Advocacy and equity planners have tried to block displacement and encourage housing and economic development in low-income neighborhoods. Recently, calls for reparative planning have arisen as a form of resistance within the profession. It differs from the earlier demands for racial equity that arose from 1960s racial unrest and the Civil Rights movement by calling for targeted investment to redress previous racial injustices (Williams, <a href="#index.xhtml_CIT0028" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0028">2020</a>). The federal government has responded with the Reconnecting Communities initiative, aimed at removing racist infrastructures such as freeways. Planning directors of over 30 U.S. cities have mobilized and launched a manifesto, _Commitment to Change_ (Planning Directors, <a href="#index.xhtml_CIT0023" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0023">2022</a>), aimed at healing the wounds of history. Mayors have formed an organization, MORE (Mayors Organize for Reparations and Equity), which is encouraging reparative practices within their constituencies. The MORE (<a href="#index.xhtml_CIT0021" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0021">2022</a>) coalition is committed to supporting Congressional action proposed in a bill (US Congress, <a href="#index.xhtml_CIT0027" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0027">2023</a>) that would establish a _Commission to Study and Develop Reparation Proposals for African Americans_. The commission would identify (1) the role of the federal and state governments in supporting the institution of slavery; (2) the forms of discrimination in the public and private sectors against freed slaves and their descendants; and (3) the lingering negative effects of slavery on living African Americans and society. The formation of a Commission with these goals represents a reparative approach to confronting and dismantling institutional and structural racism. Undergirding and buoying this collective shift in planning _intent_ has been the profound impact of the \#BlackLivesMatter movement.
 
 </div>
 
 <div role="paragraph">
 
-Fed by decolonial, postcolonial and abolitionist planning theory (Dorries et al., <a href="#index.xhtml_CIT0020" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0020">2019</a>; Porter et al., <a href="#index.xhtml_CIT0025" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0025">2021</a>), the current discourse around reparative justice focuses specifically and unambiguously on “*justice*” for people of the African diaspora, whereas earlier planning discourses focused on more diffuse concepts such as *diversity, equality*, and *equity* (Metzger, <a href="#index.xhtml_CIT0022" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0022">1996</a>). There are two big differences here between reparative and equity-based planning: first, the focus of reparations is race, not class; and second, the redistributive principle in equity planning, in and of itself, is not considered sufficient to fulfill the criterion of reparations.
+Fed by decolonial, postcolonial and abolitionist planning theory (Dorries et al., <a href="#index.xhtml_CIT0020" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0020">2019</a>; Porter et al., <a href="#index.xhtml_CIT0025" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0025">2021</a>), the current discourse around reparative justice focuses specifically and unambiguously on “_justice_” for people of the African diaspora, whereas earlier planning discourses focused on more diffuse concepts such as _diversity, equality_, and _equity_ (Metzger, <a href="#index.xhtml_CIT0022" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0022">1996</a>). There are two big differences here between reparative and equity-based planning: first, the focus of reparations is race, not class; and second, the redistributive principle in equity planning, in and of itself, is not considered sufficient to fulfill the criterion of reparations.
 
 </div>
 
 <div role="paragraph">
 
-Nevertheless the earlier *diversity/equality/advocacy* discourse and equity planning paved the way for today’s more justice-focused approaches, alongside the important concept of recognition (Young, <a href="#index.xhtml_CIT0030" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0030">1990</a>). Like Young, we see recognition of difference as critical to reparative planning, leading not to *equality* of treatment but to *different* treatment of groups or individuals based on the extent of their marginalization and lack of privilege and power. Recognition in this sense is a necessary precursor to reparative planning.
+Nevertheless the earlier _diversity/equality/advocacy_ discourse and equity planning paved the way for today’s more justice-focused approaches, alongside the important concept of recognition (Young, <a href="#index.xhtml_CIT0030" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0030">1990</a>). Like Young, we see recognition of difference as critical to reparative planning, leading not to _equality_ of treatment but to _different_ treatment of groups or individuals based on the extent of their marginalization and lack of privilege and power. Recognition in this sense is a necessary precursor to reparative planning.
 
 </div>
 
@@ -794,7 +794,7 @@ In 1968, some Providence residents responded to existing disparities and weak go
 
 <div role="paragraph">
 
-The publication of *A Matter of Truth* (Rhode Island Black Heritage Society & 1696 Heritage Group, <a href="#index.xhtml_CIT0026" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0026">2021</a>) resulted in a formal acknowledgement from the mayor’s office regarding the injustices Native American and Black Americans continue to endure. It argues that racial equity begins through the admission and repair of injustices. This report informed recommendations of the Municipal Reparations Commission, which described how race-based discrimination changed neighborhoods largely composed of people of African heritage and limited-income. Ultimately, the report calls for “measurable outcomes for reparations to *close the present-day racial wealth and equity gap* that has left too many BIPOC residents of Providence much poorer than their white counterparts” (Providence Municipal Reparations Commission, <a href="#index.xhtml_CIT0024" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0024">2022</a>).
+The publication of _A Matter of Truth_ (Rhode Island Black Heritage Society & 1696 Heritage Group, <a href="#index.xhtml_CIT0026" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0026">2021</a>) resulted in a formal acknowledgement from the mayor’s office regarding the injustices Native American and Black Americans continue to endure. It argues that racial equity begins through the admission and repair of injustices. This report informed recommendations of the Municipal Reparations Commission, which described how race-based discrimination changed neighborhoods largely composed of people of African heritage and limited-income. Ultimately, the report calls for “measurable outcomes for reparations to _close the present-day racial wealth and equity gap_ that has left too many BIPOC residents of Providence much poorer than their white counterparts” (Providence Municipal Reparations Commission, <a href="#index.xhtml_CIT0024" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0024">2022</a>).
 
 </div>
 
@@ -818,7 +818,7 @@ Mayor Elorza has proposed that \$15 million in the city’s American Rescue Plan
 
 <div role="paragraph">
 
-From our perspective, the Providence, RI case of resistance resulting in reparative planning is welcome and goes well beyond advocacy/equity planning in both its *focus* (race not class) and its *means* (justice, not equity). It should be seen as a well thought out and organized local/ized experiment. At present, it represents an understandably broad-brush approach to establish the *principles* of reparations, rather than a strict focus on *what a reparative urban planning might look like in practice*. Based in discrete policy areas such as housing or land use, it therefore still falls far short of the call from Williams (<a href="#index.xhtml_CIT0028" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0028">2020</a>), MORE and *Commitment to Change* for a paradigm shift affecting not only *how* we plan, but *what* we plan and *who* benefits.
+From our perspective, the Providence, RI case of resistance resulting in reparative planning is welcome and goes well beyond advocacy/equity planning in both its _focus_ (race not class) and its _means_ (justice, not equity). It should be seen as a well thought out and organized local/ized experiment. At present, it represents an understandably broad-brush approach to establish the _principles_ of reparations, rather than a strict focus on _what a reparative urban planning might look like in practice_. Based in discrete policy areas such as housing or land use, it therefore still falls far short of the call from Williams (<a href="#index.xhtml_CIT0028" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0028">2020</a>), MORE and _Commitment to Change_ for a paradigm shift affecting not only _how_ we plan, but _what_ we plan and _who_ benefits.
 
 </div>
 
@@ -834,13 +834,13 @@ From our perspective, the Providence, RI case of resistance resulting in reparat
 
 <div role="paragraph">
 
-***Julian Agyeman*** is a Professor of Urban and Environmental Policy and Planning and the Fletcher Professor of Rhetoric and Debate at Tufts University. He is the originator of the concept of “just sustainabilities,” which explores the intersecting goals of social justice and environmental sustainability. Email: <Julian.Agyeman@tufts.edu>
+_**Julian Agyeman**_ is a Professor of Urban and Environmental Policy and Planning and the Fletcher Professor of Rhetoric and Debate at Tufts University. He is the originator of the concept of “just sustainabilities,” which explores the intersecting goals of social justice and environmental sustainability. Email: <Julian.Agyeman@tufts.edu>
 
 </div>
 
 <div role="paragraph">
 
-***Nicholas Stewart*** a Jamaican-American scholar, is an MS Environmental Policy and Planning candidate at Tufts University. He has studied the water crisis through different foci in Ghana, Jamaica, Australia, and Senegal. His current interest focuses on intersectional justice through and within reparative planning. Email: <Nicholas.Stewart@tufts.edu>
+_**Nicholas Stewart**_ a Jamaican-American scholar, is an MS Environmental Policy and Planning candidate at Tufts University. He has studied the water crisis through different foci in Ghana, Jamaica, Australia, and Senegal. His current interest focuses on intersectional justice through and within reparative planning. Email: <Nicholas.Stewart@tufts.edu>
 
 </div>
 
@@ -868,7 +868,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0016" class="citations">
 
-<span class="citation">African American Ambassadors Group. (2022), *Truth-telling & reconciliation: Proposing a framework for the City of Providence.* February 6. <https://truth.rwu.me/report.html></span>
+<span class="citation">African American Ambassadors Group. (2022), _Truth-telling & reconciliation: Proposing a framework for the City of Providence._ February 6. <https://truth.rwu.me/report.html></span>
 
 </div>
 
@@ -878,7 +878,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0017" class="citations">
 
-<span class="citation">Agyeman, J. (2020). Urban planning as a tool of white supremacy – The other lesson from Minneapolis. *The Conversation*, July 27, 2020</span>
+<span class="citation">Agyeman, J. (2020). Urban planning as a tool of white supremacy – The other lesson from Minneapolis. _The Conversation_, July 27, 2020</span>
 
 </div>
 
@@ -888,7 +888,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0018" class="citations">
 
-<span class="citation">City of Providence. (2022a). *The Providence rescue plan*. <https://pvdrescueplan.com/about/></span>
+<span class="citation">City of Providence. (2022a). _The Providence rescue plan_. <https://pvdrescueplan.com/about/></span>
 
 </div>
 
@@ -898,7 +898,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0019" class="citations">
 
-<span class="citation">City of Providence. (2022b). *Ordinance ORD-2022-59*. <https://providenceri.iqm2.com/Citizens/Detail_LegiFile.aspx?Frame=None&MeetingID=13834&MediaPosition=&ID=38099&CssClass=></span>
+<span class="citation">City of Providence. (2022b). _Ordinance ORD-2022-59_. <https://providenceri.iqm2.com/Citizens/Detail_LegiFile.aspx?Frame=None&MeetingID=13834&MediaPosition=&ID=38099&CssClass=></span>
 
 </div>
 
@@ -908,7 +908,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0020" class="citations">
 
-<span class="citation">Dorries, H., Hugill, D., & Tomiak, J. (2019). Racial capitalism and the production of settler colonial cities. *Geoforum*, 132, 263–270. [Crossref](https://doi.org/10.1016/j.geoforum.2019.07.016).</span>
+<span class="citation">Dorries, H., Hugill, D., & Tomiak, J. (2019). Racial capitalism and the production of settler colonial cities. _Geoforum_, 132, 263–270. [Crossref](https://doi.org/10.1016/j.geoforum.2019.07.016).</span>
 
 </div>
 
@@ -928,7 +928,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0022" class="citations">
 
-<span class="citation">Metzger, J. (1996). The theory and practice of equity planning: An annotated bibliography. *Journal of Planning Literature*, *11*, 112–126. [Crossref](https://doi.org/10.1177/088541229601100106).</span>
+<span class="citation">Metzger, J. (1996). The theory and practice of equity planning: An annotated bibliography. _Journal of Planning Literature_, _11_, 112–126. [Crossref](https://doi.org/10.1177/088541229601100106).</span>
 
 </div>
 
@@ -938,7 +938,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0023" class="citations">
 
-<span class="citation">Planning Directors. (2022). *Planning and equity: A commitment to change* <https://www.phila.gov/departments/philadelphia-city-planning-commission/about/planning-and-equity-a-commitment-to-change/></span>
+<span class="citation">Planning Directors. (2022). _Planning and equity: A commitment to change_ <https://www.phila.gov/departments/philadelphia-city-planning-commission/about/planning-and-equity-a-commitment-to-change/></span>
 
 </div>
 
@@ -948,7 +948,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0024" class="citations">
 
-<span class="citation">Providence Municipal Reparations Commission. (2022). *Report of the Providence Municipal Reparations Commission.* <https://www.providenceri.gov/wp-content/uploads/2022/08/ReparationsRecommendationsReport_FINAL.pdf></span>
+<span class="citation">Providence Municipal Reparations Commission. (2022). _Report of the Providence Municipal Reparations Commission._ <https://www.providenceri.gov/wp-content/uploads/2022/08/ReparationsRecommendationsReport_FINAL.pdf></span>
 
 </div>
 
@@ -958,7 +958,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0025" class="citations">
 
-<span class="citation">Porter, L., Roy, A., & Legacy, C. (2021). Planning solidarity? From silence to refusal. *Planning Theory & Practice*, *22*(1), 111–138. [Crossref](https://doi.org/10.1080/14649357.2021.1872952). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=000619350600001).</span>
+<span class="citation">Porter, L., Roy, A., & Legacy, C. (2021). Planning solidarity? From silence to refusal. _Planning Theory & Practice_, _22_(1), 111–138. [Crossref](https://doi.org/10.1080/14649357.2021.1872952). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=000619350600001).</span>
 
 </div>
 
@@ -968,7 +968,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0026" class="citations">
 
-<span class="citation">Rhode Island Black Heritage Society & 1696 Heritage Group. (2021). *A matter of truth,* <https://www.providenceri.gov/wp-content/uploads/2021/06/Matter-of-Truth2.pdf></span>
+<span class="citation">Rhode Island Black Heritage Society & 1696 Heritage Group. (2021). _A matter of truth,_ <https://www.providenceri.gov/wp-content/uploads/2021/06/Matter-of-Truth2.pdf></span>
 
 </div>
 
@@ -978,7 +978,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0027" class="citations">
 
-<span class="citation">Congress, U. S. (2023). 117th Congress: *Commission to Study and Develop Reparation Proposals for African Americans Act* (H.R. 40). www.GovTrack.us. 2021, January 2. <https://www.govtrack.us/congress/bills/117/hr40>.</span>
+<span class="citation">Congress, U. S. (2023). 117th Congress: _Commission to Study and Develop Reparation Proposals for African Americans Act_ (H.R. 40). www.GovTrack.us. 2021, January 2. <https://www.govtrack.us/congress/bills/117/hr40>.</span>
 
 </div>
 
@@ -988,7 +988,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0028" class="citations">
 
-<span class="citation">Williams, R. (2020). From racial to reparative planning: Confronting the white side of planning. *Journal of Planning Education and Research*, *52*, 1–11. [Crossref](https://doi.org/10.1177/0739456X20946416). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=WOS%3A000556317300001).</span>
+<span class="citation">Williams, R. (2020). From racial to reparative planning: Confronting the white side of planning. _Journal of Planning Education and Research_, _52_, 1–11. [Crossref](https://doi.org/10.1177/0739456X20946416). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=WOS%3A000556317300001).</span>
 
 </div>
 
@@ -998,7 +998,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0029" class="citations">
 
-<span class="citation">Wolf-Powers, L. (2022). *University city: History, race, & community in the era of the innovation district*. University of Pennsylvania Press.</span>
+<span class="citation">Wolf-Powers, L. (2022). _University city: History, race, & community in the era of the innovation district_. University of Pennsylvania Press.</span>
 
 </div>
 
@@ -1008,7 +1008,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0030" class="citations">
 
-<span class="citation">Young, I. M. (1990). *Justice and the politics of difference*. Princeton University Press.</span>
+<span class="citation">Young, I. M. (1990). _Justice and the politics of difference_. Princeton University Press.</span>
 
 </div>
 
@@ -1060,7 +1060,7 @@ In Stuttgart, the 600,000-inhabitant capital of Baden-Wurttemberg, a railway and
 
 <div role="paragraph">
 
-Protests failed to stop S21 but nevertheless proved momentous. Many perceived the resistance to S21 as marking a watershed moment, dividing German history into a time “before” and a time “after” it (Korte, <a href="#index.xhtml_CIT0033" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0033">2011</a>). Although for some it signaled a new era of civic engagement, others saw the protests in a more negative light. These critics described them as constituting a maelstrom of naysaying and populism, making reasonable debate impossible and threatening to turn the country into a *Dagegen-Republik* (“opposition republic”). Such portrayals place the conflict around S21 squarely in the context of discussions in the planning literature about the “corrosive effects” of the “current populist moment” (Rivero et al., <a href="#index.xhtml_CIT0036" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0036">2022</a>, p. 1) and the challenges that NIMBY resistance poses for planning (Schively, <a href="#index.xhtml_CIT0037" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0037">2007</a>).
+Protests failed to stop S21 but nevertheless proved momentous. Many perceived the resistance to S21 as marking a watershed moment, dividing German history into a time “before” and a time “after” it (Korte, <a href="#index.xhtml_CIT0033" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0033">2011</a>). Although for some it signaled a new era of civic engagement, others saw the protests in a more negative light. These critics described them as constituting a maelstrom of naysaying and populism, making reasonable debate impossible and threatening to turn the country into a _Dagegen-Republik_ (“opposition republic”). Such portrayals place the conflict around S21 squarely in the context of discussions in the planning literature about the “corrosive effects” of the “current populist moment” (Rivero et al., <a href="#index.xhtml_CIT0036" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0036">2022</a>, p. 1) and the challenges that NIMBY resistance poses for planning (Schively, <a href="#index.xhtml_CIT0037" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0037">2007</a>).
 
 </div>
 
@@ -1082,7 +1082,7 @@ The conflicts over S21 began with interrogating the project’s real purpose. Fo
 
 <div role="paragraph">
 
-Resistance to S21 proved so momentous that a new word entered the German language: “Wutbürger.” First used in the magazine *Der Spiegel* in 2010, the neologism was declared word of the year 2010 by the *Gesellschaft für deutsche Sprache* (“German Language Society”) and subsequently added to the Duden dictionary. The latter defines it in a neutral tone as “citizens protesting and demonstrating very forcefully in public out of disappointment with certain political decisions.” The journalist that introduced it portrayed it as an expression of a growing populism gripping German society, likening it to right-wing, anti-migration movements and citizens’ initiatives opposing wind farms. He identified distrust of the state, naysaying and NIMBYism as its cause and attacked participants for thinking “only of themselves and not of the future of their city,” for claiming to be able to “judge things better than the politicians,” for “shouting and hating,” and for disregarding the rules of democracy (Kurbjuweit, <a href="#index.xhtml_CIT0034" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0034">2010</a>).
+Resistance to S21 proved so momentous that a new word entered the German language: “Wutbürger.” First used in the magazine _Der Spiegel_ in 2010, the neologism was declared word of the year 2010 by the _Gesellschaft für deutsche Sprache_ (“German Language Society”) and subsequently added to the Duden dictionary. The latter defines it in a neutral tone as “citizens protesting and demonstrating very forcefully in public out of disappointment with certain political decisions.” The journalist that introduced it portrayed it as an expression of a growing populism gripping German society, likening it to right-wing, anti-migration movements and citizens’ initiatives opposing wind farms. He identified distrust of the state, naysaying and NIMBYism as its cause and attacked participants for thinking “only of themselves and not of the future of their city,” for claiming to be able to “judge things better than the politicians,” for “shouting and hating,” and for disregarding the rules of democracy (Kurbjuweit, <a href="#index.xhtml_CIT0034" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0034">2010</a>).
 
 </div>
 
@@ -1124,13 +1124,13 @@ As with other mass movements, the opposition to S21 encompassed competing factio
 
 <div role="paragraph">
 
-New hopes were raised after state elections in March 2011. The Greens, together with the centre-left Social Democratic Party (SPD), ousted the conservative Christian Democratic Union (CDU), which had ruled the state uninterruptedly since the 1950s. In their coalition agreement, they decided to settle the question of whether the state should continue to finance S21 through a referendum. It came out in favour of the project supporters – who had outspent the opposition many times over for their campaign – prompting the Greens to abandon their opposition. Soon after, it became clear that rumours of massive cost increases, denied by the project proponents before the referendum, were true, causing many to cry foul. The Greens, however, stood by their position despite a steady stream of further cost increases and other problems. Some former allies meanwhile remained steadfast in their opposition and continued weekly protests, refusing to consider the project a *fait accompli.*
+New hopes were raised after state elections in March 2011. The Greens, together with the centre-left Social Democratic Party (SPD), ousted the conservative Christian Democratic Union (CDU), which had ruled the state uninterruptedly since the 1950s. In their coalition agreement, they decided to settle the question of whether the state should continue to finance S21 through a referendum. It came out in favour of the project supporters – who had outspent the opposition many times over for their campaign – prompting the Greens to abandon their opposition. Soon after, it became clear that rumours of massive cost increases, denied by the project proponents before the referendum, were true, causing many to cry foul. The Greens, however, stood by their position despite a steady stream of further cost increases and other problems. Some former allies meanwhile remained steadfast in their opposition and continued weekly protests, refusing to consider the project a _fait accompli._
 
 </div>
 
 <div role="paragraph">
 
-Given the advanced stage of construction, *this* position indeed appears irrational; however, a strong case can be made that protests *in toto* were not. The struggle against S21 was a popular revolt with a populist bent rather than simply a populist revolt. Coinciding with a rise of urban social movements elsewhere (Swyngedouw, <a href="#index.xhtml_CIT0038" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0038">2014</a>), it echoed long-standing diagnoses and demands of progressive urban struggles but also showed that the boundaries between progressive and regressive/defensive movements are fuzzy and that NIMBYism as an explanation (and condemnation) of resistance rings hollow in the absence of further analysis.
+Given the advanced stage of construction, _this_ position indeed appears irrational; however, a strong case can be made that protests _in toto_ were not. The struggle against S21 was a popular revolt with a populist bent rather than simply a populist revolt. Coinciding with a rise of urban social movements elsewhere (Swyngedouw, <a href="#index.xhtml_CIT0038" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0038">2014</a>), it echoed long-standing diagnoses and demands of progressive urban struggles but also showed that the boundaries between progressive and regressive/defensive movements are fuzzy and that NIMBYism as an explanation (and condemnation) of resistance rings hollow in the absence of further analysis.
 
 </div>
 
@@ -1146,7 +1146,7 @@ Given the advanced stage of construction, *this* position indeed appears irratio
 
 <div role="paragraph">
 
-***Johannes Novy*** is a Senior Lecturer at the School of Architecture and Cities, University of Westminster, London. He researches and teaches on topics such as urban (development) politics, urban tourism and leisure consumption and is also a member of the curatorial board of the International Building Exhibition Stuttgart-Region 2027 (IBA’27). Email: <J.Novy@westminster.ac.uk>
+_**Johannes Novy**_ is a Senior Lecturer at the School of Architecture and Cities, University of Westminster, London. He researches and teaches on topics such as urban (development) politics, urban tourism and leisure consumption and is also a member of the curatorial board of the International Building Exhibition Stuttgart-Region 2027 (IBA’27). Email: <J.Novy@westminster.ac.uk>
 
 </div>
 
@@ -1174,7 +1174,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0031" class="citations">
 
-<span class="citation">Flyvbjerg, B. (2017). Introduction: The iron law of megaproject management. In B. Flyvbjerg (Ed.), *The Oxford handbook of megaproject management* (pp. 1–18). Oxford University Press. [Crossref](https://doi.org/10.1093/oxfordhb/9780198732242.001.0001).</span>
+<span class="citation">Flyvbjerg, B. (2017). Introduction: The iron law of megaproject management. In B. Flyvbjerg (Ed.), _The Oxford handbook of megaproject management_ (pp. 1–18). Oxford University Press. [Crossref](https://doi.org/10.1093/oxfordhb/9780198732242.001.0001).</span>
 
 </div>
 
@@ -1184,7 +1184,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0032" class="citations">
 
-<span class="citation">Habermas, J. (2010). Leadership and leitkultur. *New York Times.* 28 October. <https://www.nytimes.com/2010/10/29/opinion/29Habermas.html></span>
+<span class="citation">Habermas, J. (2010). Leadership and leitkultur. _New York Times._ 28 October. <https://www.nytimes.com/2010/10/29/opinion/29Habermas.html></span>
 
 </div>
 
@@ -1194,7 +1194,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0033" class="citations">
 
-<span class="citation">Korte, K. R. (2011). Eine zeitkrise des politischen. Über die zeitkrise im superwahljahr 2011. *Regierungsforschung. de, Politikmanagement und Politikberatung*, <http://www.regierungs-forschung.de/dx/public/article.Html></span>
+<span class="citation">Korte, K. R. (2011). Eine zeitkrise des politischen. Über die zeitkrise im superwahljahr 2011. _Regierungsforschung. de, Politikmanagement und Politikberatung_, <http://www.regierungs-forschung.de/dx/public/article.Html></span>
 
 </div>
 
@@ -1204,7 +1204,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0034" class="citations">
 
-<span class="citation">Kurbjuweit, D. (2010). Der wutbürger. *Der Spiegel*, 41/2010, 26–27.</span>
+<span class="citation">Kurbjuweit, D. (2010). Der wutbürger. _Der Spiegel_, 41/2010, 26–27.</span>
 
 </div>
 
@@ -1214,7 +1214,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0079" class="citations">
 
-<span class="citation">Lösch, V., Stocker, G., Leidig, S. & Wolf, W. (2010). *Stuttgart 21 oder: Wem gehört die Stadt*. PapyRossa Verlag.</span>
+<span class="citation">Lösch, V., Stocker, G., Leidig, S. & Wolf, W. (2010). _Stuttgart 21 oder: Wem gehört die Stadt_. PapyRossa Verlag.</span>
 
 </div>
 
@@ -1224,7 +1224,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0035" class="citations">
 
-<span class="citation">Novy, J., & Peters, D. (2012). Railway station mega-projects as public controversies: The case of stuttgart 21. *Built Environment*, *38*(1), 128–145. [Crossref](https://doi.org/10.2148/benv.38.1.128).</span>
+<span class="citation">Novy, J., & Peters, D. (2012). Railway station mega-projects as public controversies: The case of stuttgart 21. _Built Environment_, _38_(1), 128–145. [Crossref](https://doi.org/10.2148/benv.38.1.128).</span>
 
 </div>
 
@@ -1234,7 +1234,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0036" class="citations">
 
-<span class="citation">Rivero, J. J., Sotomayor, L., Zanotto, J. M., & Zitcer, A. (2022). Democratic public or populist rabble: Repositioning the city amidst social fracture. *International Journal of Urban and Regional Research*, *46*(1), 101–114. [Crossref](https://doi.org/10.1111/1468-2427.12898). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=000562422100001).</span>
+<span class="citation">Rivero, J. J., Sotomayor, L., Zanotto, J. M., & Zitcer, A. (2022). Democratic public or populist rabble: Repositioning the city amidst social fracture. _International Journal of Urban and Regional Research_, _46_(1), 101–114. [Crossref](https://doi.org/10.1111/1468-2427.12898). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=000562422100001).</span>
 
 </div>
 
@@ -1244,7 +1244,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0037" class="citations">
 
-<span class="citation">Schively, C. (2007). Understanding the NIMBY and LULU phenomena: Reassessing our knowledge base and informing future research. *Journal of Planning Literature*, *21*(3), 255–266. [Crossref](https://doi.org/10.1177/0885412206295845). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=WOS%3A000243846400001).</span>
+<span class="citation">Schively, C. (2007). Understanding the NIMBY and LULU phenomena: Reassessing our knowledge base and informing future research. _Journal of Planning Literature_, _21_(3), 255–266. [Crossref](https://doi.org/10.1177/0885412206295845). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=WOS%3A000243846400001).</span>
 
 </div>
 
@@ -1254,7 +1254,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0038" class="citations">
 
-<span class="citation">Swyngedouw, E. (2014). Where is the political? Insurgent mobilisations and the incipient ‘return of the political. *Space and Polity*, *18*(2), 122–136. [Crossref](https://doi.org/10.1080/13562576.2013.879774).</span>
+<span class="citation">Swyngedouw, E. (2014). Where is the political? Insurgent mobilisations and the incipient ‘return of the political. _Space and Polity_, _18_(2), 122–136. [Crossref](https://doi.org/10.1080/13562576.2013.879774).</span>
 
 </div>
 
@@ -1408,13 +1408,13 @@ Transport policy making and local transport planning are unavoidably complex exe
 
 <div role="paragraph">
 
-***Aysin Dedekorkut-Howes*** is a Senior Lecturer of Urban and Environmental Planning at Griffith University. Her research focuses on climate change adaptation, disaster resilience, water resource management, and urbanisation in subtropical areas and coastal cities. She is the co-editor of the book *Off the Plan: The Urbanisation of the Gold Coast.* Email: <a.dedekorkut@griffith.edu.au>
+_**Aysin Dedekorkut-Howes**_ is a Senior Lecturer of Urban and Environmental Planning at Griffith University. Her research focuses on climate change adaptation, disaster resilience, water resource management, and urbanisation in subtropical areas and coastal cities. She is the co-editor of the book _Off the Plan: The Urbanisation of the Gold Coast._ Email: <a.dedekorkut@griffith.edu.au>
 
 </div>
 
 <div role="paragraph">
 
-***Paul Burton*** is Professor of Urban Managment and Planning and Director of the Cities Research Institute at Griffith University. His current research is focused on inter-professional working in the development sector, the role and regulation of tiny houses and the values held and applied by practising planners. Email: <p.burton@griffith.edu.au>
+_**Paul Burton**_ is Professor of Urban Managment and Planning and Director of the Cities Research Institute at Griffith University. His current research is focused on inter-professional working in the development sector, the role and regulation of tiny houses and the values held and applied by practising planners. Email: <p.burton@griffith.edu.au>
 
 </div>
 
@@ -1442,7 +1442,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0039" class="citations">
 
-<span class="citation">Cansdale, D. (2022, May 13). Gold Coast light rail debate shows ‘change can be scary’, but city still has a public transport problem. *ABC Gold Coast*. <https://www.abc.net.au/news/2022-05-13/gold-coast-light-rail-debate-protest-tom-tate-karen-andrews/101055522></span>
+<span class="citation">Cansdale, D. (2022, May 13). Gold Coast light rail debate shows ‘change can be scary’, but city still has a public transport problem. _ABC Gold Coast_. <https://www.abc.net.au/news/2022-05-13/gold-coast-light-rail-debate-protest-tom-tate-karen-andrews/101055522></span>
 
 </div>
 
@@ -1452,7 +1452,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0040" class="citations">
 
-<span class="citation">Cansdale, D., & Sheehan, H. (2022, May 10). Karen Andrews voices opposition to Gold Coast light rail project, mayor Tom Tate slams arrogant backflip. *ABC Gold Coast*. <https://www.abc.net.au/news/2022-05-10/karen-andrews-withdraws-support-for-light-rail/101052196></span>
+<span class="citation">Cansdale, D., & Sheehan, H. (2022, May 10). Karen Andrews voices opposition to Gold Coast light rail project, mayor Tom Tate slams arrogant backflip. _ABC Gold Coast_. <https://www.abc.net.au/news/2022-05-10/karen-andrews-withdraws-support-for-light-rail/101052196></span>
 
 </div>
 
@@ -1462,7 +1462,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0041" class="citations">
 
-<span class="citation">Lowe, I. (2012). *Bigger Or better?: Australia’s population debate*. University of Queensland Press.</span>
+<span class="citation">Lowe, I. (2012). _Bigger Or better?: Australia’s population debate_. University of Queensland Press.</span>
 
 </div>
 
@@ -1472,7 +1472,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0042" class="citations">
 
-<span class="citation">Queensland Government. (2021). (*Gold Coast Light Rail Stage 4 (GCLR4) Burleigh Heads to Coolangatta Community Consultation Summary – Burleigh Heads to Tugun section.* December. <https://www.tmr.qld.gov.au/projects/gold-coast-light-rail-stage-4></span>
+<span class="citation">Queensland Government. (2021). (_Gold Coast Light Rail Stage 4 (GCLR4) Burleigh Heads to Coolangatta Community Consultation Summary – Burleigh Heads to Tugun section._ December. <https://www.tmr.qld.gov.au/projects/gold-coast-light-rail-stage-4></span>
 
 </div>
 
@@ -1621,7 +1621,7 @@ Each kind of resistance required a distinct response from CA HSRA planners. The 
 
 <div role="paragraph">
 
-The benefits of high-speed rail are abstract, will only accrue in the long term, require significant expense and coordination, and are afforded to many Californians equally. Meanwhile, costs are borne by specific communities and individual landowners. Some communities chose a path of *pragmatic negotiation*, scraping concessions from HSRA planners, while others chose a more adversarial approach: outright opposition to high-speed rail *on its face*, refusing to negotiate with planners. A normative lesson emerges: *tactics* for resistance are as important as opponents’ overall normative *position* on a given planning project. In California, groups that contested the project on its face ultimately lost out. Pragmatic communities, by contrast, experienced local wins alongside high-speed rail – e.g. an improved irrigation canal, a newly rebuilt fire station, and underground rail tunnels.
+The benefits of high-speed rail are abstract, will only accrue in the long term, require significant expense and coordination, and are afforded to many Californians equally. Meanwhile, costs are borne by specific communities and individual landowners. Some communities chose a path of _pragmatic negotiation_, scraping concessions from HSRA planners, while others chose a more adversarial approach: outright opposition to high-speed rail _on its face_, refusing to negotiate with planners. A normative lesson emerges: _tactics_ for resistance are as important as opponents’ overall normative _position_ on a given planning project. In California, groups that contested the project on its face ultimately lost out. Pragmatic communities, by contrast, experienced local wins alongside high-speed rail – e.g. an improved irrigation canal, a newly rebuilt fire station, and underground rail tunnels.
 
 </div>
 
@@ -1649,7 +1649,7 @@ The case reveals that communities’ social dynamics shape the potency of projec
 
 <div role="paragraph">
 
-***Stefan Chavez-Norgaard*** is a PhD Candidate in Urban Planning at Columbia University. His research interests include urban and planning theory, local-government and planning law, and mixed-methods research focused on planning practice and urban governance in the related but distinct late-liberal contexts of South Africa and the United States. Email: <spn2121@columbia.edu>
+_**Stefan Chavez-Norgaard**_ is a PhD Candidate in Urban Planning at Columbia University. His research interests include urban and planning theory, local-government and planning law, and mixed-methods research focused on planning practice and urban governance in the related but distinct late-liberal contexts of South Africa and the United States. Email: <spn2121@columbia.edu>
 
 </div>
 
@@ -1677,7 +1677,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0043" class="citations">
 
-<span class="citation">California High Speed Rail Authority (CA HSRA). (2022). *Business plan.* 1 May. Retrieved October 4, 2019, from <https://hsr.ca.gov/wp-content/uploads/2022/05/2022-Business-Plan-FINAL-A11Y.pdf></span>
+<span class="citation">California High Speed Rail Authority (CA HSRA). (2022). _Business plan._ 1 May. Retrieved October 4, 2019, from <https://hsr.ca.gov/wp-content/uploads/2022/05/2022-Business-Plan-FINAL-A11Y.pdf></span>
 
 </div>
 
@@ -1687,7 +1687,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0044" class="citations">
 
-<span class="citation">Vartabedian, R. (2022). ‘Governor, legislators won’t budge in high-speed rail dispute.’ *Cal Matters*. 6 May. Retrieved July 10, 2022, from <https://calmatters.org/politics/2022/05/california-high-speed-rail-standoff/></span>
+<span class="citation">Vartabedian, R. (2022). ‘Governor, legislators won’t budge in high-speed rail dispute.’ _Cal Matters_. 6 May. Retrieved July 10, 2022, from <https://calmatters.org/politics/2022/05/california-high-speed-rail-standoff/></span>
 
 </div>
 
@@ -1697,7 +1697,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0045" class="citations">
 
-<span class="citation">Vartabedian, R., Karlamangla, S. (2015). Protesters, many from the San Fernando Valley, decry bullet train route at meeting in L.A. *Los Angeles Times*. 9 June. Retrieved July 15, 2022, from <https://www.latimes.com/local/lanow/la-me-ln-bullet-train-protests-201506-story.html></span>
+<span class="citation">Vartabedian, R., Karlamangla, S. (2015). Protesters, many from the San Fernando Valley, decry bullet train route at meeting in L.A. _Los Angeles Times_. 9 June. Retrieved July 15, 2022, from <https://www.latimes.com/local/lanow/la-me-ln-bullet-train-protests-201506-story.html></span>
 
 </div>
 
@@ -1811,7 +1811,7 @@ Less often acknowledged is the Singapore model’s reliance on the premise of a 
 
 <div role="paragraph">
 
-***Nick R. Smith*** is Assistant Professor of Architecture and Urban Studies at Barnard College, Columbia University. His research explores the politics of urbanization and planning, with a regional focus on Asia. He is the author of *The End of the Village: Planning the Urbanization of Rural China.* Email: <nick.r.smith@gmail.com>
+_**Nick R. Smith**_ is Assistant Professor of Architecture and Urban Studies at Barnard College, Columbia University. His research explores the politics of urbanization and planning, with a regional focus on Asia. He is the author of _The End of the Village: Planning the Urbanization of Rural China._ Email: <nick.r.smith@gmail.com>
 
 </div>
 
@@ -1839,7 +1839,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0046" class="citations">
 
-<span class="citation">Chong, T. (2014). Bukit Brown municipal cemetery: Contesting imaginations of the good life in Singapore. In D. P. S. Goh (Ed.), *Worlding Multiculturalisms: The Politics of inter-Asian Dwelling* (pp. 161–182). Routledge.</span>
+<span class="citation">Chong, T. (2014). Bukit Brown municipal cemetery: Contesting imaginations of the good life in Singapore. In D. P. S. Goh (Ed.), _Worlding Multiculturalisms: The Politics of inter-Asian Dwelling_ (pp. 161–182). Routledge.</span>
 
 </div>
 
@@ -1849,7 +1849,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0047" class="citations">
 
-<span class="citation">Chua B. H. (2011). Singapore as model: Planning innovations, knowledge experts. In A. Roy & A. Ong (Eds.), *Worlding cities* (pp. 27–54). John Wiley & Sons, Ltd.</span>
+<span class="citation">Chua B. H. (2011). Singapore as model: Planning innovations, knowledge experts. In A. Roy & A. Ong (Eds.), _Worlding cities_ (pp. 27–54). John Wiley & Sons, Ltd.</span>
 
 </div>
 
@@ -1859,7 +1859,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0048" class="citations">
 
-<span class="citation">Chua B. H. (2017). *Liberalism disavowed: Communitarianism and state capitalism in Singapore*. NUS Press. [Crossref](https://doi.org/10.7591/9781501713453).</span>
+<span class="citation">Chua B. H. (2017). _Liberalism disavowed: Communitarianism and state capitalism in Singapore_. NUS Press. [Crossref](https://doi.org/10.7591/9781501713453).</span>
 
 </div>
 
@@ -1869,7 +1869,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0049" class="citations">
 
-<span class="citation">Fainstein, S. S. (2017). Urban planning and social justice. In M. Gunder, A. Madanipour, & V. Watson (Eds.), *The Routledge handbook of planning theory* (pp. 130–142). Routledge. [Crossref](https://doi.org/10.4324/9781315696072-11).</span>
+<span class="citation">Fainstein, S. S. (2017). Urban planning and social justice. In M. Gunder, A. Madanipour, & V. Watson (Eds.), _The Routledge handbook of planning theory_ (pp. 130–142). Routledge. [Crossref](https://doi.org/10.4324/9781315696072-11).</span>
 
 </div>
 
@@ -1879,7 +1879,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0050" class="citations">
 
-<span class="citation">Huang, J. (2014). Resurgent spirits of civil society activism: Rediscovering the Bukit Brown cemetery in Singapore. *Journal of the Malaysian Branch of the Royal Asiatic Society*, *87*(2), 21–45. [Crossref](https://doi.org/10.1353/ras.2014.0016).</span>
+<span class="citation">Huang, J. (2014). Resurgent spirits of civil society activism: Rediscovering the Bukit Brown cemetery in Singapore. _Journal of the Malaysian Branch of the Royal Asiatic Society_, _87_(2), 21–45. [Crossref](https://doi.org/10.1353/ras.2014.0016).</span>
 
 </div>
 
@@ -1889,7 +1889,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0051" class="citations">
 
-<span class="citation">Khoo, L.-M., & Boh, J. (2018). *Engaging well, forging bonds: The community as stakeholders in urban development*. Center for Livable Cities.</span>
+<span class="citation">Khoo, L.-M., & Boh, J. (2018). _Engaging well, forging bonds: The community as stakeholders in urban development_. Center for Livable Cities.</span>
 
 </div>
 
@@ -1899,7 +1899,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0052" class="citations">
 
-<span class="citation">Lim, C., & Leow, C. (2017). The Bukit Brown experience. In C. Singam & M. Thomas (Eds.), *The art of advocacy in Singapore* (pp. 110–123). Ethos Books.</span>
+<span class="citation">Lim, C., & Leow, C. (2017). The Bukit Brown experience. In C. Singam & M. Thomas (Eds.), _The art of advocacy in Singapore_ (pp. 110–123). Ethos Books.</span>
 
 </div>
 
@@ -1909,7 +1909,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0053" class="citations">
 
-<span class="citation">Pow, C. P. (2014). License to travel. *City*, *18*(3), 287–306. [Crossref](https://doi.org/10.1080/13604813.2014.908515).</span>
+<span class="citation">Pow, C. P. (2014). License to travel. _City_, _18_(3), 287–306. [Crossref](https://doi.org/10.1080/13604813.2014.908515).</span>
 
 </div>
 
@@ -1919,7 +1919,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0054" class="citations">
 
-<span class="citation">Shatkin, G. (2014). Reinterpreting the meaning of the ‘Singapore model’: State capitalism and urban planning. *International Journal of Urban and Regional Research*, *38*(1), 116–137. [Crossref](https://doi.org/10.1111/1468-2427.12095). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=WOS%3A000328747200007).</span>
+<span class="citation">Shatkin, G. (2014). Reinterpreting the meaning of the ‘Singapore model’: State capitalism and urban planning. _International Journal of Urban and Regional Research_, _38_(1), 116–137. [Crossref](https://doi.org/10.1111/1468-2427.12095). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=WOS%3A000328747200007).</span>
 
 </div>
 
@@ -2057,7 +2057,7 @@ The YIMBY movement certainly responds to a need for affordable housing. But all 
 
 <div role="paragraph">
 
-***Sharon Zukin*** is professor emerita of sociology and of earth and environmental sciences at Brooklyn College and the CUNY Graduate Center. The author of *Loft Living*, *Naked City*, and other books about New York, she is developing a documentary video project on SoHo with the film maker Alice Arnold. Email: <SZukin@gc.cuny.edu>
+_**Sharon Zukin**_ is professor emerita of sociology and of earth and environmental sciences at Brooklyn College and the CUNY Graduate Center. The author of _Loft Living_, _Naked City_, and other books about New York, she is developing a documentary video project on SoHo with the film maker Alice Arnold. Email: <SZukin@gc.cuny.edu>
 
 </div>
 
@@ -2085,7 +2085,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0055" class="citations">
 
-<span class="citation">Ezra Klein Show. (2021). We’ve become too complicated’: Where Eric Adams thinks Democrats went wrong. *New York Times*. <https://www.nytimes.com/2021/10/01/opinion/ezra-klein-podcast-eric-adams.html?showTranscript=1>, October 1.</span>
+<span class="citation">Ezra Klein Show. (2021). We’ve become too complicated’: Where Eric Adams thinks Democrats went wrong. _New York Times_. <https://www.nytimes.com/2021/10/01/opinion/ezra-klein-podcast-eric-adams.html?showTranscript=1>, October 1.</span>
 
 </div>
 
@@ -2095,7 +2095,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0056" class="citations">
 
-<span class="citation">Kent, L. (1997). Jane Jacobs: An oral history interview conducted for the GVSHP preservation archives, Toronto. *Village Preservation*. <https://www.villagepreservation.org/oral_history/jane-jacobs/></span>
+<span class="citation">Kent, L. (1997). Jane Jacobs: An oral history interview conducted for the GVSHP preservation archives, Toronto. _Village Preservation_. <https://www.villagepreservation.org/oral_history/jane-jacobs/></span>
 
 </div>
 
@@ -2125,7 +2125,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0059" class="citations">
 
-<span class="citation">NYC Planning. (2019). *Envision SoHo/NoHo: A summary of findings and recommendations.* *SoHoNoHo*. <https://www.envisionsohonoho.nyc/envision-sohonoho-report1></span>
+<span class="citation">NYC Planning. (2019). _Envision SoHo/NoHo: A summary of findings and recommendations._ _SoHoNoHo_. <https://www.envisionsohonoho.nyc/envision-sohonoho-report1></span>
 
 </div>
 
@@ -2145,7 +2145,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0061" class="citations">
 
-<span class="citation">Zukin, S. (1982). *Loft living: Culture and capital in urban change*. Johns Hopkins University Press.</span>
+<span class="citation">Zukin, S. (1982). _Loft living: Culture and capital in urban change_. Johns Hopkins University Press.</span>
 
 </div>
 
@@ -2249,7 +2249,7 @@ Following this meeting, the organizers’ email inbox quickly began to fill with
 
 <div role="paragraph">
 
-At the second CEC meeting (January 2020), resistance to the planning process was in full gear. Protesters interrupted the presentation, attacking WXY as a biased facilitator, and they displayed banners targeting the DOE. They demanded that the Working Group include more representation of parents, Asian-Americans, and Jews. Conservative press (like the Fox-owned *NY Post*) provided critical commentary, and social media activity grew, even connecting those resisting the D28 Plan process with opponents to a WXY school boundary study in Montgomery County, Maryland (Chalkbeat, 13 January <a href="#index.xhtml_CIT0062" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0062">2020</a>). The planners feared that any future in-person events might quickly disintegrate.
+At the second CEC meeting (January 2020), resistance to the planning process was in full gear. Protesters interrupted the presentation, attacking WXY as a biased facilitator, and they displayed banners targeting the DOE. They demanded that the Working Group include more representation of parents, Asian-Americans, and Jews. Conservative press (like the Fox-owned _NY Post_) provided critical commentary, and social media activity grew, even connecting those resisting the D28 Plan process with opponents to a WXY school boundary study in Montgomery County, Maryland (Chalkbeat, 13 January <a href="#index.xhtml_CIT0062" class="biblioref" role="doc-biblioref" data-xml-rid="CIT0062">2020</a>). The planners feared that any future in-person events might quickly disintegrate.
 
 </div>
 
@@ -2261,7 +2261,7 @@ At the second CEC meeting (January 2020), resistance to the planning process was
 
 <div role="paragraph">
 
-The D28 Plan process had explicitly aimed *“to increase middle school diversity and academic outcomes,*” and Working Group members were selected accordingly. The protestors believed that this choice of objective shaped the process, causing them to argue that the process was not *really* open to all possible recommendations, even if the planners had promised public input into any recommendations.
+The D28 Plan process had explicitly aimed _“to increase middle school diversity and academic outcomes,_” and Working Group members were selected accordingly. The protestors believed that this choice of objective shaped the process, causing them to argue that the process was not _really_ open to all possible recommendations, even if the planners had promised public input into any recommendations.
 
 </div>
 
@@ -2279,7 +2279,7 @@ Although development of the D15 Plan had proceeded smoothly, planning there oper
 
 <div role="paragraph">
 
-The collapse of the D28 Plan process dampened prospects for other school diversity community planning efforts. The success of the D15 Plan had spawned a City Council resolution that *all* community school districts should undertake a diversity planning process. But after the D28 tumult and the COVID-19 pandemic, this resolution has not been pursued.
+The collapse of the D28 Plan process dampened prospects for other school diversity community planning efforts. The success of the D15 Plan had spawned a City Council resolution that _all_ community school districts should undertake a diversity planning process. But after the D28 tumult and the COVID-19 pandemic, this resolution has not been pursued.
 
 </div>
 
@@ -2307,7 +2307,7 @@ Municipal agencies now hold both virtual and in-person events with diverse forma
 
 <div role="paragraph">
 
-***Adam Lubinsky***, PhD, AICP, is a Principal at WXY Studio, an interdisciplinary planning and architecture practice, and an Associate Professor of Professional Practice at Columbia University, based in New York City. He leads master plan and neighborhood planning processes utilizing data analysis, design and new forms of community engagement. Email: <AdamLubinsky@wxystudio.com>
+_**Adam Lubinsky**_, PhD, AICP, is a Principal at WXY Studio, an interdisciplinary planning and architecture practice, and an Associate Professor of Professional Practice at Columbia University, based in New York City. He leads master plan and neighborhood planning processes utilizing data analysis, design and new forms of community engagement. Email: <AdamLubinsky@wxystudio.com>
 
 </div>
 
@@ -2335,7 +2335,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0062" class="citations">
 
-<span class="citation">*Chalkbeat.* (2020). Resources, and School Performance, January 13. <https://ny.chalkbeat.org/2020/1/13/21121720/a-push-to-integrate-queens-schools-has-ripped-open-a-fight-about-race-resources-and-school-performan></span>
+<span class="citation">_Chalkbeat._ (2020). Resources, and School Performance, January 13. <https://ny.chalkbeat.org/2020/1/13/21121720/a-push-to-integrate-queens-schools-has-ripped-open-a-fight-about-race-resources-and-school-performan></span>
 
 </div>
 
@@ -2345,7 +2345,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0063" class="citations">
 
-<span class="citation">Einstein, K. L., Glick, D., Godinez Puig, L., & Palmer, M. (2022). Still muted: The limited participatory democracy of Zoom public meetings. *Urban Affairs Review*, *2022*, 704. [Crossref](https://doi.org/10.1177/107808742110704).</span>
+<span class="citation">Einstein, K. L., Glick, D., Godinez Puig, L., & Palmer, M. (2022). Still muted: The limited participatory democracy of Zoom public meetings. _Urban Affairs Review_, _2022_, 704. [Crossref](https://doi.org/10.1177/107808742110704).</span>
 
 </div>
 
@@ -2403,7 +2403,7 @@ From 1994 to 2006 I served seven years as the elected lead on regeneration and p
 
 <div role="paragraph">
 
-From 2000 to 2007 I also chaired the Thames Gateway London Partnership, bringing together public, private and third sector organisations with a purview that extended from London east of Tower Bridge along both sides of the river to the English Channel. At both the London borough scale and more strategically across the Gateway, the challenge was invariably one of balance between expanding London eastwards and attracting investment into the area’s superannuated infrastructure. With projected population growth of well over a million across the Gateway, we were building a new city, not on a *tabula* rasa but instead retrofitting an industrial heritage site, much of which was polluted, and though well connected to the world by water, poorly connected to the rest of London by mass transit.
+From 2000 to 2007 I also chaired the Thames Gateway London Partnership, bringing together public, private and third sector organisations with a purview that extended from London east of Tower Bridge along both sides of the river to the English Channel. At both the London borough scale and more strategically across the Gateway, the challenge was invariably one of balance between expanding London eastwards and attracting investment into the area’s superannuated infrastructure. With projected population growth of well over a million across the Gateway, we were building a new city, not on a _tabula_ rasa but instead retrofitting an industrial heritage site, much of which was polluted, and though well connected to the world by water, poorly connected to the rest of London by mass transit.
 
 </div>
 
@@ -2433,7 +2433,7 @@ A strong sense of the social-democratic ideal to which we aspired went hand in h
 
 <div role="paragraph">
 
-Ours was an example of resistance by state-sector planners to push against sponsors of development, limited by what was plausible, legal and redistributive. To that end, the planning team generated the *evidence base* and drafts of the planning framework for the borough. Along with a bevy of top-flight, expensive consultants, we produced an evidence base that fit within the geographical hierarchy of plans nationally, forecast the likely outcomes of new development, and successfully contested zoning challenges.
+Ours was an example of resistance by state-sector planners to push against sponsors of development, limited by what was plausible, legal and redistributive. To that end, the planning team generated the _evidence base_ and drafts of the planning framework for the borough. Along with a bevy of top-flight, expensive consultants, we produced an evidence base that fit within the geographical hierarchy of plans nationally, forecast the likely outcomes of new development, and successfully contested zoning challenges.
 
 </div>
 
@@ -2489,7 +2489,7 @@ Politicians famously campaign in poetry, govern in prose. Less elegantly, planne
 
 <div role="paragraph">
 
-***Michael Keith*** is Professor of Anthropology (University of Oxford), Director of COMPAS (Centre on Migration Policy and Society) and of the PEAK Urban research programme on urban futures working in China, Colombia, India and South Africa. Formerly a politician in east London, his most recent book is *The Unfinished Politics of Race* (Cambridge University Press). Email: <michael.keith@compas.ox.ac.uk>
+_**Michael Keith**_ is Professor of Anthropology (University of Oxford), Director of COMPAS (Centre on Migration Policy and Society) and of the PEAK Urban research programme on urban futures working in China, Colombia, India and South Africa. Formerly a politician in east London, his most recent book is _The Unfinished Politics of Race_ (Cambridge University Press). Email: <michael.keith@compas.ox.ac.uk>
 
 </div>
 
@@ -2517,7 +2517,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0064" class="citations">
 
-<span class="citation">Harvey, D. (1973). *Social justice and the city*. Georgia University Press.</span>
+<span class="citation">Harvey, D. (1973). _Social justice and the city_. Georgia University Press.</span>
 
 </div>
 
@@ -2537,7 +2537,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0066" class="citations">
 
-<span class="citation">Pigou, A. (1909). *The policy of land taxation*. Longmans.</span>
+<span class="citation">Pigou, A. (1909). _The policy of land taxation_. Longmans.</span>
 
 </div>
 
@@ -2547,7 +2547,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0067" class="citations">
 
-<span class="citation">Coase, R. (1960). The problem of social cost. *The Journal of Law and Economics*, *3*, 1–44. [Crossref](https://doi.org/10.23943/9780691186429-012). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=A1960CHK3800001).</span>
+<span class="citation">Coase, R. (1960). The problem of social cost. _The Journal of Law and Economics_, _3_, 1–44. [Crossref](https://doi.org/10.23943/9780691186429-012). [Web of Science](https://gateway.webofknowledge.com/gateway/Gateway.cgi?GWVersion=2&DestApp=WOS_CPL&UsrCustomerID=5e3815c904498985e796fc91436abd9a&SrcAuth=atyponcel&SrcApp=literatum&DestLinkType=FullRecord&KeyUT=A1960CHK3800001).</span>
 
 </div>
 
@@ -2557,7 +2557,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0068" class="citations">
 
-<span class="citation">Schmitt, C. (1996). *The concept of the political*, trans. George Schwab. University of Chicago Press. (Original work published 1927)</span>
+<span class="citation">Schmitt, C. (1996). _The concept of the political_, trans. George Schwab. University of Chicago Press. (Original work published 1927)</span>
 
 </div>
 
@@ -2567,7 +2567,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_CIT0069" class="citations">
 
-<span class="citation">Stark, D. (2011). *The sense of dissonance: Accounts of worth in economic life*. Princeton University Press. [Crossref](https://doi.org/10.2307/j.ctt7pg4h).</span>
+<span class="citation">Stark, D. (2011). _The sense of dissonance: Accounts of worth in economic life_. Princeton University Press. [Crossref](https://doi.org/10.2307/j.ctt7pg4h).</span>
 
 </div>
 
@@ -2583,7 +2583,7 @@ No potential conflict of interest was reported by the author(s).
 
 <div id="index.xhtml_backmatter" class="section backmatter" data-extent="backmatter">
 
-------------------------------------------------------------------------
+---
 
 <div class="article-notes">
 

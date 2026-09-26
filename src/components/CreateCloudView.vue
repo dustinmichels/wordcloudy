@@ -85,7 +85,6 @@ function handleClearUrl() {
 watch(
   () => gdocUrl.value,
   (newUrl) => {
-
     const trimmed = newUrl.trim();
     if (!trimmed) {
       isUrlLoading.value = false;

@@ -858,12 +858,12 @@ test("parseGoogleDocHtml parses local copy of Housing doc export correctly", asy
 });
 
 test("parseGoogleDocHtml parses local Resistance and Response in Planning export", async () => {
-  const html = await Bun.file(
-    "./samples/planning/resistance-and-response-in-planning.html",
-  ).text();
+  const html = await Bun.file("./samples/planning/resistance-and-response-in-planning.html").text();
   const parsed = parseGoogleDocHtml(html);
   expect(parsed.markdown).toContain("## Introduction: Resistance and Response in Planning");
-  expect(parsed.markdown).toContain("## Indigenous Resistance as Multiscalar, Insurgent Planning under Empire");
+  expect(parsed.markdown).toContain(
+    "## Indigenous Resistance as Multiscalar, Insurgent Planning under Empire",
+  );
 });
 
 test("fetchAndParseGoogleDoc loads and parses live US Constitution Google Doc", async () => {
