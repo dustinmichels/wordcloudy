@@ -48,8 +48,9 @@ declare const __DOCUMENT_DATA__: ParsedDocumentData | undefined;
 const initialDocData: ParsedDocumentData | null =
   typeof __DOCUMENT_DATA__ !== "undefined" && __DOCUMENT_DATA__?.all ? __DOCUMENT_DATA__ : null;
 
-const hasSharedDocInUrl =
-  typeof window !== "undefined" && Boolean(decodeGoogleDocShareCode(window.location.href));
+const sharedDocIdFromUrl =
+  typeof window !== "undefined" ? decodeGoogleDocShareCode(window.location.href) : null;
+const hasSharedDocInUrl = Boolean(sharedDocIdFromUrl);
 const sharedTitleFromUrl =
   typeof window !== "undefined" ? extractTitleFromUrl(window.location.href) : null;
 const sharedAttributionFromUrl =
@@ -62,6 +63,9 @@ const currentPage = ref<"home" | "view" | "edit" | "create" | "load">(
 );
 
 const docData = ref<ParsedDocumentData | null>(null);
+const actionGoogleDocId = computed(
+  () => docData.value?.sourceGoogleDocId ?? sharedDocIdFromUrl,
+);
 const sampleData = ref<ParsedDocumentData | null>(initialDocData);
 const selectedSection = ref<string>("all");
 const selectedWord = ref<string | null>(null);
@@ -341,6 +345,8 @@ async function handleLoadSample() {
 }
 
 async function handleShare() {
+  if (!actionGoogleDocId.value) return;
+
   const url = docData.value?.sourceGoogleDocId
     ? getShareableAppUrl(
         docData.value.sourceGoogleDocId,
@@ -399,6 +405,15 @@ async function handleShare() {
       toast.value = null;
     }, 2500);
   }
+}
+
+function handleViewDocument() {
+  if (!actionGoogleDocId.value || typeof window === "undefined") return;
+  window.open(
+    `https://docs.google.com/document/d/${actionGoogleDocId.value}/edit`,
+    "_blank",
+    "noopener,noreferrer",
+  );
 }
 
 function handleSavePng() {
@@ -489,7 +504,7 @@ onMounted(() => {
   window.addEventListener("keydown", handleKeyDown);
 
   if (typeof window !== "undefined") {
-    const sharedDocId = decodeGoogleDocShareCode(window.location.href);
+    const sharedDocId = sharedDocIdFromUrl;
     const sharedAttribution = extractAttributionFromUrl(window.location.href);
     const sharedDate = extractDateFromUrl(window.location.href);
     const sharedTitle = extractTitleFromUrl(window.location.href);
@@ -802,35 +817,34 @@ onUnmounted(() => {
           <span v-if="displayedDate" class="wordcloud-date">{{ displayedDate }}</span>
         </p>
         <div class="wordcloud-header-meta">
-          <template v-if="docData?.sourceGoogleDocId">
-            <button
-              type="button"
-              :class="['header-action-btn', 'share-btn', copyStatus === 'copied' ? 'copied' : '']"
-              title="Copy share link to clipboard"
-              @click="handleShare"
-            >
-              <template v-if="copyStatus === 'copied'">
-                <Check class="header-action-btn-icon" :size="14" aria-hidden="true" />
-                Copied!
-              </template>
-              <template v-else>
-                <Share2 class="header-action-btn-icon" :size="14" aria-hidden="true" />
-                Share
-              </template>
-            </button>
-            <span class="meta-separator" aria-hidden="true">•</span>
-            <a
-              :href="`https://docs.google.com/document/d/${docData.sourceGoogleDocId}/edit`"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="header-action-btn"
-              title="Open original document in new tab"
-            >
-              <ExternalLink class="header-action-btn-icon" :size="14" aria-hidden="true" />
-              View doc
-            </a>
-            <span class="meta-separator" aria-hidden="true">•</span>
-          </template>
+          <button
+            type="button"
+            :class="['header-action-btn', 'share-btn', copyStatus === 'copied' ? 'copied' : '']"
+            title="Copy share link to clipboard"
+            :disabled="!actionGoogleDocId"
+            @click="handleShare"
+          >
+            <template v-if="copyStatus === 'copied'">
+              <Check class="header-action-btn-icon" :size="14" aria-hidden="true" />
+              Copied!
+            </template>
+            <template v-else>
+              <Share2 class="header-action-btn-icon" :size="14" aria-hidden="true" />
+              Share
+            </template>
+          </button>
+          <span class="meta-separator" aria-hidden="true">•</span>
+          <button
+            type="button"
+            class="header-action-btn"
+            title="Open original document in new tab"
+            :disabled="!actionGoogleDocId"
+            @click="handleViewDocument"
+          >
+            <ExternalLink class="header-action-btn-icon" :size="14" aria-hidden="true" />
+            View doc
+          </button>
+          <span class="meta-separator" aria-hidden="true">•</span>
           <button
             type="button"
             class="header-action-btn"

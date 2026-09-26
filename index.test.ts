@@ -287,23 +287,24 @@ test("parseDocSections dynamically turns any new H2 into a section and aggregate
   expect(sections[1]?.content).toContain("### Nested Detail B");
 });
 
-test("parseDocSections keeps a lone H2 as the section and aggregates H3 content", () => {
+test("parseDocSections skips a singleton H1 title and aggregates H3 content into H2 sections", () => {
   const markdown = `
-## Document Title
+# Document Title
 
-### First Topic
+## First Topic
 First topic details.
 
-### Second Topic
+### First Topic Detail
+More details.
+
+## Second Topic
 Second topic details.
 `;
 
   const sections = parseDocSections(markdown);
 
-  expect(sections.map((s) => s.title)).toEqual(["Document Title"]);
-  expect(sections.map((s) => s.content)).toEqual([
-    "### First Topic\nFirst topic details.\n\n### Second Topic\nSecond topic details.",
-  ]);
+  expect(sections.map((s) => s.title)).toEqual(["First Topic", "Second Topic"]);
+  expect(sections[0]?.content).toBe("First topic details.\n\n### First Topic Detail\nMore details.");
 });
 
 test("getDocumentWordData computes overall and section-specific frequencies and sentences", async () => {
@@ -416,7 +417,7 @@ test("parseGoogleDocHtml extracts title, headings, and lists from HTML export", 
       <title>Sample Document Title</title>
     </head>
     <body>
-      <p class="c-bold"><span>First Section</span></p>
+      <p class="c-bold"><span>In Defence of the “Wutb&uuml;rger”</span></p>
       <ul class="lst">
         <li><span>First item in section one.</span></li>
         <li><span>Second item in section one.</span></li>
@@ -428,7 +429,7 @@ test("parseGoogleDocHtml extracts title, headings, and lists from HTML export", 
 
   const parsed = parseGoogleDocHtml(sampleHtml);
   expect(parsed.title).toBe("Sample Document Title");
-  expect(parsed.markdown).toContain("## First Section");
+  expect(parsed.markdown).toContain("## In Defence of the “Wutbürger”");
   expect(parsed.markdown).toContain("- First item in section one.");
   expect(parsed.markdown).toContain("## Second Section");
   expect(parsed.markdown).toContain("Regular paragraph content here.");
@@ -870,6 +871,21 @@ test("parseGoogleDocHtml parses local copy of Housing doc export correctly", asy
   expect(senseOfHome?.words[0]?.text).toBe("power");
   // Subheaders are excluded from words
   expect(senseOfHome?.words.some((w) => w.text === "cultivate")).toBe(false);
+});
+
+test("parseGoogleDocHtml uses planning H2s as sections and folds H3s into them", async () => {
+  const html = await Bun.file("./samples/planning/resistance-and-response-in-planning.html").text();
+  const parsed = parseGoogleDocHtml(html);
+  const sections = parseDocSections(parsed.markdown);
+  const docData = getDocumentWordData(parsed.markdown);
+
+  expect(parsed.markdown).toContain("# Resistance and Response in Planning: Edited by Susan S. Fainstein and John Forester");
+  expect(parsed.markdown).toContain("## Introduction: Resistance and Response in Planning");
+  expect(parsed.markdown).toContain("### Notes on Contributors");
+  expect(docData.sections).toHaveLength(10);
+  expect(docData.sections[0]?.title).toBe("Introduction: Resistance and Response in Planning");
+  expect(docData.sections.some((section) => section.title === "Notes on Contributors")).toBe(false);
+  expect(sections[0]?.content).toContain("### Notes on Contributors");
 });
 
 test("parseGoogleDocHtml preserves Guåhan as a searchable word", async () => {

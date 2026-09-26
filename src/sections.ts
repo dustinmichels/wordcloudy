@@ -173,11 +173,19 @@ function parseSectionsAtHeadingLevel(markdown: string, headingLevel: number): Se
 }
 
 /**
- * Parses markdown source into sections based on H2 headers (`## `).
- * H3 and deeper headings remain aggregated into their parent H2 section.
+ * Parses markdown into sections at the shallowest heading level that has multiple headings.
+ * Shallower singleton headings are treated as document titles; deeper headings stay with their parent.
  */
 export function parseDocSections(markdown: string): Section[] {
-  return parseSectionsAtHeadingLevel(markdown, 2);
+  let fallback: Section[] = [];
+
+  for (let headingLevel = 1; headingLevel <= 6; headingLevel++) {
+    const sections = parseSectionsAtHeadingLevel(markdown, headingLevel);
+    if (sections.length > 1) return sections;
+    if (sections.length === 1) fallback = sections;
+  }
+
+  return fallback;
 }
 
 /**
@@ -260,6 +268,8 @@ export function decodeHtmlEntities(str: string): string {
     .replace(/&hellip;/g, "…")
     .replace(/&aring;/g, "å")
     .replace(/&Aring;/g, "Å")
+    .replace(/&uuml;/g, "ü")
+    .replace(/&Uuml;/g, "Ü")
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
     .replace(/&lt;/g, "<")
@@ -413,11 +423,9 @@ export function parseGoogleDocHtml(html: string): { title?: string; markdown: st
   }
 
   if (hasHtmlHeadings) {
-    const headingLevels = blocks.filter((b) => b.isHeading).map((b) => b.headingLevel);
-    const minLevel = headingLevels.length > 0 ? Math.min(...headingLevels) : 2;
     for (const b of blocks) {
       if (b.isHeading) {
-        b.markdownLevel = b.headingLevel === minLevel ? 2 : 3;
+        b.markdownLevel = b.headingLevel;
       }
     }
   } else {
@@ -464,9 +472,10 @@ export function parseGoogleDocHtml(html: string): { title?: string; markdown: st
   }
 
   const markdownLines: string[] = [];
+
   for (const b of blocks) {
     if (b.isHeading) {
-      const hashes = b.markdownLevel === 2 ? "##" : "###";
+      const hashes = "#".repeat(b.markdownLevel ?? 2);
       markdownLines.push(`\n${hashes} ${b.text}\n`);
     } else if (b.isList) {
       markdownLines.push(`- ${b.text}`);
