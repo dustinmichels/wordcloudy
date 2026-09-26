@@ -100,19 +100,19 @@ const DIACRITIC_REGEX_PARTS: Readonly<Record<string, string>> = {
   y: "[yýÿŷ]",
   z: "[zźżž]",
 };
-
 function escapeTermPart(part: string): string {
   return [...part]
-    .map(
-      (char) =>
-        DIACRITIC_REGEX_PARTS[char.toLowerCase()] ?? char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-    )
+    .map((char) => {
+      if (char === "'") return "['’]";
+      return DIACRITIC_REGEX_PARTS[char.toLowerCase()] ?? char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    })
     .join("");
 }
 
 /**
  * Builds a case-insensitive regular expression to match a word, bigram, or trigram in text.
- * Handles hyphenated bigrams/trigrams (e.g. "desired-outcomes") against either spaces or hyphens in text.
+ * Handles curly apostrophes plus hyphenated bigrams/trigrams (e.g. "desired-outcomes") against
+ * either spaces or hyphens in text.
  */
 export function buildTermRegex(term: string, global = false): RegExp {
   const escaped = term

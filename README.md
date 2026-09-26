@@ -1,21 +1,17 @@
 # WordCloudy
 
-Interactive word cloud and phrase frequency analysis tool built with Bun, React 19, and `@visx/wordcloud`. Extracts topical keywords, collocations, bigrams, and trigrams from Google Docs or pasted text.
-
-Default dataset: _The Constitution of the United States_ (`samples/constituion/us-constitution.html`).
-
----
+Interactive word-cloud and phrase-frequency explorer built with Bun, Vue 3, Vite, and `d3-cloud`. Analyze public Google Docs or Sheets, or pasted text and Markdown. The bundled sample is _The Constitution of the United States_ (`samples/constituion/us-constitution.html`).
 
 ## Features
 
-- **Interactive Word Cloud**: Logarithmic font scaling, Archimedean or rectangular spirals, toggleable word rotation, and section filtering.
-- **Sentence Inspection**: Click any keyword or phrase to open a drawer listing every sentence occurrence with term highlighting.
-- **Google Doc Integration**: Fetch and parse public Google Docs client-side; share clouds via URL query parameters (`?doc=<id>`).
-- **Markdown & Text Import**: Paste raw text or markdown with automatic section and sentence extraction.
-- **Export**: Download visualizations directly as SVG or PNG.
-- **Single-File Static Distribution**: Self-contained HTML output (`dist/index.html`) with embedded assets and pre-baked data.
-
----
+- **Interactive cloud**: Logarithmic font scaling, Archimedean or rectangular layout, optional rotation, and per-section filtering.
+- **Context inspection**: Select a word, bigram, or trigram to see its frequency, document and cleaned-text percentages, and matching sentences with term highlighting.
+- **Google Docs and Sheets**: Accepts a public document or spreadsheet URL (or raw ID). Documents are parsed from HTML when available, with a text fallback; Sheets are read from CSV.
+- **Pasted text and Markdown**: Supports custom title, attribution, and date. Markdown headings become sections; deeper headings remain within their parent section.
+- **Sharing and recents**: Google Doc/Sheet clouds receive a URL containing the source ID and optional title, attribution, and date. Recent Google sources are retained in browser storage (up to 20).
+- **PNG export**: Saves the current rendered cloud as a PNG.
+- **Static distribution**: Produces a self-contained `dist/index.html`, with embedded assets, plus `404.html` and `.nojekyll` for GitHub Pages.
+- **Ambient header**: Subtle drifting clouds decorate the navigation; reduced-motion preferences keep them still.
 
 ## Quickstart
 
@@ -23,49 +19,59 @@ Default dataset: _The Constitution of the United States_ (`samples/constituion/u
 # Install dependencies
 bun install
 
-# Start development server with HMR at http://localhost:3000
+# Start Vite with HMR at http://localhost:3000
 bun run dev
 
-# Build single-file production bundle into dist/
+# Build the static production bundle into dist/
 bun run build
 
-# Run unit and build verification tests
+# Run the test suite
 bun test
 ```
 
----
+The development server also exposes the pre-baked Constitution sample at `/api/sections`.
 
-## Text Analysis & N-Gram Pipeline
+## Sharing a Google source
 
-Located in `src/stopwords.ts`:
+The source must be shared as **Anyone with the link can view**. The app creates links in this form:
 
-- **Stop Words**: Strips standard grammatical stop words from unigrams; preserves casing-insensitive lookups with prototype pollution guards.
-- **Bigrams (`getBigramFrequencies`)**: Extracts 2-word collocations appearing $\ge 2$ times. Excludes stop-word edges by default; supports optional Pointwise Mutual Information (PMI) thresholding via `minPmi` when allowing stop words.
-- **Trigrams with Interior Stop Words (`getTrigramFrequencies`)**: Enforces content words on outer edges ($w_1, w_3$) while permitting function words internally ($w_2$). Captures natural phrases like `cost of housing` or `freedom of speech` without loose function-word pairs.
-- **Collocation Scoring (`getCollocations`)**: Computes PMI and Normalized PMI (NPMI, $-1$ to $+1$) to evaluate phrase association against chance co-occurrence.
+```text
+?doc=<google-doc-or-sheet-id>&title=<title>&attribution=<attribution>&date=<date>
+```
 
----
+`doc` is required. `title`, `attribution`, and `date` are optional and URL-encoded. The loader also accepts `gdoc` or `share` aliases for `doc`, plus compatible hash parameters.
+
+Pasted-text clouds remain local to the current page and cannot be shared as source-backed links.
+
+## Text analysis
+
+`src/stopwords.ts` normalizes Markdown and punctuation, removes bare URLs and diacritics, lowercases text, joins adjacent title-cased words into hyphenated proper-noun tokens, and tokenizes words (two characters or longer by default). The frequency pipeline combines:
+
+- **Unigrams**: Excludes the default stop-word set, with optional custom stop words.
+- **Bigrams**: Counts adjacent tokens within punctuation-delimited segments. Phrases must occur at least twice and exclude stop words by default; `allowStopWords` and `minPmi` are available.
+- **Trigrams**: Requires content words at both edges while allowing an interior stop word by default, preserving phrases such as `cost of housing`.
+- **Collocations**: Scores recurring bigrams with PMI and NPMI, with configurable minimum count and score thresholds.
 
 ## Core API
 
 ### `src/stopwords.ts`
 
-- `getWordFrequencies(text, options?)`: Returns sorted word, bigram, and trigram frequencies.
-- `getBigramFrequencies(text, options?)`: Extracts recurring bigrams across sentence/clause boundaries.
-- `getTrigramFrequencies(text, options?)`: Extracts recurring 3-word keyphrases.
-- `getCollocations(text, options?)`: Computes PMI/NPMI scores for word pairs.
+- `tokenize(text, options?)`: Normalizes and tokenizes text.
+- `getWordFrequencies(text, options?)`: Returns sorted unigram, bigram, and trigram frequencies; n-grams are enabled by default.
+- `getBigramFrequencies(text, options?)`: Returns recurring adjacent bigrams.
+- `getTrigramFrequencies(text, options?)`: Returns recurring trigrams with configurable interior-stop-word handling.
+- `getCollocations(text, options?)`: Returns bigrams with count, PMI, and NPMI.
+- `countDocumentWords(text, options?)`: Returns total and stop-word-filtered word counts.
 
 ### `src/sections.ts`
 
-- `getDocumentWordData(markdown, topWordsLimit?, title?)`: Builds sections from the shallowest heading level with multiple entries, folding deeper headings into their parent section, then computes word frequencies and sentence indices.
-- `parseGoogleDocHtml(html)`: Converts exported Google Doc HTML to markdown and title metadata.
-- `fetchAndParseGoogleDoc(docIdOrUrl, customTitle?)`: Fetches public Google Doc exports client-side.
-- `parsePastedText(text, customTitle?)`: Generates document data from pasted markdown or plain text.
-- `getShareableAppUrl(docIdOrUrl, baseUrl?)`: Generates shareable app link with encoded doc ID.
-- `decodeGoogleDocShareCode(input)`: Parses doc ID from share codes, URLs, or query parameters.
-
----
+- `getDocumentWordData(markdown, topWordsLimit?, title?)`: Builds section, sentence, frequency, and word-count data. It selects the shallowest heading level containing multiple headings.
+- `parseGoogleDocHtml(html)`: Converts an exported Google Doc HTML document into Markdown and title metadata.
+- `parsePastedText(text, customTitle?, attribution?, date?)`: Generates document data from text or Markdown.
+- `fetchAndParseGoogleDoc(docIdOrUrl, customTitle?, attribution?, date?)`: Fetches and parses a public Google Doc or Sheet.
+- `getShareableAppUrl(docIdOrUrl, baseUrlOrOptions?, attribution?, date?, title?)`: Creates a source-backed app URL.
+- `decodeGoogleDocShareCode(input)`: Extracts a Google source ID from IDs, URLs, query strings, hash parameters, or compatible Base64 input.
 
 ## Deployment
 
-Pushes to `main` trigger `.github/workflows/deploy.yml`, which runs `bun run build` and `bun test`, then publishes `dist/` (`index.html`, `404.html`, `.nojekyll`) to GitHub Pages.
+Pushes to `main` run `.github/workflows/deploy.yml`. The workflow installs Bun dependencies with the lockfile, builds `dist/`, runs `bun test`, and publishes the static artifact to GitHub Pages.

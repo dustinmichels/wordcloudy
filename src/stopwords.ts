@@ -68,6 +68,7 @@ export const DEFAULT_STOP_WORDS: Readonly<Record<string, true>> = {
   his: true,
   how: true,
   "how's": true,
+  https: true,
   i: true,
   "i'd": true,
   "i'll": true,
@@ -169,6 +170,7 @@ export const DEFAULT_STOP_WORDS: Readonly<Record<string, true>> = {
   "won't": true,
   would: true,
   "wouldn't": true,
+  www: true,
   you: true,
   "you'd": true,
   "you'll": true,
@@ -241,18 +243,25 @@ export interface DocumentWordStats {
 }
 
 /**
- * Normalizes quotes/apostrophes, strips markdown links/markers, and converts text to lowercase.
+ * Normalizes quotes/apostrophes, removes URLs, and strips markdown links/markers.
  */
-export function cleanText(text: string): string {
+function normalizeText(text: string): string {
   return text
     .replace(/[’‘]/g, "'") // normalize curly single quotes/apostrophes
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // markdown links -> text
+    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, " ") // bare URLs
     .replace(/[*_#`~>•]/g, " ") // markdown markers
     .replace(/\\--|--|—/g, " ") // dashes
     .replace(/\\!/g, " ") // escaped punctuation
     .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase();
+    .replace(/\p{M}/gu, "");
+}
+
+/**
+ * Normalizes text for case-insensitive filtering and counting.
+ */
+export function cleanText(text: string): string {
+  return normalizeText(text).toLowerCase();
 }
 
 /**
@@ -276,14 +285,35 @@ function buildStopWordLookup(
 
 /**
  * Strips markdown syntax, normalizes unicode dashes/escapes, and extracts lowercase tokens.
+ * Adjacent title-cased words are preserved as a single hyphenated proper-noun token.
  */
 export function tokenize(text: string, options: TokenizeOptions = {}): string[] {
   const { minLength = 2, includeNumbers = false } = options;
-  const cleaned = cleanText(text);
-  const pattern = includeNumbers ? /[a-z0-9]+(?:'[a-z0-9]+)?/g : /[a-z]+(?:'[a-z]+)?/g;
-  const matches = cleaned.match(pattern) || [];
+  const normalized = normalizeText(text);
+  const pattern = includeNumbers
+    ? /[a-z0-9]+(?:'[a-z0-9]+)?/gi
+    : /[a-z]+(?:'[a-z]+)?/gi;
+  const matches = [...normalized.matchAll(pattern)];
+  const tokens: string[] = [];
 
-  return matches.filter((word) => word.length >= minLength);
+  for (let i = 0; i < matches.length; ) {
+    let end = i + 1;
+    while (
+      /^[A-Z]/.test(matches[end - 1][0]) &&
+      matches[end] &&
+      /^[A-Z]/.test(matches[end][0]) &&
+      /^\s+$/.test(
+        normalized.slice(matches[end - 1].index! + matches[end - 1][0].length, matches[end].index!),
+      )
+    ) {
+      end++;
+    }
+
+    tokens.push(matches.slice(i, end).map((match) => match[0].toLowerCase()).join("-"));
+    i = end;
+  }
+
+  return tokens.filter((word) => word.length >= minLength);
 }
 
 /**

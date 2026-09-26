@@ -14,6 +14,26 @@ test("tokenize cleans markdown and extracts tokens", () => {
   expect(tokens).toEqual(["housing", "is", "expensive", "check", "this", "now"]);
 });
 
+test("tokenize removes bare URLs before extracting word-cloud tokens", () => {
+  const text =
+    "ABC Gold Coast . https://www.abc.net.au/news/2022-05-13/gold-coast-light-rail-debate-protest-tom-tate-karen-andrews/101055522";
+
+  expect(tokenize(text)).toEqual(["abc-gold-coast"]);
+});
+
+test("getWordFrequencies joins adjacent title-cased words into proper-noun entries", () => {
+  const freqs = getWordFrequencies("Palo Alto grows. Palo Alto changes.", {
+    includeBigrams: false,
+    includeTrigrams: false,
+  });
+
+  expect(freqs).toEqual([
+    { text: "palo-alto", value: 2 },
+    { text: "changes", value: 1 },
+    { text: "grows", value: 1 },
+  ]);
+});
+
 test("getWordFrequencies strips stop words and tallies frequencies", () => {
   const text = "Housing, housing and more housing! We need safe housing.";
   const freqs = getWordFrequencies(text);

@@ -640,6 +640,7 @@ onUnmounted(() => {
   <div class="wordcloud-container">
     <!-- Top Application Navigation -->
     <header class="app-top-nav">
+      <div class="header-clouds" aria-hidden="true"></div>
       <div class="top-nav-inner">
         <div
           class="top-nav-brand"
