@@ -57,7 +57,7 @@ Located in `src/stopwords.ts`:
 
 ### `src/sections.ts`
 
-- `getDocumentWordData(markdown, topWordsLimit?, title?)`: Builds section hierarchy, word frequencies, and sentence indices.
+- `getDocumentWordData(markdown, topWordsLimit?, title?)`: Builds H2-based sections (with deeper headings included in their parent section), word frequencies, and sentence indices.
 - `parseGoogleDocHtml(html)`: Converts exported Google Doc HTML to markdown and title metadata.
 - `fetchAndParseGoogleDoc(docIdOrUrl, customTitle?)`: Fetches public Google Doc exports client-side.
 - `parsePastedText(text, customTitle?)`: Generates document data from pasted markdown or plain text.

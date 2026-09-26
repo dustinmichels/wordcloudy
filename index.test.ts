@@ -287,7 +287,7 @@ test("parseDocSections dynamically turns any new H2 into a section and aggregate
   expect(sections[1]?.content).toContain("### Nested Detail B");
 });
 
-test("parseDocSections descends from a lone H2 title to H3 sections", () => {
+test("parseDocSections keeps a lone H2 as the section and aggregates H3 content", () => {
   const markdown = `
 ## Document Title
 
@@ -300,8 +300,10 @@ Second topic details.
 
   const sections = parseDocSections(markdown);
 
-  expect(sections.map((s) => s.title)).toEqual(["First Topic", "Second Topic"]);
-  expect(sections.map((s) => s.content)).toEqual(["First topic details.", "Second topic details."]);
+  expect(sections.map((s) => s.title)).toEqual(["Document Title"]);
+  expect(sections.map((s) => s.content)).toEqual([
+    "### First Topic\nFirst topic details.\n\n### Second Topic\nSecond topic details.",
+  ]);
 });
 
 test("getDocumentWordData computes overall and section-specific frequencies and sentences", async () => {

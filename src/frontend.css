@@ -76,11 +76,12 @@ body {
   justify-content: center;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: -0.05rem;
-  margin-bottom: 0.35rem;
+  max-width: 52rem;
+  margin: -0.05rem auto 0.35rem;
   font-size: 0.95rem;
   color: var(--text-secondary);
 }
+
 
 .wordcloud-attribution {
   font-size: 0.95rem;
@@ -89,10 +90,8 @@ body {
 }
 
 .wordcloud-attribution-link {
-  color: inherit;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.15em;
+  color: var(--accent-color);
+  text-decoration: none;
 }
 
 .wordcloud-attribution-link:hover {

@@ -174,12 +174,10 @@ function parseSectionsAtHeadingLevel(markdown: string, headingLevel: number): Se
 
 /**
  * Parses markdown source into sections based on H2 headers (`## `).
- * If H2 yields only one section, treats it as a document title and parses H3
- * headers instead.
+ * H3 and deeper headings remain aggregated into their parent H2 section.
  */
 export function parseDocSections(markdown: string): Section[] {
-  const h2Sections = parseSectionsAtHeadingLevel(markdown, 2);
-  return h2Sections.length === 1 ? parseSectionsAtHeadingLevel(markdown, 3) : h2Sections;
+  return parseSectionsAtHeadingLevel(markdown, 2);
 }
 
 /**
