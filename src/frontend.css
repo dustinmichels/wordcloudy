@@ -53,8 +53,17 @@ body {
 }
 
 .wordcloud-header {
-  text-align: center;
-  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, 1fr);
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+.wordcloud-header-info {
+  min-width: 0;
+  text-align: left;
 }
 
 .wordcloud-header h1 {
@@ -73,11 +82,11 @@ body {
 .wordcloud-byline {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 0.5rem;
   max-width: 52rem;
-  margin: -0.05rem auto 0.35rem;
+  margin: -0.05rem 0 0.35rem;
   font-size: 0.95rem;
   color: var(--text-secondary);
 }
@@ -126,7 +135,7 @@ body {
 .wordcloud-header-meta {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 0.65rem;
   font-size: 0.95rem;
@@ -469,6 +478,7 @@ body {
 .wordcloud-export-actions {
   display: flex;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .wordcloud-reshuffle-btn {
@@ -484,6 +494,7 @@ body {
   font: inherit;
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     color 0.15s ease,
@@ -507,14 +518,9 @@ body {
   cursor: not-allowed;
 }
 
-.wordcloud-reshuffle-btn:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
-}
-
 .wordcloud-stage {
   width: 100%;
-  height: clamp(440px, calc(100vh - 350px), 560px);
+  height: clamp(380px, calc(100vh - 430px), 480px);
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -582,7 +588,7 @@ body {
 }
 
 .wordcloud-stats-widget {
-  margin-top: 0.75rem;
+  margin-top: 0;
   padding: 0.5rem 0.85rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -590,11 +596,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem 0.75rem;
+  gap: 0.35rem 0.75rem;
   font-size: 0.85rem;
   color: var(--text-secondary);
   min-height: 40px;
-  white-space: nowrap;
+  flex-wrap: wrap;
 }
 
 .wordcloud-stats-counts {
@@ -617,73 +623,40 @@ body {
 
 .wordcloud-stats-selected {
   display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-.wordcloud-stats-badge {
-  display: inline-block;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  width: 100%;
+  min-height: 24px;
+  padding-top: 0.35rem;
+  margin-top: 0.15rem;
+  border-top: 1px solid var(--border-color);
   font-size: 0.8rem;
-  font-weight: 700;
-  color: #b45309;
-  background-color: #fef3c7;
-  border: 1px solid #fde68a;
-  padding: 0.1rem 0.45rem;
-  border-radius: 4px;
-}
-
-.wordcloud-stats-frequency {
-  color: var(--text-secondary);
-}
-
-.wordcloud-stats-frequency strong {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.wordcloud-stats-pct {
-  color: var(--text-secondary);
-  font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 .wordcloud-stats-hint {
-  font-size: 0.8rem;
+  font-size: 12px;
   color: var(--text-secondary);
-  opacity: 0.8;
-  margin-left: auto;
+  opacity: 0.75;
 }
 
-.wordcloud-stats-clear {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0.1rem 0.3rem;
-  margin-left: 0.1rem;
-  font-size: 0.8rem;
-  line-height: 1;
-  border-radius: 3px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
+.wordcloud-stats-selected .sentence-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
 }
 
-.wordcloud-stats-clear:hover {
+.wordcloud-stats-selected .sentence-stats {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.wordcloud-stats-selected .sentence-stats strong {
   color: var(--text-primary);
-  background-color: rgba(0, 0, 0, 0.06);
+  font-weight: 600;
 }
-
-.wordcloud-stats-clear svg {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-}
-
 @media (max-width: 640px) {
   .wordcloud-stats-widget {
     flex-direction: column;
@@ -691,22 +664,83 @@ body {
     padding: 0.5rem 0.75rem;
     white-space: normal;
   }
-  .wordcloud-stats-selected,
-  .wordcloud-stats-hint {
-    margin-left: 0;
-  }
 }
 
-.controls {
+.wordcloud-left-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 0.85rem;
+  width: 100%;
+  margin-top: 0.85rem;
+}
+
+.wordcloud-options-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.85rem;
+  margin-left: auto;
+}
+
+.wordcloud-options-controls > .control-field:first-child {
+  flex: 0 0 11.5rem;
+}
+
+.section-select-wrapper {
   width: 100%;
   display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  padding: 1rem 1.25rem;
-  background: var(--bg-secondary);
+  align-items: center;
+}
+
+.section-select {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.55rem 2.5rem 0.55rem 1rem;
+  appearance: none;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  border-radius: 9999px;
+  background-color: var(--bg-primary);
+  background-image:
+    linear-gradient(135deg, transparent 50%, var(--accent-color) 50%),
+    linear-gradient(45deg, var(--accent-color) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.2rem) calc(50% - 2px),
+    calc(100% - 0.9rem) calc(50% - 2px);
+  background-repeat: no-repeat;
+  background-size:
+    0.32rem 0.32rem,
+    0.32rem 0.32rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.section-select:hover:not(:disabled) {
+  border-color: var(--accent-color);
+  background-color: var(--accent-light);
+}
+
+.section-select:focus-visible {
+  border-color: var(--accent-color);
+  box-shadow:
+    0 0 0 3px rgba(47, 107, 154, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.section-select:disabled {
+  cursor: not-allowed;
+  color: var(--text-secondary);
+  opacity: 0.65;
 }
 
 .control-field {
@@ -723,7 +757,7 @@ body {
   letter-spacing: 0.04em;
 }
 
-.controls select {
+.control-field select {
   width: 100%;
   min-height: 2.5rem;
   padding: 0.55rem 2.5rem 0.55rem 0.75rem;
@@ -754,38 +788,29 @@ body {
     background-color 0.15s ease;
 }
 
-.controls select:hover:not(:disabled) {
+.control-field select:hover:not(:disabled) {
   border-color: var(--accent-color);
   background-color: var(--accent-light);
 }
 
-.controls select:focus-visible {
+.control-field select:focus-visible {
   border-color: var(--accent-color);
   box-shadow:
     0 0 0 3px rgba(47, 107, 154, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-.controls select:disabled {
+.control-field select:disabled {
   cursor: not-allowed;
   color: var(--text-secondary);
   opacity: 0.65;
-}
-
-.controls-options-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.85rem;
-}
-
-.controls-options-row .control-field {
-  flex: 1;
 }
 
 .control-field-checkbox {
   flex-direction: row !important;
   align-items: center;
   padding-bottom: 0.45rem;
+  flex-shrink: 0;
 }
 
 .control-field-checkbox label {
@@ -798,9 +823,10 @@ body {
   letter-spacing: normal;
   color: var(--text-primary);
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.controls input[type="checkbox"] {
+.control-field input[type="checkbox"] {
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -867,24 +893,6 @@ body {
   }
 }
 
-.sentence-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 1rem;
-}
-
-.sentence-panel-title {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
 .sentence-badge {
   display: inline-block;
   font-size: 14px;
@@ -907,33 +915,8 @@ body {
   font-weight: 600;
 }
 
-.sentence-close-btn {
-  background: transparent;
-  border: 1px solid var(--border-color);
+.sentence-stats {
   color: var(--text-secondary);
-  border-radius: 4px;
-  padding: 0.25rem 0.6rem;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.sentence-close-btn:hover {
-  background-color: #fee2e2;
-  border-color: #fca5a5;
-  color: #b91c1c;
-}
-
-.sentence-close-btn svg {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
 }
 
 .wordcloud-clear-btn {
@@ -1098,8 +1081,6 @@ mark.highlighted-term {
 }
 
 .save-btn {
-  flex: 1;
-  width: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1112,6 +1093,7 @@ mark.highlighted-term {
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -1274,7 +1256,8 @@ mark.highlighted-term {
   content: "";
   position: absolute;
   inset: 0 -640px 0 0;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='100' viewBox='0 0 640 100'%3E%3Cpath fill='%23dbeafe' d='M48 68a18 18 0 0 1-2-36 27 27 0 0 1 51-9 20 20 0 0 1 31 19 13 13 0 0 1-2 26Z'/%3E%3Cpath fill='%2393c5fd' d='M350 96a23 23 0 0 1-4-46 34 34 0 0 1 64-13 26 26 0 0 1 41 25 17 17 0 0 1-3 34Z'/%3E%3C/svg%3E") repeat-x left center;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='100' viewBox='0 0 640 100'%3E%3Cpath fill='%23dbeafe' d='M48 68a18 18 0 0 1-2-36 27 27 0 0 1 51-9 20 20 0 0 1 31 19 13 13 0 0 1-2 26Z'/%3E%3Cpath fill='%2393c5fd' d='M350 96a23 23 0 0 1-4-46 34 34 0 0 1 64-13 26 26 0 0 1 41 25 17 17 0 0 1-3 34Z'/%3E%3C/svg%3E")
+    repeat-x left center;
   opacity: 0.09;
   animation: header-cloud-drift 100s linear infinite;
 }
@@ -2356,6 +2339,10 @@ button.url-status-icon.url-status-error:active {
   .wordcloud-content {
     padding: 1.5rem 1rem 2rem;
   }
+  .wordcloud-header {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
 
   .wordcloud-main {
     grid-template-columns: 1fr;
@@ -2376,9 +2363,14 @@ button.url-status-icon.url-status-error:active {
     height: 350px;
   }
 
-  .controls-options-row {
-    flex-direction: column;
-    align-items: stretch;
+  .wordcloud-left-controls {
+    gap: 0.75rem;
+  }
+
+  .wordcloud-options-controls {
+    margin-left: 0;
+    width: 100%;
+    flex-wrap: wrap;
   }
 
   .control-field-checkbox {

@@ -797,69 +797,86 @@ onUnmounted(() => {
       </div>
 
       <div class="wordcloud-header">
-        <h1>{{ docData?.title || sharedTitleFromUrl || "" }}</h1>
-        <p v-if="displayedAttribution || displayedDate" class="wordcloud-byline">
-          <span v-if="displayedAttribution" class="wordcloud-attribution">
-            <template v-for="(part, index) in attributionParts" :key="index">
-              <a
-                v-if="part.href"
-                :href="part.href"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="wordcloud-attribution-link"
-                >{{ part.text }}</a
-              >
-              <template v-else>{{ part.text }}</template>
-            </template>
-          </span>
-          <span
-            v-if="displayedAttribution && displayedDate"
-            class="byline-separator"
-            aria-hidden="true"
+        <div class="wordcloud-header-info">
+          <h1>{{ docData?.title || sharedTitleFromUrl || "" }}</h1>
+          <p v-if="displayedAttribution || displayedDate" class="wordcloud-byline">
+            <span v-if="displayedAttribution" class="wordcloud-attribution">
+              <template v-for="(part, index) in attributionParts" :key="index">
+                <a
+                  v-if="part.href"
+                  :href="part.href"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="wordcloud-attribution-link"
+                  >{{ part.text }}</a
+                >
+                <template v-else>{{ part.text }}</template>
+              </template>
+            </span>
+            <span
+              v-if="displayedAttribution && displayedDate"
+              class="byline-separator"
+              aria-hidden="true"
+            >
+              •
+            </span>
+            <span v-if="displayedDate" class="wordcloud-date">{{ displayedDate }}</span>
+          </p>
+          <div class="wordcloud-header-meta">
+            <button
+              type="button"
+              :class="['header-action-btn', 'share-btn', copyStatus === 'copied' ? 'copied' : '']"
+              title="Copy share link to clipboard"
+              :disabled="!actionGoogleDocId"
+              @click="handleShare"
+            >
+              <template v-if="copyStatus === 'copied'">
+                <Check class="header-action-btn-icon" :size="14" aria-hidden="true" />
+                Copied!
+              </template>
+              <template v-else>
+                <Share2 class="header-action-btn-icon" :size="14" aria-hidden="true" />
+                Share
+              </template>
+            </button>
+            <span class="meta-separator" aria-hidden="true">•</span>
+            <button
+              type="button"
+              class="header-action-btn"
+              aria-haspopup="dialog"
+              :aria-expanded="isAboutOpen"
+              @click="isAboutOpen = true"
+            >
+              <Info class="header-action-btn-icon" :size="14" aria-hidden="true" />
+              About
+            </button>
+            <span class="meta-separator" aria-hidden="true">•</span>
+            <button
+              type="button"
+              class="header-action-btn"
+              title="Open original document in new tab"
+              :disabled="!actionGoogleDocId"
+              @click="handleViewDocument"
+            >
+              <ExternalLink class="header-action-btn-icon" :size="14" aria-hidden="true" />
+              View doc
+            </button>
+          </div>
+        </div>
+        <div class="section-select-wrapper">
+          <select
+            id="section-select"
+            class="section-select"
+            :value="selectedSection"
+            :disabled="loading || !docData"
+            aria-label="Section"
+            @change="handleSectionChange(($event.target as HTMLSelectElement).value)"
           >
-            •
-          </span>
-          <span v-if="displayedDate" class="wordcloud-date">{{ displayedDate }}</span>
-        </p>
-        <div class="wordcloud-header-meta">
-          <button
-            type="button"
-            :class="['header-action-btn', 'share-btn', copyStatus === 'copied' ? 'copied' : '']"
-            title="Copy share link to clipboard"
-            :disabled="!actionGoogleDocId"
-            @click="handleShare"
-          >
-            <template v-if="copyStatus === 'copied'">
-              <Check class="header-action-btn-icon" :size="14" aria-hidden="true" />
-              Copied!
-            </template>
-            <template v-else>
-              <Share2 class="header-action-btn-icon" :size="14" aria-hidden="true" />
-              Share
-            </template>
-          </button>
-          <span class="meta-separator" aria-hidden="true">•</span>
-          <button
-            type="button"
-            class="header-action-btn"
-            aria-haspopup="dialog"
-            :aria-expanded="isAboutOpen"
-            @click="isAboutOpen = true"
-          >
-            <Info class="header-action-btn-icon" :size="14" aria-hidden="true" />
-            About
-          </button>
-          <span class="meta-separator" aria-hidden="true">•</span>
-          <button
-            type="button"
-            class="header-action-btn"
-            title="Open original document in new tab"
-            :disabled="!actionGoogleDocId"
-            @click="handleViewDocument"
-          >
-            <ExternalLink class="header-action-btn-icon" :size="14" aria-hidden="true" />
-            View doc
-          </button>
+            <option value="all">All Sections</option>
+            <option v-for="sec in docData?.sections" :key="sec.id" :value="sec.id">
+              {{ sec.title }}
+            </option>
+          </select>
         </div>
       </div>
 
@@ -904,95 +921,10 @@ onUnmounted(() => {
                   @word-click="handleWordClick"
                 />
               </div>
-
-              <div class="wordcloud-stats-widget" role="status" aria-live="polite">
-                <div class="wordcloud-stats-counts">
-                  <span class="wordcloud-stats-item">
-                    <strong>{{ activeStats.totalWords.toLocaleString() }}</strong> words in
-                    {{ selectedSection === "all" ? "doc" : "section" }}
-                  </span>
-                  <span class="wordcloud-stats-divider">|</span>
-                  <span class="wordcloud-stats-item">
-                    <strong>{{ activeStats.cleanedWords.toLocaleString() }}</strong> after cleaning
-                  </span>
-                </div>
-                <div v-if="selectedWord && selectedWordStats" class="wordcloud-stats-selected">
-                  <span class="wordcloud-stats-divider">|</span>
-                  <span
-                    class="wordcloud-stats-badge"
-                    :title="`${selectedWordStats.count.toLocaleString()} occurrences`"
-                  >
-                    {{ selectedWord.replace(/-/g, " ") }}
-                  </span>
-                  <span class="wordcloud-stats-frequency">
-                    <strong>{{ selectedWordStats.count.toLocaleString() }}</strong>
-                    {{ selectedWordStats.count === 1 ? "time" : "times" }}
-                  </span>
-                  <span class="wordcloud-stats-pct">
-                    ({{ selectedWordStats.docPercent }} of
-                    {{ selectedSection === "all" ? "doc" : "section" }} ·
-                    {{ selectedWordStats.cleanedPercent }} after cleaning)
-                  </span>
-                  <button
-                    type="button"
-                    class="wordcloud-stats-clear"
-                    aria-label="Clear word selection"
-                    title="Clear selection"
-                    @click="selectedWord = null"
-                  >
-                    <X :size="13" aria-hidden="true" />
-                  </button>
-                </div>
-                <span v-else class="wordcloud-stats-hint">Click a word to inspect</span>
-              </div>
             </template>
-          </div>
 
-          <!-- Right: Controls & Example Sentences -->
-          <div class="wordcloud-right">
-            <div class="controls">
-              <div class="control-field">
-                <label for="section-select">Section</label>
-                <select
-                  id="section-select"
-                  :value="selectedSection"
-                  :disabled="loading || !docData"
-                  @change="handleSectionChange(($event.target as HTMLSelectElement).value)"
-                >
-                  <option value="all">ALL</option>
-                  <option v-for="sec in docData?.sections" :key="sec.id" :value="sec.id">
-                    {{ sec.title }}
-                  </option>
-                </select>
-              </div>
-
-              <div class="controls-options-row">
-                <div class="control-field">
-                  <label for="spiral-select">Spiral type</label>
-                  <select id="spiral-select" v-model="spiralType">
-                    <option value="archimedean">archimedean</option>
-                    <option value="rectangular">rectangular</option>
-                  </select>
-                </div>
-                <div class="control-field control-field-checkbox">
-                  <label>
-                    <input v-model="withRotation" type="checkbox" />
-                    With rotation
-                  </label>
-                </div>
-              </div>
-
+            <div class="wordcloud-left-controls">
               <div class="wordcloud-export-actions">
-                <button
-                  type="button"
-                  class="wordcloud-reshuffle-btn"
-                  title="Reshuffle word cloud"
-                  :disabled="loading || activeWords.length === 0"
-                  @click="handleReshuffle"
-                >
-                  <Shuffle :size="14" aria-hidden="true" />
-                  Reshuffle
-                </button>
                 <button
                   type="button"
                   class="save-btn"
@@ -1008,15 +940,68 @@ onUnmounted(() => {
                     Save as PNG
                   </template>
                 </button>
+                <button
+                  type="button"
+                  class="wordcloud-reshuffle-btn"
+                  title="Reshuffle word cloud"
+                  :disabled="loading || activeWords.length === 0"
+                  @click="handleReshuffle"
+                >
+                  <Shuffle :size="14" aria-hidden="true" />
+                  Reshuffle
+                </button>
+              </div>
+              <div class="wordcloud-options-controls">
+                <div class="control-field">
+                  <label for="spiral-select">Spiral type</label>
+                  <select id="spiral-select" v-model="spiralType">
+                    <option value="archimedean">archimedean</option>
+                    <option value="rectangular">rectangular</option>
+                  </select>
+                </div>
+                <div class="control-field control-field-checkbox">
+                  <label>
+                    <input v-model="withRotation" type="checkbox" />
+                    With rotation
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Section Selection, Word Counts, & Example Sentences -->
+          <div class="wordcloud-right">
+            <div v-if="docData" class="wordcloud-stats-widget" role="status" aria-live="polite">
+              <div class="wordcloud-stats-counts">
+                <span class="wordcloud-stats-item">
+                  <strong>{{ activeStats.totalWords.toLocaleString() }}</strong> words in
+                  {{ selectedSection === "all" ? "doc" : "section" }}
+                </span>
+                <span class="wordcloud-stats-divider">|</span>
+                <span class="wordcloud-stats-item">
+                  <strong>{{ activeStats.cleanedWords.toLocaleString() }}</strong> after cleaning
+                </span>
+              </div>
+
+              <div class="wordcloud-stats-selected">
+                <template v-if="selectedWord && selectedWordStats">
+                  <span class="sentence-badge">{{ selectedWord.replace(/-/g, " ") }}</span>
+                  <span class="sentence-stats">
+                    <strong>{{ selectedWordStats.count.toLocaleString() }}</strong>
+                    {{ selectedWordStats.count === 1 ? "time" : "times" }} ·
+                    {{ selectedWordStats.docPercent }} of
+                    {{ selectedSection === "all" ? "doc" : "section" }} ·
+                    {{ selectedWordStats.cleanedPercent }} after cleaning
+                  </span>
+                </template>
+                <span v-else class="wordcloud-stats-hint">Click a word to inspect</span>
               </div>
             </div>
 
             <SentenceDrawer
               :selected-word="selectedWord"
               :selected-section="selectedSection"
-              :section-title="currentSectionTitle"
               :sentences="matchingSentences"
-              @clear="selectedWord = null"
             />
           </div>
         </div>

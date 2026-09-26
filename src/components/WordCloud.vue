@@ -89,7 +89,14 @@ function computeLayout() {
 }
 
 watch(
-  [() => props.words, () => props.spiralType, () => props.withRotation, () => props.layoutSeed, w, h],
+  [
+    () => props.words,
+    () => props.spiralType,
+    () => props.withRotation,
+    () => props.layoutSeed,
+    w,
+    h,
+  ],
   () => {
     computeLayout();
   },

@@ -18,3 +18,9 @@ export interface CloudWord {
   padding?: number;
   hasText?: boolean;
 }
+
+export interface SelectedWordStats {
+  count: number;
+  docPercent: string;
+  cleanedPercent: string;
+}

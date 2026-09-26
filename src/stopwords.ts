@@ -30,6 +30,7 @@ export const DEFAULT_STOP_WORDS: Readonly<Record<string, true>> = {
   cant: true,
   could: true,
   "couldn't": true,
+  crossref: true,
   did: true,
   "didn't": true,
   do: true,
@@ -290,13 +291,11 @@ function buildStopWordLookup(
 export function tokenize(text: string, options: TokenizeOptions = {}): string[] {
   const { minLength = 2, includeNumbers = false } = options;
   const normalized = normalizeText(text);
-  const pattern = includeNumbers
-    ? /[a-z0-9]+(?:'[a-z0-9]+)?/gi
-    : /[a-z]+(?:'[a-z]+)?/gi;
+  const pattern = includeNumbers ? /[a-z0-9]+(?:'[a-z0-9]+)?/gi : /[a-z]+(?:'[a-z]+)?/gi;
   const matches = [...normalized.matchAll(pattern)];
   const tokens: string[] = [];
 
-  for (let i = 0; i < matches.length; ) {
+  for (let i = 0; i < matches.length;) {
     let end = i + 1;
     while (
       /^[A-Z]/.test(matches[end - 1][0]) &&
@@ -309,7 +308,12 @@ export function tokenize(text: string, options: TokenizeOptions = {}): string[] 
       end++;
     }
 
-    tokens.push(matches.slice(i, end).map((match) => match[0].toLowerCase()).join("-"));
+    tokens.push(
+      matches
+        .slice(i, end)
+        .map((match) => match[0].toLowerCase())
+        .join("-"),
+    );
     i = end;
   }
 

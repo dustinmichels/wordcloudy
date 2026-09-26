@@ -104,7 +104,9 @@ function escapeTermPart(part: string): string {
   return [...part]
     .map((char) => {
       if (char === "'") return "['’]";
-      return DIACRITIC_REGEX_PARTS[char.toLowerCase()] ?? char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return (
+        DIACRITIC_REGEX_PARTS[char.toLowerCase()] ?? char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      );
     })
     .join("");
 }
