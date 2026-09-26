@@ -15,6 +15,7 @@ import {
   Pencil,
   Plus,
   Share2,
+  Shuffle,
   X,
 } from "lucide-vue-next";
 import {
@@ -78,6 +79,7 @@ const toast = ref<{ message: string; type: "success" | "error" } | null>(null);
 let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 const sharedDocError = ref<string | null>(null);
 const stageRef = ref<HTMLDivElement | null>(null);
+const layoutSeed = ref<number>(0);
 
 const displayedAttribution = computed(
   () => docData.value?.attribution ?? sharedAttributionFromUrl ?? "",
@@ -233,6 +235,10 @@ const currentSectionTitle = computed(() => {
 
 function handleWordClick(word: string) {
   selectedWord.value = selectedWord.value === word ? null : word;
+}
+
+function handleReshuffle() {
+  layoutSeed.value++;
 }
 
 function handleSectionChange(newSection: string) {
@@ -744,7 +750,7 @@ onUnmounted(() => {
         :sample-loading="loading"
         @create="handleCreateDoc"
         @load-sample="handleLoadSample"
-        @cancel="docData ? (currentPage = 'view') : (currentPage = 'home')"
+        @go-create="currentPage = 'create'"
       />
     </main>
 
@@ -836,23 +842,23 @@ onUnmounted(() => {
           <button
             type="button"
             class="header-action-btn"
-            title="Open original document in new tab"
-            :disabled="!actionGoogleDocId"
-            @click="handleViewDocument"
-          >
-            <ExternalLink class="header-action-btn-icon" :size="14" aria-hidden="true" />
-            View doc
-          </button>
-          <span class="meta-separator" aria-hidden="true">•</span>
-          <button
-            type="button"
-            class="header-action-btn"
             aria-haspopup="dialog"
             :aria-expanded="isAboutOpen"
             @click="isAboutOpen = true"
           >
             <Info class="header-action-btn-icon" :size="14" aria-hidden="true" />
             About
+          </button>
+          <span class="meta-separator" aria-hidden="true">•</span>
+          <button
+            type="button"
+            class="header-action-btn"
+            title="Open original document in new tab"
+            :disabled="!actionGoogleDocId"
+            @click="handleViewDocument"
+          >
+            <ExternalLink class="header-action-btn-icon" :size="14" aria-hidden="true" />
+            View doc
           </button>
         </div>
       </div>
@@ -893,6 +899,7 @@ onUnmounted(() => {
                   :words="activeWords"
                   :spiral-type="spiralType"
                   :with-rotation="withRotation"
+                  :layout-seed="layoutSeed"
                   :selected-word="selectedWord"
                   @word-click="handleWordClick"
                 />
@@ -975,21 +982,33 @@ onUnmounted(() => {
                 </div>
               </div>
 
-              <button
-                type="button"
-                class="save-btn"
-                :disabled="saving || loading || activeWords.length === 0"
-                @click="handleSavePng"
-              >
-                <template v-if="saving">
-                  <Loader2 class="btn-spinner-icon spin" :size="14" aria-hidden="true" />
-                  Saving...
-                </template>
-                <template v-else>
-                  <Download :size="14" aria-hidden="true" />
-                  Save as PNG
-                </template>
-              </button>
+              <div class="wordcloud-export-actions">
+                <button
+                  type="button"
+                  class="wordcloud-reshuffle-btn"
+                  title="Reshuffle word cloud"
+                  :disabled="loading || activeWords.length === 0"
+                  @click="handleReshuffle"
+                >
+                  <Shuffle :size="14" aria-hidden="true" />
+                  Reshuffle
+                </button>
+                <button
+                  type="button"
+                  class="save-btn"
+                  :disabled="saving || loading || activeWords.length === 0"
+                  @click="handleSavePng"
+                >
+                  <template v-if="saving">
+                    <Loader2 class="btn-spinner-icon spin" :size="14" aria-hidden="true" />
+                    Saving...
+                  </template>
+                  <template v-else>
+                    <Download :size="14" aria-hidden="true" />
+                    Save as PNG
+                  </template>
+                </button>
+              </div>
             </div>
 
             <SentenceDrawer

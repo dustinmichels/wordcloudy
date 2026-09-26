@@ -9,6 +9,7 @@ const props = defineProps<{
   words: WordData[];
   spiralType: SpiralType;
   withRotation: boolean;
+  layoutSeed: number;
   selectedWord: string | null;
 }>();
 
@@ -30,7 +31,16 @@ function getRotationDegree() {
   return rand * degree;
 }
 
-const fixedValueGenerator = () => 0.5;
+function createSeededRandom(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 interface LayoutWord extends WordData {
   size?: number;
@@ -71,7 +81,7 @@ function computeLayout() {
     .fontSize((d) => fontScale.value(d.value))
     .spiral(props.spiralType)
     .rotate(props.withRotation ? getRotationDegree : () => 0)
-    .random(fixedValueGenerator)
+    .random(createSeededRandom(props.layoutSeed))
     .on("end", (outputWords: LayoutWord[]) => {
       cloudWords.value = outputWords;
     });
@@ -79,7 +89,7 @@ function computeLayout() {
 }
 
 watch(
-  [() => props.words, () => props.spiralType, () => props.withRotation, w, h],
+  [() => props.words, () => props.spiralType, () => props.withRotation, () => props.layoutSeed, w, h],
   () => {
     computeLayout();
   },
@@ -102,10 +112,10 @@ function getTooltip(item: LayoutWord): string {
           <text
             :fill="selectedWord === item.text ? '#d97706' : colors[i % colors.length]"
             text-anchor="middle"
-            :transform="`translate(${item.x ?? 0}, ${item.y ?? 0}) rotate(${item.rotate ?? 0})`"
             :font-size="item.size"
             :font-family="item.font || 'Impact'"
             :style="{
+              transform: `translate(${item.x ?? 0}px, ${item.y ?? 0}px) rotate(${item.rotate ?? 0}deg)`,
               cursor: 'pointer',
               userSelect: 'none',
               opacity: selectedWord !== null && selectedWord !== item.text ? 0.3 : 1,
