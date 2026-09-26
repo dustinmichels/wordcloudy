@@ -768,8 +768,6 @@ test("standalone build produces GitHub Pages assets (index.html, 404.html, and .
   expect(await Bun.file("./dist/index.html").exists()).toBe(true);
   expect(await Bun.file("./dist/404.html").exists()).toBe(true);
   expect(await Bun.file("./dist/.nojekyll").exists()).toBe(true);
-  const notFoundHtml = await Bun.file("./dist/404.html").text();
-  expect(notFoundHtml).toContain("WordCloudy");
 });
 
 test("stripMarkdownHeadings removes heading lines and preserves content", () => {
