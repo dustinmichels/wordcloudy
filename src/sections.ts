@@ -105,8 +105,7 @@ function escapeTermPart(part: string): string {
   return [...part]
     .map(
       (char) =>
-        DIACRITIC_REGEX_PARTS[char.toLowerCase()] ??
-        char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        DIACRITIC_REGEX_PARTS[char.toLowerCase()] ?? char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
     )
     .join("");
 }
@@ -693,8 +692,6 @@ export function linkifyAttribution(attribution: string): AttributionPart[] {
 
   return parts;
 }
-
-
 
 /**
  * Generates a full shareable application URL containing the encoded share code.

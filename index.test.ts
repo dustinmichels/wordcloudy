@@ -304,7 +304,9 @@ Second topic details.
   const sections = parseDocSections(markdown);
 
   expect(sections.map((s) => s.title)).toEqual(["First Topic", "Second Topic"]);
-  expect(sections[0]?.content).toBe("First topic details.\n\n### First Topic Detail\nMore details.");
+  expect(sections[0]?.content).toBe(
+    "First topic details.\n\n### First Topic Detail\nMore details.",
+  );
 });
 
 test("getDocumentWordData computes overall and section-specific frequencies and sentences", async () => {
@@ -879,7 +881,9 @@ test("parseGoogleDocHtml uses planning H2s as sections and folds H3s into them",
   const sections = parseDocSections(parsed.markdown);
   const docData = getDocumentWordData(parsed.markdown);
 
-  expect(parsed.markdown).toContain("# Resistance and Response in Planning: Edited by Susan S. Fainstein and John Forester");
+  expect(parsed.markdown).toContain(
+    "# Resistance and Response in Planning: Edited by Susan S. Fainstein and John Forester",
+  );
   expect(parsed.markdown).toContain("## Introduction: Resistance and Response in Planning");
   expect(parsed.markdown).toContain("### Notes on Contributors");
   expect(docData.sections).toHaveLength(10);

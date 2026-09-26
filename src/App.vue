@@ -63,9 +63,7 @@ const currentPage = ref<"home" | "view" | "edit" | "create" | "load">(
 );
 
 const docData = ref<ParsedDocumentData | null>(null);
-const actionGoogleDocId = computed(
-  () => docData.value?.sourceGoogleDocId ?? sharedDocIdFromUrl,
-);
+const actionGoogleDocId = computed(() => docData.value?.sourceGoogleDocId ?? sharedDocIdFromUrl);
 const sampleData = ref<ParsedDocumentData | null>(initialDocData);
 const selectedSection = ref<string>("all");
 const selectedWord = ref<string | null>(null);
