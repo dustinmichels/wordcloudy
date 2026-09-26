@@ -6,6 +6,7 @@
   --border-color: #e2e8f0;
   --accent-color: #2f6b9a;
   --accent-dark: #143059;
+  --accent-light: #ebf3f9;
 }
 
 * {
@@ -37,6 +38,7 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
+  background-color: var(--accent-light);
 }
 
 .wordcloud-content {
@@ -1203,12 +1205,13 @@ mark.highlighted-term {
 /* Top Application Navigation */
 .app-top-nav {
   width: 100%;
-  background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  background-color: var(--accent-dark);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   position: sticky;
   top: 0;
   z-index: 100;
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .top-nav-inner {
@@ -1236,29 +1239,30 @@ mark.highlighted-term {
 }
 
 .top-nav-brand .brand-logo svg {
+  stroke: #93c5fd;
   transition: stroke 0.15s ease-in-out;
 }
 
 .top-nav-brand .brand-name {
+  color: #ffffff;
   transition: color 0.15s ease-in-out;
 }
 
 .top-nav-brand:hover {
-  background-color: rgba(15, 23, 42, 0.08);
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .top-nav-brand:hover .brand-name {
-  color: #020617;
+  color: #ffffff;
 }
 
 .top-nav-brand:hover .brand-logo svg {
-  stroke: #020617;
+  stroke: #ffffff;
 }
 
 .top-nav-brand:active {
-  background-color: rgba(15, 23, 42, 0.14);
+  background-color: rgba(255, 255, 255, 0.16);
 }
-
 .brand-logo {
   font-size: 1.35rem;
   line-height: 1;
@@ -1290,7 +1294,7 @@ mark.highlighted-term {
   transform-origin: center center;
   font-weight: 700;
   font-size: 1.1rem;
-  color: var(--accent-dark);
+  color: #ffffff;
   letter-spacing: -0.02em;
 }
 
@@ -1317,10 +1321,10 @@ mark.highlighted-term {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  background-color: var(--bg-secondary);
+  background-color: rgba(0, 0, 0, 0.22);
   padding: 0.25rem;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   margin-left: auto;
 }
 
@@ -1331,7 +1335,7 @@ mark.highlighted-term {
   padding: 0.4rem 0.9rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.75);
   background: transparent;
   border: none;
   border-radius: 6px;
@@ -1346,25 +1350,25 @@ mark.highlighted-term {
 }
 
 .top-nav-tab:hover {
-  color: var(--text-primary);
+  color: #ffffff;
 }
 
 .top-nav-tab.active {
-  background-color: var(--bg-primary);
+  background-color: #ffffff;
   color: var(--accent-dark);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
 .top-nav-tab:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .top-nav-tab-divider {
   width: 1px;
   height: 18px;
-  background-color: var(--border-color);
+  background-color: rgba(255, 255, 255, 0.2);
   margin: 0 0.25rem;
   flex-shrink: 0;
 }
