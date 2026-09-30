@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import {
   AlertCircle,
   Bike,
   Building2,
   Check,
+  ChevronDown,
   Cloud,
   Download,
   ExternalLink,
@@ -70,6 +71,11 @@ const selectedSection = ref<string>("all");
 const selectedWord = ref<string | null>(null);
 const spiralType = ref<SpiralType>("archimedean");
 const withRotation = ref<boolean>(false);
+const controlsExpanded = ref<boolean>(true);
+
+watch(selectedWord, (value) => {
+  controlsExpanded.value = !value;
+});
 const loading = ref<boolean>(hasSharedDocInUrl);
 const loadingMessage = ref<string>("Loading word cloud...");
 const saving = ref<boolean>(false);
@@ -142,10 +148,10 @@ function formatPercent(value: number): string {
 const activeWords = computed<WordData[]>(() => {
   if (!docData.value) return [];
   if (selectedSection.value === "all") {
-    return docData.value.all.slice(0, 100);
+    return docData.value.all.slice(0, 70);
   }
   const section = docData.value.sections.find((s) => s.id === selectedSection.value);
-  return section ? section.words.slice(0, 100) : [];
+  return section ? section.words.slice(0, 70) : [];
 });
 
 const activeStats = computed(() => {
@@ -944,11 +950,13 @@ onUnmounted(() => {
 
           <!-- Right: Controls & Example Sentences -->
           <div class="wordcloud-right">
-            <div class="controls">
+            <!-- Top: Section Picker (no bounding box) -->
+            <div class="section-picker">
               <div class="control-field">
                 <label for="section-select">Section</label>
                 <select
                   id="section-select"
+                  class="section-select"
                   :value="selectedSection"
                   :disabled="loading || !docData"
                   @change="handleSectionChange(($event.target as HTMLSelectElement).value)"
@@ -959,49 +967,84 @@ onUnmounted(() => {
                   </option>
                 </select>
               </div>
+            </div>
 
-              <div class="controls-options-row">
-                <div class="control-field">
-                  <label for="spiral-select">Spiral type</label>
-                  <select id="spiral-select" v-model="spiralType">
-                    <option value="archimedean">archimedean</option>
-                    <option value="rectangular">rectangular</option>
-                  </select>
-                </div>
-                <div class="control-field control-field-checkbox">
-                  <label>
-                    <input v-model="withRotation" type="checkbox" />
-                    With rotation
-                  </label>
-                </div>
-              </div>
+            <!-- Next: Controls (Collapsible) -->
+            <div class="controls" :class="{ 'is-collapsed': !controlsExpanded }">
+              <button
+                type="button"
+                class="controls-header"
+                :aria-expanded="controlsExpanded"
+                aria-controls="controls-body"
+                title="Toggle controls"
+                @click="controlsExpanded = !controlsExpanded"
+              >
+                <span class="controls-header-title">Controls</span>
+                <ChevronDown
+                  class="controls-header-chevron"
+                  :class="{ 'is-collapsed': !controlsExpanded }"
+                  :size="15"
+                  aria-hidden="true"
+                />
+              </button>
 
-              <div class="wordcloud-export-actions">
-                <button
-                  type="button"
-                  class="wordcloud-reshuffle-btn"
-                  title="Reshuffle word cloud"
-                  :disabled="loading || activeWords.length === 0"
-                  @click="handleReshuffle"
-                >
-                  <Shuffle :size="14" aria-hidden="true" />
-                  Reshuffle
-                </button>
-                <button
-                  type="button"
-                  class="save-btn"
-                  :disabled="saving || loading || activeWords.length === 0"
-                  @click="handleSavePng"
-                >
-                  <template v-if="saving">
-                    <Loader2 class="btn-spinner-icon spin" :size="14" aria-hidden="true" />
-                    Saving...
-                  </template>
-                  <template v-else>
-                    <Download :size="14" aria-hidden="true" />
-                    Save as PNG
-                  </template>
-                </button>
+              <div v-show="controlsExpanded" id="controls-body" class="controls-body">
+                <div class="controls-options-row">
+                  <div class="control-field">
+                    <label for="spiral-select">Spiral type</label>
+                    <select id="spiral-select" v-model="spiralType">
+                      <option value="archimedean">archimedean</option>
+                      <option value="rectangular">rectangular</option>
+                    </select>
+                  </div>
+                  <div class="control-field">
+                    <label for="rotation-toggle">Rotation</label>
+                    <label class="rotation-toggle" for="rotation-toggle">
+                      <input
+                        id="rotation-toggle"
+                        v-model="withRotation"
+                        type="checkbox"
+                        role="switch"
+                        :aria-checked="withRotation"
+                        class="rotation-toggle-input"
+                      />
+                      <span class="rotation-toggle-track" aria-hidden="true">
+                        <span class="rotation-toggle-thumb" />
+                      </span>
+                      <span class="rotation-toggle-label">{{
+                        withRotation ? "Rotation on" : "Rotation off"
+                      }}</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="wordcloud-export-actions">
+                  <button
+                    type="button"
+                    class="wordcloud-reshuffle-btn"
+                    title="Reshuffle word cloud"
+                    :disabled="loading || activeWords.length === 0"
+                    @click="handleReshuffle"
+                  >
+                    <Shuffle :size="14" aria-hidden="true" />
+                    Reshuffle
+                  </button>
+                  <button
+                    type="button"
+                    class="save-btn"
+                    :disabled="saving || loading || activeWords.length === 0"
+                    @click="handleSavePng"
+                  >
+                    <template v-if="saving">
+                      <Loader2 class="btn-spinner-icon spin" :size="14" aria-hidden="true" />
+                      Saving...
+                    </template>
+                    <template v-else>
+                      <Download :size="14" aria-hidden="true" />
+                      Save as PNG
+                    </template>
+                  </button>
+                </div>
               </div>
             </div>
 

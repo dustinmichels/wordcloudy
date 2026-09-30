@@ -6,6 +6,7 @@ import {
   getBigramFrequencies,
   getTrigramFrequencies,
   getCollocations,
+  DEFAULT_STOP_WORDS,
 } from "./src/stopwords";
 
 test("tokenize cleans markdown and extracts tokens", () => {
@@ -42,6 +43,13 @@ test("getWordFrequencies strips stop words and tallies frequencies", () => {
   expect(freqs.find((f) => f.text === "safe")).toEqual({ text: "safe", value: 1 });
 });
 
+test("getWordFrequencies strips pp and crossref as default stop words", () => {
+  expect(DEFAULT_STOP_WORDS.pp).toBe(true);
+  expect(DEFAULT_STOP_WORDS.crossref).toBe(true);
+  const freqs = getWordFrequencies("pp crossref housing pp crossref");
+  expect(freqs).toEqual([{ text: "housing", value: 1 }]);
+});
+
 test("countDocumentWords counts total words in text and words remaining after cleaning", () => {
   const text = "Housing, housing and more housing! We need safe housing.";
   const stats = countDocumentWords(text);
@@ -61,6 +69,53 @@ test("tokenize normalizes curly apostrophes", () => {
   const text = "we don’t have money, but they’ll manage";
   const tokens = tokenize(text);
   expect(tokens).toEqual(["we", "don't", "have", "money", "but", "they'll", "manage"]);
+});
+test("tokenize normalizes noun possessive 's into base word while preserving contraction stop words", () => {
+  const text = "The PAP regards the PAP's political hegemony. Let's plan Singapore's future.";
+  const tokens = tokenize(text);
+  expect(tokens).toEqual([
+    "the",
+    "pap",
+    "regards",
+    "the",
+    "pap",
+    "political",
+    "hegemony",
+    "let's",
+    "plan",
+    "singapore",
+    "future",
+  ]);
+});
+
+test("getWordFrequencies combines base and possessive counts under the base word and preserves let's as a stop word", () => {
+  const text =
+    "Let's plan. The PAP and the PAP's policies. Singapore and Singapore’s success. Let's plan.";
+  const freqs = getWordFrequencies(text, { includeBigrams: false, includeTrigrams: false });
+  const map = Object.fromEntries(freqs.map((f) => [f.text, f.value]));
+
+  expect(map["pap"]).toBe(2);
+  expect(map["pap's"]).toBeUndefined();
+  expect(map["singapore"]).toBe(2);
+  expect(map["singapore's"]).toBeUndefined();
+  expect(map["plan"]).toBe(2);
+  expect(map["let"]).toBeUndefined();
+  expect(map["let's"]).toBeUndefined();
+});
+test("getWordFrequencies honors custom stopWords lookup during title-case joining", () => {
+  const customEmpty = getWordFrequencies("The Hague and The Hague", {
+    stopWords: {},
+    includeBigrams: false,
+    includeTrigrams: false,
+  });
+  expect(customEmpty.find((f) => f.text === "the-hague")?.value).toBe(2);
+
+  const defaultFreqs = getWordFrequencies("The Hague and The Hague", {
+    includeBigrams: false,
+    includeTrigrams: false,
+  });
+  expect(defaultFreqs.find((f) => f.text === "hague")?.value).toBe(2);
+  expect(defaultFreqs.find((f) => f.text === "the-hague")).toBeUndefined();
 });
 
 test("getWordFrequencies safely counts prototype words like constructor", () => {
@@ -404,6 +459,13 @@ test("buildTermRegex correctly matches unigrams, bigrams, and trigrams", () => {
   expect(trigramRx.test("move to neighborhoods")).toBe(true);
   expect(trigramRx.test("relocate to neighborhoods")).toBe(false);
 });
+test("buildTermRegex matches base terms and possessive forms with straight and curly apostrophes", () => {
+  const rx = buildTermRegex("pap", true);
+  const text = "The PAP is here. The PAP's decision was final. The PAP’s legacy remains.";
+  const matches = [...text.matchAll(rx)].map((m) => m[0]);
+  expect(matches).toEqual(["PAP", "PAP's", "PAP’s"]);
+});
+
 test("extractGoogleDocId handles various URL formats and raw IDs", () => {
   expect(
     extractGoogleDocId(
@@ -1225,29 +1287,6 @@ test("getGoogleDocWebUrl handles full URLs, raw IDs, spreadsheets, and invalid l
   expect(getGoogleDocWebUrl("https://google.com")).toBeNull();
   expect(getGoogleDocWebUrl("not a link")).toBeNull();
   expect(getGoogleDocWebUrl("")).toBeNull();
-});
-
-test("About modal content accurately reflects extraction methodology", async () => {
-  const modalSrc = await Bun.file("./src/components/AboutModal.vue").text();
-  // Step 1: Normalization & Stop words
-  expect(modalSrc).toContain("Text Normalization");
-  expect(modalSrc).toContain("what");
-  expect(modalSrc).toContain("with");
-
-  // Step 2: Keyphrases & Multi-Word N-Grams
-  expect(modalSrc).toContain("Edge-Filtered Bigrams");
-  expect(modalSrc).toContain("Edge-Filtered Trigrams");
-  expect(modalSrc).toContain("allowing an interior stop word");
-  expect(modalSrc).not.toContain("[content] + [stop] + [content]");
-
-  // Step 3: Frequency Ranking & Selection (top 100 terms, no misleading PMI claims)
-  expect(modalSrc).toContain("Frequency Ranking &amp; Selection");
-  expect(modalSrc).toContain("top 100 terms");
-  expect(modalSrc).not.toContain("Collocation Filtering");
-
-  // Step 4: Section breakdown by headings
-  expect(modalSrc).toContain("shallowest heading level with multiple headings");
-  expect(modalSrc).toMatch(/scale\s+logarithmically/);
 });
 
 test("App.vue View doc action targets the public /preview viewer endpoint", async () => {

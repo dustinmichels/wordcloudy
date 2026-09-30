@@ -89,7 +89,7 @@ onUnmounted(() => {
             </div>
             <p>
               Candidate unigrams, bigrams, and trigrams are pooled into a single frequency ranking
-              sorted descending by occurrence count. The top 100 terms are selected to populate the
+              sorted descending by occurrence count. The top 70 terms are selected to populate the
               cloud, allowing recurring multi-word phrases to compete directly with individual
               words.
             </p>

@@ -14,7 +14,7 @@ import { getDocumentWordData, parseGoogleDocHtml } from "./src/sections.ts";
 export default defineConfig(() => {
   const rawHtml = readFileSync("./samples/constituion/us-constitution.html", "utf-8");
   const { title, markdown } = parseGoogleDocHtml(rawHtml);
-  const docData = getDocumentWordData(markdown, 100, title);
+  const docData = getDocumentWordData(markdown, 70, title);
   docData.sourceGoogleDocId = "1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc";
   docData.attribution = "Independence Hall, Philadelphia";
   docData.date = "September 1787";

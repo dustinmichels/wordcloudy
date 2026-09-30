@@ -75,6 +75,9 @@ const preloadedData = ref<ParsedDocumentData | null>(null);
 const urlInputRef = ref<HTMLInputElement | null>(null);
 const hasUserEditedTitle = ref(Boolean(props.initialCustomTitle));
 let inFlightPromise: Promise<ParsedDocumentData> | null = null;
+const showDetails = computed(
+  () => props.isEdit || sourceMode.value === "paste" || urlLoadSuccess.value,
+);
 
 function handleClearUrl() {
   gdocUrl.value = "";
@@ -415,47 +418,49 @@ function handleCancel() {
             </div>
           </div>
 
-          <div class="form-group">
-            <label htmlFor="gdoc-title-input">
-              Document Title
-              <span class="optional-tag">(optional — auto-detected if left blank)</span>
-            </label>
-            <input
-              id="gdoc-title-input"
-              v-model="customTitle"
-              type="text"
-              class="form-input"
-              placeholder="e.g. The Constitution of the United States"
-              :disabled="isLoading"
-              @input="hasUserEditedTitle = true"
-            />
-          </div>
-          <div class="form-group">
-            <label htmlFor="gdoc-attribution-input">
-              Attribution <span class="optional-tag">(optional)</span>
-            </label>
-            <input
-              id="gdoc-attribution-input"
-              v-model="attribution"
-              type="text"
-              class="form-input"
-              placeholder="e.g. By Jane Doe or Source: Census Bureau"
-              :disabled="isLoading"
-            />
-          </div>
-          <div class="form-group">
-            <label htmlFor="gdoc-date-input">
-              Date <span class="optional-tag">(optional)</span>
-            </label>
-            <input
-              id="gdoc-date-input"
-              v-model="date"
-              type="text"
-              class="form-input"
-              placeholder="e.g. September 2026 or 1787"
-              :disabled="isLoading"
-            />
-          </div>
+          <template v-if="isEdit || urlLoadSuccess">
+            <div class="form-group">
+              <label htmlFor="gdoc-title-input">
+                Document Title
+                <span class="optional-tag">(optional — auto-detected if left blank)</span>
+              </label>
+              <input
+                id="gdoc-title-input"
+                v-model="customTitle"
+                type="text"
+                class="form-input"
+                placeholder="e.g. The Constitution of the United States"
+                :disabled="isLoading"
+                @input="hasUserEditedTitle = true"
+              />
+            </div>
+            <div class="form-group">
+              <label htmlFor="gdoc-attribution-input">
+                Attribution <span class="optional-tag">(optional)</span>
+              </label>
+              <input
+                id="gdoc-attribution-input"
+                v-model="attribution"
+                type="text"
+                class="form-input"
+                placeholder="e.g. By Jane Doe or Source: Census Bureau"
+                :disabled="isLoading"
+              />
+            </div>
+            <div class="form-group">
+              <label htmlFor="gdoc-date-input">
+                Date <span class="optional-tag">(optional)</span>
+              </label>
+              <input
+                id="gdoc-date-input"
+                v-model="date"
+                type="text"
+                class="form-input"
+                placeholder="e.g. September 2026 or 1787"
+                :disabled="isLoading"
+              />
+            </div>
+          </template>
         </div>
 
         <div v-else class="form-section">
@@ -560,7 +565,7 @@ function handleCancel() {
           </div>
         </div>
 
-        <div class="create-form-actions">
+        <div v-if="showDetails" class="create-form-actions">
           <button
             v-if="onCancel"
             type="button"

@@ -30,6 +30,7 @@ export const DEFAULT_STOP_WORDS: Readonly<Record<string, true>> = {
   cant: true,
   could: true,
   "couldn't": true,
+  crossref: true,
   did: true,
   "didn't": true,
   do: true,
@@ -107,6 +108,7 @@ export const DEFAULT_STOP_WORDS: Readonly<Record<string, true>> = {
   out: true,
   over: true,
   own: true,
+  pp: true,
   same: true,
   "shan't": true,
   she: true,
@@ -185,6 +187,8 @@ export const DEFAULT_STOP_WORDS: Readonly<Record<string, true>> = {
 export interface TokenizeOptions {
   minLength?: number;
   includeNumbers?: boolean;
+  stopWords?: Readonly<Record<string, true>>;
+  additionalStopWords?: Iterable<string>;
 }
 
 export interface BigramOptions extends TokenizeOptions {
@@ -288,28 +292,59 @@ function buildStopWordLookup(
  * Adjacent title-cased words are preserved as a single hyphenated proper-noun token.
  */
 export function tokenize(text: string, options: TokenizeOptions = {}): string[] {
-  const { minLength = 2, includeNumbers = false } = options;
+  const {
+    minLength = 2,
+    includeNumbers = false,
+    stopWords = DEFAULT_STOP_WORDS,
+    additionalStopWords,
+  } = options;
   const normalized = normalizeText(text);
-  const pattern = includeNumbers
-    ? /[a-z0-9]+(?:'[a-z0-9]+)?/gi
-    : /[a-z]+(?:'[a-z]+)?/gi;
-  const matches = [...normalized.matchAll(pattern)];
+  const pattern = includeNumbers ? /[a-z0-9]+(?:'[a-z0-9]+)?/gi : /[a-z]+(?:'[a-z]+)?/gi;
+  const rawMatches = [...normalized.matchAll(pattern)];
+  const lookup = buildStopWordLookup(stopWords, additionalStopWords);
+
+  // Normalize possessive 's (e.g. "PAP's" -> "PAP", "Singapore's" -> "Singapore")
+  // while preserving existing contraction stop words like "let's", "it's", "that's"
+  const matches = rawMatches.map((m) => {
+    let word = m[0];
+    if (!lookup[m[0].toLowerCase()] && /'s$/i.test(word)) {
+      word = word.slice(0, -2);
+    }
+    return {
+      word,
+      raw: m[0],
+      index: m.index!,
+    };
+  });
+
   const tokens: string[] = [];
 
-  for (let i = 0; i < matches.length; ) {
+  for (let i = 0; i < matches.length;) {
     let end = i + 1;
-    while (
-      /^[A-Z]/.test(matches[end - 1][0]) &&
-      matches[end] &&
-      /^[A-Z]/.test(matches[end][0]) &&
-      /^\s+$/.test(
-        normalized.slice(matches[end - 1].index! + matches[end - 1][0].length, matches[end].index!),
-      )
-    ) {
-      end++;
+    const isStop = !!lookup[matches[i].word.toLowerCase()];
+    if (!isStop) {
+      while (
+        /^[A-Z]/.test(matches[end - 1].word) &&
+        matches[end] &&
+        !lookup[matches[end].word.toLowerCase()] &&
+        /^[A-Z]/.test(matches[end].word) &&
+        /^\s+$/.test(
+          normalized.slice(
+            matches[end - 1].index + matches[end - 1].raw.length,
+            matches[end].index,
+          ),
+        )
+      ) {
+        end++;
+      }
     }
 
-    tokens.push(matches.slice(i, end).map((match) => match[0].toLowerCase()).join("-"));
+    tokens.push(
+      matches
+        .slice(i, end)
+        .map((match) => match.word.toLowerCase())
+        .join("-"),
+    );
     i = end;
   }
 
@@ -341,7 +376,7 @@ export function getCollocations(text: string, options: CollocationOptions = {}):
   let totalBigrams = 0;
 
   for (const seg of segments) {
-    const tokens = tokenize(seg, tokenizeOpts);
+    const tokens = tokenize(seg, { ...tokenizeOpts, stopWords, additionalStopWords });
     for (const t of tokens) {
       unigramCounts[t] = (unigramCounts[t] ?? 0) + 1;
       totalUnigrams++;
@@ -428,7 +463,7 @@ export function getBigramFrequencies(text: string, options: BigramOptions = {}):
   const bigramCounts: Record<string, number> = Object.create(null);
 
   for (const seg of segments) {
-    const tokens = tokenize(seg, tokenizeOpts);
+    const tokens = tokenize(seg, { ...tokenizeOpts, stopWords, additionalStopWords });
     for (let i = 0; i < tokens.length - 1; i++) {
       const w1 = tokens[i];
       const w2 = tokens[i + 1];
@@ -465,7 +500,7 @@ export function getTrigramFrequencies(text: string, options: TrigramOptions = {}
   const trigramCounts: Record<string, number> = Object.create(null);
 
   for (const seg of segments) {
-    const tokens = tokenize(seg, tokenizeOpts);
+    const tokens = tokenize(seg, { ...tokenizeOpts, stopWords, additionalStopWords });
     for (let i = 0; i < tokens.length - 2; i++) {
       const w1 = tokens[i];
       const w2 = tokens[i + 1];
@@ -508,7 +543,7 @@ export function getWordFrequencies(text: string, options: FrequencyOptions = {})
   } = options;
 
   const lookup = buildStopWordLookup(stopWords, additionalStopWords);
-  const tokens = tokenize(text, tokenizeOpts);
+  const tokens = tokenize(text, { ...tokenizeOpts, stopWords, additionalStopWords });
   const frequencies: Record<string, number> = Object.create(null);
 
   for (const word of tokens) {
@@ -558,7 +593,7 @@ export function countDocumentWords(
   const { stopWords = DEFAULT_STOP_WORDS, additionalStopWords, ...tokenizeOpts } = options;
   const cleaned = cleanText(text);
   const totalTokens = cleaned.match(/[a-z0-9]+(?:'[a-z0-9]+)?/g) || [];
-  const tokens = tokenize(text, tokenizeOpts);
+  const tokens = tokenize(text, { ...tokenizeOpts, stopWords, additionalStopWords });
   const lookup = buildStopWordLookup(stopWords, additionalStopWords);
   let cleanedWords = 0;
   for (const token of tokens) {

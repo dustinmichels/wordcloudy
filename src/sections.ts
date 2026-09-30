@@ -104,7 +104,9 @@ function escapeTermPart(part: string): string {
   return [...part]
     .map((char) => {
       if (char === "'") return "['’]";
-      return DIACRITIC_REGEX_PARTS[char.toLowerCase()] ?? char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return (
+        DIACRITIC_REGEX_PARTS[char.toLowerCase()] ?? char.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      );
     })
     .join("");
 }
@@ -120,7 +122,7 @@ export function buildTermRegex(term: string, global = false): RegExp {
     .split(/[-\s]+/)
     .map(escapeTermPart)
     .join("[\\s\\-–—]+");
-  return new RegExp(`\\b${escaped}\\b`, global ? "gi" : "i");
+  return new RegExp(`\\b${escaped}(?:['’]s?)?\\b`, global ? "gi" : "i");
 }
 
 /**
@@ -210,7 +212,7 @@ export function stripMarkdownHeadings(text: string): string {
  */
 export function getDocumentWordData(
   markdown: string,
-  topWordsLimit = 100,
+  topWordsLimit = 70,
   title?: string,
 ): ParsedDocumentData {
   const strippedMarkdown = stripMarkdownHeadings(markdown);
@@ -520,7 +522,7 @@ export function parsePastedText(
     }
   }
 
-  const result = getDocumentWordData(content, 100, title);
+  const result = getDocumentWordData(content, 70, title);
   if (isCustomTitle) {
     result.customTitle = customTitle!.trim();
   }
@@ -577,7 +579,7 @@ export async function fetchAndParseGoogleDoc(
       const finalTitle = isCustomTitle
         ? customTitle!.trim()
         : parsed.title || getFirstDocumentLine(parsed.markdown);
-      const result = getDocumentWordData(parsed.markdown, 100, finalTitle);
+      const result = getDocumentWordData(parsed.markdown, 70, finalTitle);
       result.sourceGoogleDocId = docId;
       if (isCustomTitle) {
         result.customTitle = customTitle!.trim();

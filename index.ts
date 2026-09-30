@@ -4,7 +4,7 @@ import { getDocumentWordData, parseGoogleDocHtml } from "./src/sections";
 const docFile = Bun.file("./samples/constituion/us-constitution.html");
 const html = await docFile.text();
 const { title, markdown } = parseGoogleDocHtml(html);
-const docData = getDocumentWordData(markdown, 100, title);
+const docData = getDocumentWordData(markdown, 70, title);
 docData.sourceGoogleDocId = "1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc";
 docData.attribution = "Independence Hall, Philadelphia";
 docData.date = "September 1787";
