@@ -107,26 +107,29 @@ function getTooltip(item: LayoutWord): string {
   <div ref="containerRef" class="wordcloud-wrapper" style="width: 100%; height: 100%">
     <svg :width="w" :height="h" class="wordcloud-svg" aria-label="Word cloud visualization">
       <g :transform="`translate(${w / 2}, ${h / 2})`">
-        <g v-for="(item, i) in cloudWords" :key="`${item.text}-${i}`">
-          <title>{{ getTooltip(item) }}</title>
-          <text
-            :fill="selectedWord === item.text ? '#d97706' : colors[i % colors.length]"
-            text-anchor="middle"
-            :font-size="item.size"
-            :font-family="item.font || 'Impact'"
-            :style="{
-              transform: `translate(${item.x ?? 0}px, ${item.y ?? 0}px) rotate(${item.rotate ?? 0}deg)`,
-              cursor: 'pointer',
-              userSelect: 'none',
-              opacity: selectedWord !== null && selectedWord !== item.text ? 0.3 : 1,
-              fontWeight: selectedWord === item.text ? 'bold' : 'normal',
-            }"
-            :class="['cloud-word', selectedWord === item.text ? 'cloud-word-selected' : '']"
-            @click="emit('wordClick', item.text ?? '')"
-          >
-            {{ item.text }}
-          </text>
-        </g>
+        <TransitionGroup tag="g" name="cloud-word-fade">
+          <g v-for="(item, i) in cloudWords" :key="item.text || i">
+            <title>{{ getTooltip(item) }}</title>
+            <text
+              :fill="selectedWord === item.text ? '#d97706' : colors[i % colors.length]"
+              text-anchor="middle"
+              :font-size="item.size"
+              :font-family="item.font || 'Impact'"
+              :style="{
+                transform: `translate(${item.x ?? 0}px, ${item.y ?? 0}px) rotate(${item.rotate ?? 0}deg)`,
+                fontSize: `${item.size}px`,
+                cursor: 'pointer',
+                userSelect: 'none',
+                opacity: selectedWord !== null && selectedWord !== item.text ? 0.3 : 1,
+                fontWeight: selectedWord === item.text ? 'bold' : 'normal',
+              }"
+              :class="['cloud-word', selectedWord === item.text ? 'cloud-word-selected' : '']"
+              @click="emit('wordClick', item.text ?? '')"
+            >
+              {{ item.text }}
+            </text>
+          </g>
+        </TransitionGroup>
       </g>
     </svg>
   </div>

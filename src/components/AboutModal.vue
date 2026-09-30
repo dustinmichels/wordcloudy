@@ -35,9 +35,7 @@ onUnmounted(() => {
       <div class="modal-header">
         <div class="modal-title-group">
           <h2 id="about-modal-title">Word Cloud Methodology</h2>
-          <p class="modal-subtitle">
-            How words, phrases, and collocations are extracted from the text
-          </p>
+          <p class="modal-subtitle">How words and keyphrases are extracted from the text</p>
         </div>
         <button
           type="button"
@@ -76,9 +74,10 @@ onUnmounted(() => {
                 without crossing clause boundaries, requiring content words at both ends.
               </li>
               <li>
-                <strong>Interior-Stop Trigrams:</strong> Natural phrases bridging across a
-                preposition (<code>[content] + [stop] + [content]</code>), such as
-                <em>cost of housing</em> or <em>sense of uncertainty</em>.
+                <strong>Edge-Filtered Trigrams:</strong> Three-word phrases occurring at least twice
+                without crossing clause boundaries, requiring content words at both ends while
+                allowing an interior stop word (e.g. <em>cost of housing</em> or
+                <em>sense of uncertainty</em>).
               </li>
             </ul>
           </div>
@@ -86,13 +85,13 @@ onUnmounted(() => {
           <div class="methodology-card">
             <div class="methodology-card-header">
               <span class="methodology-step">3</span>
-              <h3>Frequency Ranking &amp; Collocation Filtering</h3>
+              <h3>Frequency Ranking &amp; Selection</h3>
             </div>
             <p>
-              Candidate words and keyphrases are pooled and ranked by occurrence frequency,
-              enforcing a recurrence threshold of at least two mentions for multi-word phrases.
-              Stop-word filtering on phrase boundaries prevents generic glue pairs from qualifying,
-              ensuring prominent collocations reflect meaningful recurring concepts.
+              Candidate unigrams, bigrams, and trigrams are pooled into a single frequency ranking
+              sorted descending by occurrence count. The top 100 terms are selected to populate the
+              cloud, allowing recurring multi-word phrases to compete directly with individual
+              words.
             </p>
           </div>
 
@@ -102,9 +101,9 @@ onUnmounted(() => {
               <h3>Section Breakdown &amp; Exploration</h3>
             </div>
             <p>
-              Text is segmented by major discussion themes. Word sizes scale logarithmically with
-              frequency. Clicking any term highlights matching sentence fragments across sections
-              for contextual reading.
+              Text is segmented by the shallowest heading level with multiple headings. Word sizes
+              scale logarithmically with frequency. Clicking any term highlights matching sentence
+              fragments across sections for contextual reading.
             </p>
           </div>
         </div>

@@ -226,13 +226,6 @@ const matchingSentences = computed(() => {
   return results;
 });
 
-const currentSectionTitle = computed(() => {
-  if (selectedSection.value === "all") return "All Sections";
-  return (
-    docData.value?.sections.find((s) => s.id === selectedSection.value)?.title ?? "Current Section"
-  );
-});
-
 function handleWordClick(word: string) {
   selectedWord.value = selectedWord.value === word ? null : word;
 }
@@ -414,7 +407,7 @@ async function handleShare() {
 function handleViewDocument() {
   if (!actionGoogleDocId.value || typeof window === "undefined") return;
   window.open(
-    `https://docs.google.com/document/d/${actionGoogleDocId.value}/edit`,
+    `https://docs.google.com/document/d/${actionGoogleDocId.value}/preview`,
     "_blank",
     "noopener,noreferrer",
   );
@@ -823,6 +816,18 @@ onUnmounted(() => {
         </p>
         <div class="wordcloud-header-meta">
           <button
+            v-if="selectedWord"
+            type="button"
+            class="wordcloud-clear-btn"
+            title="Clear selection (Esc)"
+            aria-label="Clear selection (Esc)"
+            @click.stop="selectedWord = null"
+          >
+            <X class="wordcloud-clear-icon" :size="15" aria-hidden="true" />
+            <kbd class="wordcloud-clear-kbd">esc</kbd>
+          </button>
+          <span v-if="selectedWord" class="meta-separator" aria-hidden="true">•</span>
+          <button
             type="button"
             :class="['header-action-btn', 'share-btn', copyStatus === 'copied' ? 'copied' : '']"
             title="Copy share link to clipboard"
@@ -884,17 +889,6 @@ onUnmounted(() => {
             </div>
             <template v-else>
               <div ref="stageRef" class="wordcloud-stage">
-                <button
-                  v-if="selectedWord"
-                  type="button"
-                  class="wordcloud-clear-btn"
-                  title="Clear selection (Esc)"
-                  aria-label="Clear selection (Esc)"
-                  @click.stop="selectedWord = null"
-                >
-                  <X class="wordcloud-clear-icon" :size="15" aria-hidden="true" />
-                  <kbd class="wordcloud-clear-kbd">esc</kbd>
-                </button>
                 <WordCloud
                   :words="activeWords"
                   :spiral-type="spiralType"
@@ -1014,9 +1008,7 @@ onUnmounted(() => {
             <SentenceDrawer
               :selected-word="selectedWord"
               :selected-section="selectedSection"
-              :section-title="currentSectionTitle"
               :sentences="matchingSentences"
-              @clear="selectedWord = null"
             />
           </div>
         </div>

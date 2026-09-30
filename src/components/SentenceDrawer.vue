@@ -1,41 +1,17 @@
 <script setup lang="ts">
-import { MessageSquare, X } from "lucide-vue-next";
+import { MessageSquare } from "lucide-vue-next";
 import HighlightedText from "./HighlightedText.vue";
 
-const props = defineProps<{
+defineProps<{
   selectedWord: string | null;
   selectedSection: string;
-  sectionTitle: string;
   sentences: Array<{ sectionTitle: string; text: string }>;
-}>();
-
-const emit = defineEmits<{
-  (e: "clear"): void;
 }>();
 </script>
 
 <template>
   <div class="sentence-panel">
     <template v-if="selectedWord">
-      <div class="sentence-panel-header">
-        <div class="sentence-panel-title">
-          <span class="sentence-badge">{{ selectedWord.replace(/-/g, " ") }}</span>
-          <span class="sentence-count">
-            {{ sentences.length }}
-            {{ sentences.length === 1 ? "sentence" : "sentences" }} in
-            <strong>{{ sectionTitle }}</strong>
-          </span>
-        </div>
-        <button
-          type="button"
-          class="sentence-close-btn"
-          @click="emit('clear')"
-          title="Clear selection"
-        >
-          <X :size="13" aria-hidden="true" /> Clear
-        </button>
-      </div>
-
       <div v-if="sentences.length === 0" class="sentence-empty">
         No sentence fragments found containing “{{ selectedWord.replace(/-/g, " ") }}” in this
         category.

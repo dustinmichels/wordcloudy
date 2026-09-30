@@ -1226,3 +1226,44 @@ test("getGoogleDocWebUrl handles full URLs, raw IDs, spreadsheets, and invalid l
   expect(getGoogleDocWebUrl("not a link")).toBeNull();
   expect(getGoogleDocWebUrl("")).toBeNull();
 });
+
+test("About modal content accurately reflects extraction methodology", async () => {
+  const modalSrc = await Bun.file("./src/components/AboutModal.vue").text();
+  // Step 1: Normalization & Stop words
+  expect(modalSrc).toContain("Text Normalization");
+  expect(modalSrc).toContain("what");
+  expect(modalSrc).toContain("with");
+
+  // Step 2: Keyphrases & Multi-Word N-Grams
+  expect(modalSrc).toContain("Edge-Filtered Bigrams");
+  expect(modalSrc).toContain("Edge-Filtered Trigrams");
+  expect(modalSrc).toContain("allowing an interior stop word");
+  expect(modalSrc).not.toContain("[content] + [stop] + [content]");
+
+  // Step 3: Frequency Ranking & Selection (top 100 terms, no misleading PMI claims)
+  expect(modalSrc).toContain("Frequency Ranking &amp; Selection");
+  expect(modalSrc).toContain("top 100 terms");
+  expect(modalSrc).not.toContain("Collocation Filtering");
+
+  // Step 4: Section breakdown by headings
+  expect(modalSrc).toContain("shallowest heading level with multiple headings");
+  expect(modalSrc).toMatch(/scale\s+logarithmically/);
+});
+
+test("App.vue View doc action targets the public /preview viewer endpoint", async () => {
+  const appSrc = await Bun.file("./src/App.vue").text();
+  expect(appSrc).toContain(
+    "`https://docs.google.com/document/d/${actionGoogleDocId.value}/preview`",
+  );
+  expect(appSrc).not.toContain(
+    "`https://docs.google.com/document/d/${actionGoogleDocId.value}/edit`",
+  );
+});
+
+test("Google Doc /preview endpoint is publicly accessible without login redirect", async () => {
+  const docId = "1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA";
+  const res = await fetch(`https://docs.google.com/document/d/${docId}/preview`);
+  expect(res.status).toBe(200);
+  const html = await res.text();
+  expect(html).toContain("Gleanings from Our Experiences of Housing");
+});
