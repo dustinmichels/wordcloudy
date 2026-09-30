@@ -306,6 +306,7 @@ import {
   parseGoogleDocHtml,
   parsePastedText,
   stripMarkdownHeadings,
+  shouldReshuffleOnKeyDown,
 } from "./src/sections";
 import {
   SAMPLE_DOC_ID,
@@ -1305,4 +1306,102 @@ test("Google Doc /preview endpoint is publicly accessible without login redirect
   expect(res.status).toBe(200);
   const html = await res.text();
   expect(html).toContain("Gleanings from Our Experiences of Housing");
+});
+
+test("shouldReshuffleOnKeyDown handles spacebar when viewing active cloud", () => {
+  const baseContext = {
+    currentPage: "view",
+    loading: false,
+    activeWordsCount: 15,
+    isModalOpen: false,
+  };
+
+  // Standard space key
+  expect(shouldReshuffleOnKeyDown({ key: " " }, baseContext)).toBe(true);
+  expect(shouldReshuffleOnKeyDown({ key: "Spacebar" }, baseContext)).toBe(true);
+  expect(shouldReshuffleOnKeyDown({ key: "", code: "Space" }, baseContext)).toBe(true);
+
+  // Other keys do not reshuffle
+  expect(shouldReshuffleOnKeyDown({ key: "Enter" }, baseContext)).toBe(false);
+  expect(shouldReshuffleOnKeyDown({ key: "a" }, baseContext)).toBe(false);
+  expect(shouldReshuffleOnKeyDown({ key: "Escape" }, baseContext)).toBe(false);
+
+  // Modifiers prevent reshuffle
+  expect(shouldReshuffleOnKeyDown({ key: " ", ctrlKey: true }, baseContext)).toBe(false);
+  expect(shouldReshuffleOnKeyDown({ key: " ", metaKey: true }, baseContext)).toBe(false);
+  expect(shouldReshuffleOnKeyDown({ key: " ", altKey: true }, baseContext)).toBe(false);
+  expect(shouldReshuffleOnKeyDown({ key: " ", shiftKey: true }, baseContext)).toBe(false);
+
+  // Repeat and defaultPrevented prevent reshuffle
+  expect(shouldReshuffleOnKeyDown({ key: " ", repeat: true }, baseContext)).toBe(false);
+  expect(shouldReshuffleOnKeyDown({ key: " ", defaultPrevented: true }, baseContext)).toBe(false);
+
+  // Form inputs and editable elements do not reshuffle
+  expect(shouldReshuffleOnKeyDown({ key: " ", target: { tagName: "INPUT" } }, baseContext)).toBe(
+    false,
+  );
+  expect(shouldReshuffleOnKeyDown({ key: " ", target: { tagName: "TEXTAREA" } }, baseContext)).toBe(
+    false,
+  );
+  expect(shouldReshuffleOnKeyDown({ key: " ", target: { tagName: "SELECT" } }, baseContext)).toBe(
+    false,
+  );
+  expect(
+    shouldReshuffleOnKeyDown({ key: " ", target: { isContentEditable: true } }, baseContext),
+  ).toBe(false);
+
+  // Other buttons or links do not reshuffle
+  expect(
+    shouldReshuffleOnKeyDown(
+      {
+        key: " ",
+        target: { tagName: "BUTTON", closest: () => null },
+      },
+      baseContext,
+    ),
+  ).toBe(false);
+  expect(
+    shouldReshuffleOnKeyDown(
+      {
+        key: " ",
+        target: { tagName: "A", closest: () => null },
+      },
+      baseContext,
+    ),
+  ).toBe(false);
+
+  // Reshuffle button itself does reshuffle
+  expect(
+    shouldReshuffleOnKeyDown(
+      {
+        key: " ",
+        target: {
+          tagName: "BUTTON",
+          closest: (sel: string) => (sel === ".wordcloud-reshuffle-btn" ? {} : null),
+        },
+      },
+      baseContext,
+    ),
+  ).toBe(true);
+
+  // Disallowed contexts
+  expect(shouldReshuffleOnKeyDown({ key: " " }, { ...baseContext, currentPage: "home" })).toBe(
+    false,
+  );
+  expect(shouldReshuffleOnKeyDown({ key: " " }, { ...baseContext, currentPage: "create" })).toBe(
+    false,
+  );
+  expect(shouldReshuffleOnKeyDown({ key: " " }, { ...baseContext, loading: true })).toBe(false);
+  expect(shouldReshuffleOnKeyDown({ key: " " }, { ...baseContext, activeWordsCount: 0 })).toBe(
+    false,
+  );
+  expect(shouldReshuffleOnKeyDown({ key: " " }, { ...baseContext, isModalOpen: true })).toBe(false);
+});
+
+test("App.vue Reshuffle button includes mouseover shortcut indicator and ARIA keyshortcut", async () => {
+  const appSrc = await Bun.file("./src/App.vue").text();
+  expect(appSrc).toContain('class="wordcloud-reshuffle-btn"');
+  expect(appSrc).toContain('title="Reshuffle word cloud (Spacebar)"');
+  expect(appSrc).toContain('aria-keyshortcuts="Space"');
+  expect(appSrc).toContain("shouldReshuffleOnKeyDown");
 });

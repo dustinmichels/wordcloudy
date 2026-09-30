@@ -36,6 +36,7 @@ import {
   getInitialEditValuesFromUrl,
   getShareableAppUrl,
   linkifyAttribution,
+  shouldReshuffleOnKeyDown,
 } from "./sections";
 import type { ParsedDocumentData, SpiralType, WordData } from "./types";
 import HomeView from "./components/HomeView.vue";
@@ -500,6 +501,29 @@ function handleKeyDown(event: KeyboardEvent) {
     } else {
       selectedWord.value = null;
     }
+    return;
+  }
+
+  const context = {
+    currentPage: currentPage.value,
+    loading: loading.value,
+    activeWordsCount: activeWords.value.length,
+    isModalOpen: isAboutOpen.value,
+  };
+
+  if (shouldReshuffleOnKeyDown(event, context)) {
+    event.preventDefault();
+    handleReshuffle();
+  } else if (
+    (event.key === " " || event.key === "Spacebar" || event.code === "Space") &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey &&
+    !event.shiftKey &&
+    event.repeat &&
+    shouldReshuffleOnKeyDown({ ...event, repeat: false }, context)
+  ) {
+    event.preventDefault();
   }
 }
 
@@ -1022,7 +1046,8 @@ onUnmounted(() => {
                   <button
                     type="button"
                     class="wordcloud-reshuffle-btn"
-                    title="Reshuffle word cloud"
+                    title="Reshuffle word cloud (Spacebar)"
+                    aria-keyshortcuts="Space"
                     :disabled="loading || activeWords.length === 0"
                     @click="handleReshuffle"
                   >

@@ -1038,3 +1038,80 @@ export function getInitialEditValuesFromUrl(
     date,
   };
 }
+
+/**
+ * Context needed to evaluate whether a keydown event should trigger a reshuffle.
+ */
+export interface ReshuffleKeyboardContext {
+  currentPage: string;
+  loading: boolean;
+  activeWordsCount: number;
+  isModalOpen: boolean;
+}
+
+/**
+ * Determines whether a keyboard event should trigger a word cloud reshuffle.
+ * Reshuffles on Spacebar press when viewing the cloud, while ignoring editable elements,
+ * other buttons/links, open modals, or repeat events.
+ */
+export function shouldReshuffleOnKeyDown(
+  event: {
+    key: string;
+    code?: string;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
+    altKey?: boolean;
+    shiftKey?: boolean;
+    repeat?: boolean;
+    defaultPrevented?: boolean;
+    target?: EventTarget | null;
+  },
+  context: ReshuffleKeyboardContext,
+): boolean {
+  if (event.defaultPrevented || event.repeat) {
+    return false;
+  }
+
+  const isSpaceKey =
+    (event.key === " " || event.key === "Spacebar" || event.code === "Space") &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey &&
+    !event.shiftKey;
+
+  if (!isSpaceKey) {
+    return false;
+  }
+
+  const target = event.target as {
+    tagName?: string;
+    isContentEditable?: boolean;
+    getAttribute?: (attr: string) => string | null;
+    closest?: (selector: string) => Element | null;
+  } | null;
+
+  if (target) {
+    const tagName = target.tagName?.toUpperCase();
+    if (
+      tagName === "INPUT" ||
+      tagName === "TEXTAREA" ||
+      tagName === "SELECT" ||
+      target.isContentEditable
+    ) {
+      return false;
+    }
+    if (
+      (tagName === "BUTTON" || tagName === "A" || target.getAttribute?.("role") === "button") &&
+      !target.closest?.(".wordcloud-reshuffle-btn")
+    ) {
+      return false;
+    }
+  }
+
+  return (
+    context.currentPage === "view" &&
+    !context.loading &&
+    context.activeWordsCount > 0 &&
+    !context.isModalOpen
+  );
+}
