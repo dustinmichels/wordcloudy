@@ -6,6 +6,9 @@ import {
   getBigramFrequencies,
   getTrigramFrequencies,
   getCollocations,
+  formatPluralLabel,
+  getPluralLabelMap,
+  mergePluralFrequencies,
   DEFAULT_STOP_WORDS,
 } from "./src/stopwords";
 
@@ -284,6 +287,117 @@ test("getWordFrequencies respects includeTrigrams: false", () => {
   const freqs = getWordFrequencies(text, { minTrigramCount: 2, includeTrigrams: false });
   expect(freqs.find((f) => f.text === "cost-of-housing")).toBeUndefined();
 });
+
+test("formatPluralLabel correctly formats regular and irregular plurals", () => {
+  expect(formatPluralLabel("frog", "frogs")).toBe("frog/s");
+  expect(formatPluralLabel("beet", "beets")).toBe("beet/s");
+  expect(formatPluralLabel("blackberry", "blackberries")).toBe("blackberry/blackberries");
+  expect(formatPluralLabel("child", "children")).toBe("child/children");
+  expect(formatPluralLabel("series", "series")).toBe("series");
+});
+
+test("getPluralLabelMap maps words only when multiple inflected forms appear", () => {
+  const frequencies = [
+    { text: "beet", value: 2 },
+    { text: "beets", value: 3 },
+    { text: "carrot", value: 5 },
+    { text: "blackberry", value: 1 },
+    { text: "blackberries", value: 4 },
+  ];
+  const map = getPluralLabelMap(frequencies);
+  expect(map.get("beet")).toBe("beet/s");
+  expect(map.get("beets")).toBe("beet/s");
+  expect(map.get("blackberry")).toBe("blackberry/blackberries");
+  expect(map.get("blackberries")).toBe("blackberry/blackberries");
+  expect(map.get("carrot")).toBeUndefined();
+});
+
+test("mergePluralFrequencies combines counts of regular and irregular plurals", () => {
+  const frequencies = [
+    { text: "housing", value: 10 },
+    { text: "beet", value: 2 },
+    { text: "beets", value: 3 },
+    { text: "blackberry", value: 1 },
+    { text: "blackberries", value: 4 },
+    { text: "city-planning", value: 6 },
+  ];
+  const merged = mergePluralFrequencies(frequencies);
+  expect(merged).toEqual([
+    { text: "housing", value: 10 },
+    { text: "city-planning", value: 6 },
+    { text: "beet/s", value: 5 },
+    { text: "blackberry/blackberries", value: 5 },
+  ]);
+});
+
+test("mergePluralFrequencies supports a precomputed labelMap across sections", () => {
+  const docFrequencies = [
+    { text: "beet", value: 2 },
+    { text: "beets", value: 3 },
+  ];
+  const labelMap = getPluralLabelMap(docFrequencies);
+
+  const section1 = [{ text: "beet", value: 2 }];
+  const section2 = [{ text: "beets", value: 3 }];
+
+  expect(mergePluralFrequencies(section1, labelMap)).toEqual([{ text: "beet/s", value: 2 }]);
+  expect(mergePluralFrequencies(section2, labelMap)).toEqual([{ text: "beet/s", value: 3 }]);
+});
+
+test("getWordFrequencies with mergePlurals: true combines plural words", () => {
+  const text =
+    "We planted a beet and beets and more beets. Later we picked a blackberry and sweet blackberries.";
+  const freqs = getWordFrequencies(text, {
+    includeBigrams: false,
+    includeTrigrams: false,
+    mergePlurals: true,
+  });
+  const beetEntry = freqs.find((f) => f.text === "beet/s");
+  const blackberryEntry = freqs.find((f) => f.text === "blackberry/blackberries");
+
+  expect(beetEntry).toEqual({ text: "beet/s", value: 3 });
+  expect(blackberryEntry).toEqual({ text: "blackberry/blackberries", value: 2 });
+});
+
+test("extractPluralsFromUrl detects query and hash params", () => {
+  expect(extractPluralsFromUrl("https://example.com/?plurals=1")).toBe(true);
+  expect(extractPluralsFromUrl("https://example.com/?mergePlurals=true")).toBe(true);
+  expect(extractPluralsFromUrl("https://example.com/#plurals=1")).toBe(true);
+  expect(extractPluralsFromUrl("https://example.com/?plurals=0")).toBe(false);
+  expect(extractPluralsFromUrl("https://example.com/")).toBe(null);
+});
+
+test("buildTermRegex correctly matches /s, (s), and / merged plural terms", () => {
+  const frogRx = buildTermRegex("frog/s", true);
+  const text0 =
+    "A green frog saw two frogs. It was not a toad, s is a letter, and frog's skin was wet.";
+  const matches0 = [...text0.matchAll(frogRx)].map((m) => m[0]);
+  expect(matches0).toEqual(["frog", "frogs", "frog's"]);
+
+  const beetRx = buildTermRegex("beet/s", true);
+  const text1 = "We have beet, beets, beet's taste, and beets’ fresh leaves. Not beetroot.";
+  const matches1 = [...text1.matchAll(beetRx)].map((m) => m[0]);
+  expect(matches1).toEqual(["beet", "beets", "beet's", "beets"]);
+
+  const berryRx = buildTermRegex("blackberry/blackberries", true);
+  const text2 = "A ripe blackberry and several blackberries were eaten. Not blackberrying.";
+  const matches2 = [...text2.matchAll(berryRx)].map((m) => m[0]);
+  expect(matches2).toEqual(["blackberry", "blackberries"]);
+});
+test("getDocumentWordData combines plurals when mergePlurals option is enabled", () => {
+  const md = `# Section 1
+A beet grew here.
+# Section 2
+More beets grew here.`;
+  const data = getDocumentWordData(md, 70, "Beet Doc", {
+    includeBigrams: false,
+    includeTrigrams: false,
+    mergePlurals: true,
+  });
+  const allBeet = data.all.find((w) => w.text === "beet/s");
+  expect(allBeet).toBeDefined();
+  expect(allBeet?.value).toBe(2);
+});
 import {
   buildTermRegex,
   cleanMarkdownFormatting,
@@ -293,9 +407,11 @@ import {
   extractDateFromUrl,
   extractGoogleDocId,
   extractModeFromUrl,
+  extractPluralsFromUrl,
   extractSentences,
   extractTextFromUrl,
   extractTitleFromUrl,
+  extractViewFromUrl,
   fetchAndParseGoogleDoc,
   getDocumentWordData,
   getGoogleDocWebUrl,
@@ -1404,4 +1520,264 @@ test("App.vue Reshuffle button includes mouseover shortcut indicator and ARIA ke
   expect(appSrc).toContain('title="Reshuffle word cloud (Spacebar)"');
   expect(appSrc).toContain('aria-keyshortcuts="Space"');
   expect(appSrc).toContain("shouldReshuffleOnKeyDown");
+});
+
+test("saveRecentDocument saves markdown/plain text documents to browser storage", () => {
+  const {
+    saveRecentDocument,
+    getRecentDocuments,
+    getRecentDocumentById,
+    clearRecentDocuments,
+  } = require("./src/storage");
+
+  clearRecentDocuments();
+  const textDoc = {
+    id: "text-12345",
+    title: "Housing & Community Notes",
+    attribution: "Urban Policy Seminar",
+    date: "Oct 2026",
+    sourceType: "text",
+    text: "## Housing\nAffordability is vital.\n\n## Community\nPublic spaces foster belonging.",
+  };
+  saveRecentDocument(textDoc);
+  const recent = getRecentDocuments();
+  expect(recent.length).toBe(1);
+  expect(recent[0]?.id).toBe("text-12345");
+  expect(recent[0]?.title).toBe("Housing & Community Notes");
+  expect(recent[0]?.sourceType).toBe("text");
+  expect(recent[0]?.text).toContain("Affordability is vital");
+  expect(recent[0]?.url).toBeUndefined();
+
+  const fetched = getRecentDocumentById("text-12345");
+  expect(fetched).toBeDefined();
+  expect(fetched?.title).toBe("Housing & Community Notes");
+  expect(fetched?.text).toBe(textDoc.text);
+  clearRecentDocuments();
+});
+
+test("saveRecentDocument auto-generates ID for text documents when ID omitted", () => {
+  const { saveRecentDocument, getRecentDocuments, clearRecentDocuments } = require("./src/storage");
+
+  clearRecentDocuments();
+  saveRecentDocument({
+    title: "My Markdown",
+    sourceType: "text",
+    text: "Some markdown paragraphs",
+  });
+  const recent = getRecentDocuments();
+  expect(recent.length).toBe(1);
+  expect(recent[0]?.id).toMatch(/^text-/);
+  expect(recent[0]?.title).toBe("My Markdown");
+  expect(recent[0]?.text).toBe("Some markdown paragraphs");
+  clearRecentDocuments();
+});
+
+test("saveRecentDocument updates existing text document in-place and preserves text", () => {
+  const { saveRecentDocument, getRecentDocuments, clearRecentDocuments } = require("./src/storage");
+
+  clearRecentDocuments();
+  saveRecentDocument({
+    id: "text-edit-test",
+    title: "Initial Title",
+    sourceType: "text",
+    text: "Initial text",
+  });
+  saveRecentDocument({
+    id: "other-doc",
+    url: "https://docs.google.com/document/d/other-doc/edit",
+    title: "Other Doc",
+  });
+  saveRecentDocument({
+    id: "text-edit-test",
+    title: "Updated Title",
+    sourceType: "text",
+    text: "Updated text with new paragraphs",
+  });
+
+  const recent = getRecentDocuments();
+  expect(recent.length).toBe(2);
+  expect(recent[0]?.id).toBe("text-edit-test");
+  expect(recent[0]?.title).toBe("Updated Title");
+  expect(recent[0]?.text).toBe("Updated text with new paragraphs");
+  expect(recent[1]?.id).toBe("other-doc");
+  clearRecentDocuments();
+});
+
+test("parsePastedText attaches rawText and sourceType to parsed data", () => {
+  const { parsePastedText } = require("./src/sections");
+  const markdown =
+    "## Intro\nThis is a sample document for testing.\n\n## Conclusion\nEnd of test.";
+  const result = parsePastedText(markdown, "Test Title", "Author", "2026");
+  expect(result.rawText).toBe(markdown);
+  expect(result.sourceType).toBe("text");
+  expect(result.customTitle).toBe("Test Title");
+  expect(result.attribution).toBe("Author");
+  expect(result.date).toBe("2026");
+});
+
+test("getInitialEditValuesFromUrl preserves text document fields for returning to edit", () => {
+  const { getInitialEditValuesFromUrl } = require("./src/sections");
+  const textDoc = {
+    title: "My Essay",
+    customTitle: "My Essay Custom",
+    attribution: "Student",
+    date: "Fall 2026",
+    rawText: "## Section 1\nSome deep insights here.",
+    localDocId: "text-987",
+  };
+
+  const editValues = getInitialEditValuesFromUrl("http://localhost:3000/", textDoc);
+  expect(editValues.sourceMode).toBe("paste");
+  expect(editValues.pastedText).toBe("## Section 1\nSome deep insights here.");
+  expect(editValues.customTitle).toBe("My Essay Custom");
+  expect(editValues.attribution).toBe("Student");
+  expect(editValues.date).toBe("Fall 2026");
+  expect(editValues.localDocId).toBe("text-987");
+});
+
+test("active document tracking manages current active document ID", () => {
+  const {
+    setActiveDocumentId,
+    getActiveDocumentId,
+    saveRecentDocument,
+    removeRecentDocument,
+    clearRecentDocuments,
+  } = require("./src/storage");
+
+  clearRecentDocuments();
+  setActiveDocumentId("text-active-1");
+  expect(getActiveDocumentId()).toBe("text-active-1");
+
+  saveRecentDocument({
+    id: "text-active-1",
+    title: "Active Doc",
+    sourceType: "text",
+    text: "Text",
+  });
+  removeRecentDocument("text-active-1");
+  expect(getActiveDocumentId()).toBeNull();
+
+  setActiveDocumentId("text-active-2");
+  clearRecentDocuments();
+  expect(getActiveDocumentId()).toBeNull();
+});
+
+test("getDocumentWordData defaults to extracting up to 100 words", async () => {
+  const content = await Bun.file("./samples/housing/housing-doc.md").text();
+  const data = getDocumentWordData(content);
+  expect(data.all.length).toBe(100);
+});
+
+test("getDocumentWordData with small doc extracts actual word count under 100", () => {
+  const shortText = "apple banana orange cherry grape mango pineapple strawberry blueberry kiwi";
+  const data = getDocumentWordData(shortText);
+  expect(data.all.length).toBe(10);
+  expect(data.all.length).toBeLessThan(100);
+});
+
+test("max words slider clamps values to document limit when doc has fewer than 100 words", () => {
+  const totalDocWords = 35;
+  const docMaxWords = Math.min(100, Math.max(1, totalDocWords));
+  const hasDocLimit = totalDocWords > 0 && totalDocWords < 100;
+
+  expect(hasDocLimit).toBe(true);
+  expect(docMaxWords).toBe(35);
+
+  expect(Math.max(1, Math.min(docMaxWords, 50))).toBe(35);
+  expect(Math.max(1, Math.min(docMaxWords, 100))).toBe(35);
+  expect(Math.max(1, Math.min(docMaxWords, 20))).toBe(20);
+  expect(Math.max(1, Math.min(docMaxWords, 0))).toBe(1);
+  expect(Math.max(1, Math.min(docMaxWords, 1))).toBe(1);
+
+  // Marker percent on 1-100 scale: ((docMaxWords - 1) / 99) * 100
+  const markerPercent = ((docMaxWords - 1) / 99) * 100;
+  expect(markerPercent).toBeCloseTo(34.34, 1);
+});
+
+test("max words slider allows full 1-100 range when doc has 100 or more words", () => {
+  const totalDocWords = 100;
+  const docMaxWords = Math.min(100, Math.max(1, totalDocWords));
+  const hasDocLimit = totalDocWords > 0 && totalDocWords < 100;
+
+  expect(hasDocLimit).toBe(false);
+  expect(docMaxWords).toBe(100);
+
+  expect(Math.max(1, Math.min(docMaxWords, 100))).toBe(100);
+  expect(Math.max(1, Math.min(docMaxWords, 70))).toBe(70);
+  expect(Math.max(1, Math.min(docMaxWords, 1))).toBe(1);
+});
+
+test("activeWords slice respects custom maxWords slider limit", async () => {
+  const content = await Bun.file("./samples/housing/housing-doc.md").text();
+  const data = getDocumentWordData(content);
+
+  const activeWordsAt25 = data.all.slice(0, 25);
+  expect(activeWordsAt25.length).toBe(25);
+
+  const activeWordsAt70 = data.all.slice(0, 70);
+  expect(activeWordsAt70.length).toBe(70);
+
+  const activeWordsAt100 = data.all.slice(0, 100);
+  expect(activeWordsAt100.length).toBe(100);
+});
+
+test("extractViewFromUrl detects bar and cloud view from query and hash params", () => {
+  expect(extractViewFromUrl("https://example.com/?view=bar")).toBe("bar");
+  expect(extractViewFromUrl("https://example.com/?chart=bar")).toBe("bar");
+  expect(extractViewFromUrl("https://example.com/?view=barchart")).toBe("bar");
+  expect(extractViewFromUrl("https://example.com/?view=cloud")).toBe("cloud");
+  expect(extractViewFromUrl("https://example.com/?chart=wordcloud")).toBe("cloud");
+  expect(extractViewFromUrl("https://example.com/#view=bar")).toBe("bar");
+  expect(extractViewFromUrl("https://example.com/#chart=bar")).toBe("bar");
+  expect(extractViewFromUrl("https://example.com/#view=cloud")).toBe("cloud");
+  expect(extractViewFromUrl("https://example.com/?doc=abc")).toBe(null);
+  expect(extractViewFromUrl("https://example.com/")).toBe(null);
+});
+
+test("bar chart view defaults to top 10 words and can be adjusted with slider", async () => {
+  const content = await Bun.file("./samples/housing/housing-doc.md").text();
+  const data = getDocumentWordData(content);
+
+  // Default for bar chart view is 10 words
+  const defaultBarWords = data.all.slice(0, 10);
+  expect(defaultBarWords.length).toBe(10);
+
+  // Default for word cloud view is 70 words
+  const defaultCloudWords = data.all.slice(0, 70);
+  expect(defaultCloudWords.length).toBe(70);
+
+  // Slider can adjust bar chart word count (e.g. 5, 15, 25)
+  const barWordsAt5 = data.all.slice(0, 5);
+  expect(barWordsAt5.length).toBe(5);
+
+  const barWordsAt15 = data.all.slice(0, 15);
+  expect(barWordsAt15.length).toBe(15);
+
+  const barWordsAt25 = data.all.slice(0, 25);
+  expect(barWordsAt25.length).toBe(25);
+
+  // The top words maintain frequency ordering
+  for (let i = 0; i < defaultBarWords.length - 1; i++) {
+    expect(defaultBarWords[i].value).toBeGreaterThanOrEqual(defaultBarWords[i + 1].value);
+  }
+});
+
+test("App.vue contains view toggle and renders WordBarChart in bar view", async () => {
+  const appSrc = await Bun.file("./src/App.vue").text();
+  expect(appSrc).toContain("WordBarChart");
+  expect(appSrc).toContain("setVizMode('cloud')");
+  expect(appSrc).toContain("setVizMode('bar')");
+  expect(appSrc).toContain('vizMode === "bar"');
+  expect(appSrc).toContain("barMaxWords");
+  expect(appSrc).toContain("cloudMaxWords");
+});
+
+test("WordBarChart component imports @tanstack/charts and @tanstack/charts/vue", async () => {
+  const barChartSrc = await Bun.file("./src/components/WordBarChart.vue").text();
+  expect(barChartSrc).toContain("@tanstack/charts");
+  expect(barChartSrc).toContain("@tanstack/charts/vue");
+  expect(barChartSrc).toContain("defineChart");
+  expect(barChartSrc).toContain("barX");
+  expect(barChartSrc).toContain("scaleBand");
+  expect(barChartSrc).toContain("scaleLinear");
 });

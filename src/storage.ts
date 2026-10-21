@@ -1,13 +1,18 @@
+export type RecentDocumentSourceType = "gdoc" | "text";
+
 export interface RecentDocument {
-  id: string; // Google Doc ID
-  url: string; // Google Doc URL
+  id: string; // Google Doc ID or local text ID
+  url?: string; // Google Doc URL
   title: string;
   attribution?: string;
   date?: string;
   updatedAt: number; // Timestamp
+  sourceType?: RecentDocumentSourceType;
+  text?: string; // Markdown/plain text content when sourceType === "text"
 }
 
 export const RECENT_DOCS_STORAGE_KEY = "wordcloudy_recent_docs";
+export const ACTIVE_DOC_STORAGE_KEY = "wordcloudy_active_doc";
 export const SAMPLE_DOC_ID = "1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc";
 export const SAMPLE_DOC_TITLE = "The Constitution of the United States";
 export const SAMPLE_DOC_ATTRIBUTION = "Independence Hall, Philadelphia";
@@ -57,9 +62,12 @@ function getStorage(): SimpleStorage {
 function isRecentDocument(item: unknown): item is RecentDocument {
   if (!item || typeof item !== "object") return false;
   if (!("id" in item) || typeof item.id !== "string" || !item.id.trim()) return false;
-  if (!("url" in item) || typeof item.url !== "string") return false;
   if (!("title" in item) || typeof item.title !== "string") return false;
-  return true;
+  if ("url" in item && typeof item.url !== "string") return false;
+  if ("text" in item && typeof item.text !== "string") return false;
+  const hasUrl = "url" in item && typeof item.url === "string" && item.url.trim().length > 0;
+  const hasText = "text" in item && typeof item.text === "string" && item.text.trim().length > 0;
+  return hasUrl || hasText;
 }
 
 export function getRecentDocuments(): RecentDocument[] {
@@ -77,36 +85,60 @@ export function getRecentDocuments(): RecentDocument[] {
 }
 
 export function saveRecentDocument(doc: {
-  id: string;
+  id?: string;
   url?: string;
   title?: string;
   attribution?: string;
   date?: string;
+  sourceType?: RecentDocumentSourceType;
+  text?: string;
 }): RecentDocument[] {
   const cleanId = doc.id?.trim();
-  if (!cleanId || cleanId === SAMPLE_DOC_ID) {
+  if (cleanId === SAMPLE_DOC_ID) {
+    return getRecentDocuments();
+  }
+
+  const cleanUrl = doc.url?.trim();
+  const isHttpUrl =
+    Boolean(cleanUrl) && (cleanUrl!.startsWith("https://") || cleanUrl!.startsWith("http://"));
+  const isText = doc.sourceType === "text" || Boolean(doc.text !== undefined && !isHttpUrl);
+
+  if (!isText && !cleanId) {
     return getRecentDocuments();
   }
 
   try {
     const storage = getStorage();
     const existing = getRecentDocuments();
-    const cleanUrl = doc.url?.trim();
-    const isHttpUrl =
-      Boolean(cleanUrl) && (cleanUrl!.startsWith("https://") || cleanUrl!.startsWith("http://"));
-    const gdocUrl = isHttpUrl ? cleanUrl! : `https://docs.google.com/document/d/${cleanId}/edit`;
 
-    const newEntry: RecentDocument = {
-      id: cleanId,
-      url: gdocUrl,
-      title: doc.title?.trim() || "Untitled Google Doc",
-      attribution: doc.attribution?.trim() || undefined,
-      date: doc.date?.trim() || undefined,
-      updatedAt: Date.now(),
-    };
+    let newEntry: RecentDocument;
+
+    if (isText) {
+      const textId = cleanId || `text-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      newEntry = {
+        id: textId,
+        title: doc.title?.trim() || "Untitled Text Document",
+        attribution: doc.attribution?.trim() || undefined,
+        date: doc.date?.trim() || undefined,
+        sourceType: "text",
+        text: doc.text || "",
+        updatedAt: Date.now(),
+      };
+    } else {
+      const gdocUrl = isHttpUrl ? cleanUrl! : `https://docs.google.com/document/d/${cleanId}/edit`;
+      newEntry = {
+        id: cleanId!,
+        url: gdocUrl,
+        title: doc.title?.trim() || "Untitled Google Doc",
+        attribution: doc.attribution?.trim() || undefined,
+        date: doc.date?.trim() || undefined,
+        sourceType: "gdoc",
+        updatedAt: Date.now(),
+      };
+    }
 
     // Filter out previous entry with the same ID, prepend new entry, and limit size
-    const filtered = existing.filter((item) => item.id !== cleanId);
+    const filtered = existing.filter((item) => item.id !== newEntry.id);
     const updated = [newEntry, ...filtered].slice(0, MAX_RECENT_DOCS);
     storage.setItem(RECENT_DOCS_STORAGE_KEY, JSON.stringify(updated));
     return updated;
@@ -116,12 +148,42 @@ export function saveRecentDocument(doc: {
   }
 }
 
+export function getRecentDocumentById(id: string): RecentDocument | undefined {
+  const docs = getRecentDocuments();
+  return docs.find((item) => item.id === id);
+}
+
+export function getActiveDocumentId(): string | null {
+  try {
+    const storage = getStorage();
+    return storage.getItem(ACTIVE_DOC_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setActiveDocumentId(id: string | null): void {
+  try {
+    const storage = getStorage();
+    if (id) {
+      storage.setItem(ACTIVE_DOC_STORAGE_KEY, id);
+    } else {
+      storage.removeItem(ACTIVE_DOC_STORAGE_KEY);
+    }
+  } catch {
+    // Blocked storage or SecurityError
+  }
+}
+
 export function removeRecentDocument(id: string): RecentDocument[] {
   try {
     const storage = getStorage();
     const existing = getRecentDocuments();
     const updated = existing.filter((item) => item.id !== id);
     storage.setItem(RECENT_DOCS_STORAGE_KEY, JSON.stringify(updated));
+    if (storage.getItem(ACTIVE_DOC_STORAGE_KEY) === id) {
+      storage.removeItem(ACTIVE_DOC_STORAGE_KEY);
+    }
     return updated;
   } catch (err) {
     console.error("Failed to remove recent document from localStorage:", err);
@@ -133,6 +195,7 @@ export function clearRecentDocuments(): void {
   try {
     const storage = getStorage();
     storage.removeItem(RECENT_DOCS_STORAGE_KEY);
+    storage.removeItem(ACTIVE_DOC_STORAGE_KEY);
   } catch (err) {
     console.error("Failed to clear recent documents from localStorage:", err);
   }

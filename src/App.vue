@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import {
   AlertCircle,
+  BarChart3,
   Bike,
   Building2,
   Check,
@@ -25,19 +26,26 @@ import {
   SAMPLE_DOC_ATTRIBUTION,
   SAMPLE_DOC_DATE,
   saveRecentDocument,
+  getRecentDocumentById,
+  getActiveDocumentId,
+  setActiveDocumentId,
 } from "./storage";
 import {
   buildTermRegex,
   decodeGoogleDocShareCode,
   extractAttributionFromUrl,
   extractDateFromUrl,
+  extractPluralsFromUrl,
   extractTitleFromUrl,
+  extractViewFromUrl,
   fetchAndParseGoogleDoc,
+  parsePastedText,
   getInitialEditValuesFromUrl,
   getShareableAppUrl,
   linkifyAttribution,
   shouldReshuffleOnKeyDown,
 } from "./sections";
+import { getPluralLabelMap, mergePluralFrequencies } from "./stopwords";
 import type { ParsedDocumentData, SpiralType, WordData } from "./types";
 import HomeView from "./components/HomeView.vue";
 import LoadRecentView from "./components/LoadRecentView.vue";
@@ -45,6 +53,7 @@ import CreateCloudView from "./components/CreateCloudView.vue";
 import WordCloud from "./components/WordCloud.vue";
 import SentenceDrawer from "./components/SentenceDrawer.vue";
 import AboutModal from "./components/AboutModal.vue";
+import WordBarChart from "./components/WordBarChart.vue";
 
 declare const __DOCUMENT_DATA__: ParsedDocumentData | undefined;
 
@@ -72,6 +81,112 @@ const selectedSection = ref<string>("all");
 const selectedWord = ref<string | null>(null);
 const spiralType = ref<SpiralType>("archimedean");
 const withRotation = ref<boolean>(false);
+const mergePlurals = ref<boolean>(
+  typeof window !== "undefined" ? (extractPluralsFromUrl(window.location.href) ?? false) : false,
+);
+const vizMode = ref<"cloud" | "bar">(
+  typeof window !== "undefined" ? (extractViewFromUrl(window.location.href) ?? "cloud") : "cloud",
+);
+const cloudMaxWords = ref<number>(70);
+const barMaxWords = ref<number>(10);
+const preferredCloudMaxWords = ref<number>(70);
+const preferredBarMaxWords = ref<number>(10);
+
+const maxWords = computed<number>({
+  get: () => (vizMode.value === "bar" ? barMaxWords.value : cloudMaxWords.value),
+  set: (val: number) => {
+    if (vizMode.value === "bar") {
+      barMaxWords.value = val;
+      preferredBarMaxWords.value = val;
+    } else {
+      cloudMaxWords.value = val;
+      preferredCloudMaxWords.value = val;
+    }
+  },
+});
+
+function setVizMode(mode: "cloud" | "bar") {
+  vizMode.value = mode;
+}
+
+const totalDocWords = computed<number>(() => {
+  if (!docData.value) return 0;
+  return mergedAllWords.value.length;
+});
+
+const docMaxWords = computed<number>(() => {
+  if (totalDocWords.value <= 0) return 100;
+  return Math.min(100, totalDocWords.value);
+});
+
+const hasDocLimit = computed<boolean>(() => {
+  return totalDocWords.value > 0 && totalDocWords.value < 100;
+});
+
+const markerPercent = computed<number>(() => {
+  if (!hasDocLimit.value) return 100;
+  return Math.max(0, Math.min(100, ((docMaxWords.value - 1) / 99) * 100));
+});
+
+const sliderTrackStyle = computed(() => {
+  const currentPct = Math.max(0, Math.min(100, ((maxWords.value - 1) / 99) * 100));
+  const limitPct = markerPercent.value;
+
+  if (hasDocLimit.value) {
+    return {
+      background: `linear-gradient(to right,
+        var(--accent-color) 0%,
+        var(--accent-color) ${currentPct}%,
+        #cbd5e1 ${currentPct}%,
+        #cbd5e1 ${limitPct}%,
+        #e2e8f0 ${limitPct}%,
+        #e2e8f0 100%)`,
+    };
+  }
+
+  return {
+    background: `linear-gradient(to right,
+      var(--accent-color) 0%,
+      var(--accent-color) ${currentPct}%,
+      #cbd5e1 ${currentPct}%,
+      #cbd5e1 100%)`,
+  };
+});
+
+watch(
+  docMaxWords,
+  (limit) => {
+    if (limit <= 0) return;
+    if (cloudMaxWords.value > limit) {
+      cloudMaxWords.value = limit;
+    } else if (cloudMaxWords.value < preferredCloudMaxWords.value) {
+      cloudMaxWords.value = Math.min(preferredCloudMaxWords.value, limit);
+    }
+    if (barMaxWords.value > limit) {
+      barMaxWords.value = limit;
+    } else if (barMaxWords.value < preferredBarMaxWords.value) {
+      barMaxWords.value = Math.min(preferredBarMaxWords.value, limit);
+    }
+  },
+  { immediate: true },
+);
+
+function handleSliderInput(e: Event) {
+  const target = e.target as HTMLInputElement;
+  const val = Number(target.value);
+  if (Number.isNaN(val)) return;
+
+  const clamped = Math.max(1, Math.min(docMaxWords.value, val));
+  target.value = String(clamped);
+  maxWords.value = clamped;
+}
+
+function handleSliderKeydown(e: KeyboardEvent) {
+  if (e.key === "End") {
+    e.preventDefault();
+    maxWords.value = docMaxWords.value;
+  }
+}
 const controlsExpanded = ref<boolean>(true);
 
 watch(selectedWord, (value) => {
@@ -114,6 +229,7 @@ function handleGoHome() {
   }
   selectedWord.value = null;
   sharedDocError.value = null;
+  setActiveDocumentId(null);
   currentPage.value = "home";
 }
 
@@ -146,13 +262,49 @@ function formatPercent(value: number): string {
   return `${Math.round(value)}%`;
 }
 
-const activeWords = computed<WordData[]>(() => {
+const docPluralLabelMap = computed(() => {
+  if (!docData.value || !mergePlurals.value) return null;
+  return getPluralLabelMap(docData.value.all);
+});
+
+const mergedAllWords = computed<WordData[]>(() => {
+  if (!docData.value) return [];
+  if (mergePlurals.value) {
+    return mergePluralFrequencies(docData.value.all, docPluralLabelMap.value ?? undefined);
+  }
+  return docData.value.all;
+});
+
+const activeWordFrequencies = computed<WordData[]>(() => {
   if (!docData.value) return [];
   if (selectedSection.value === "all") {
-    return docData.value.all.slice(0, 70);
+    return mergedAllWords.value;
   }
   const section = docData.value.sections.find((s) => s.id === selectedSection.value);
-  return section ? section.words.slice(0, 70) : [];
+  if (!section) return [];
+  if (mergePlurals.value) {
+    return mergePluralFrequencies(section.words, docPluralLabelMap.value ?? undefined);
+  }
+  return section.words;
+});
+
+const activeWords = computed<WordData[]>(() => {
+  const limit = maxWords.value;
+  return activeWordFrequencies.value.slice(0, limit);
+});
+
+watch(activeWords, (newActiveWords) => {
+  if (selectedWord.value) {
+    const wordLower = selectedWord.value.toLowerCase();
+    const wordNorm = wordLower.replace(/-/g, " ");
+    const exists = newActiveWords.some((w) => {
+      const wl = w.text.toLowerCase();
+      return wl === wordLower || wl.replace(/-/g, " ") === wordNorm;
+    });
+    if (!exists) {
+      selectedWord.value = null;
+    }
+  }
 });
 
 const activeStats = computed(() => {
@@ -183,11 +335,7 @@ const selectedWordStats = computed(() => {
 
   let count = match?.value;
   if (count === undefined) {
-    const sourceList =
-      selectedSection.value === "all"
-        ? docData.value.all
-        : (docData.value.sections.find((s) => s.id === selectedSection.value)?.words ?? []);
-    const fallbackMatch = sourceList.find((w) => {
+    const fallbackMatch = activeWordFrequencies.value.find((w) => {
       const wLower = w.text.toLowerCase();
       return wLower === wordLower || wLower.replace(/-/g, " ") === wordNormalized;
     });
@@ -246,8 +394,13 @@ function handleSectionChange(newSection: string) {
   if (selectedWord.value && docData.value) {
     const wordsInNewSection =
       newSection === "all"
-        ? docData.value.all
-        : (docData.value.sections.find((s) => s.id === newSection)?.words ?? []);
+        ? mergedAllWords.value
+        : mergePlurals.value
+          ? mergePluralFrequencies(
+              docData.value.sections.find((s) => s.id === newSection)?.words ?? [],
+              docPluralLabelMap.value ?? undefined,
+            )
+          : (docData.value.sections.find((s) => s.id === newSection)?.words ?? []);
     const exists = wordsInNewSection.some((w) => w.text === selectedWord.value);
     if (!exists) {
       selectedWord.value = null;
@@ -262,6 +415,7 @@ function handleCreateDoc(newData: ParsedDocumentData) {
   currentPage.value = "view";
   sharedDocError.value = null;
   if (newData.sourceGoogleDocId && typeof window !== "undefined") {
+    setActiveDocumentId(newData.sourceGoogleDocId);
     const shareUrl = getShareableAppUrl(
       newData.sourceGoogleDocId,
       undefined,
@@ -279,6 +433,46 @@ function handleCreateDoc(newData: ParsedDocumentData) {
       "",
       shareUrl,
     );
+  } else if (newData.localDocId) {
+    setActiveDocumentId(newData.localDocId);
+    if (typeof window !== "undefined" && window.location.search) {
+      window.history.pushState({}, "", window.location.pathname);
+    }
+  }
+}
+
+function handleEditDoc(data: ParsedDocumentData) {
+  docData.value = data;
+  selectedSection.value = "all";
+  selectedWord.value = null;
+  currentPage.value = "edit";
+  sharedDocError.value = null;
+  if (data.sourceGoogleDocId) {
+    setActiveDocumentId(data.sourceGoogleDocId);
+    if (typeof window !== "undefined") {
+      const shareUrl = getShareableAppUrl(
+        data.sourceGoogleDocId,
+        undefined,
+        data.attribution,
+        data.date,
+        data.customTitle || data.title,
+      );
+      window.history.pushState(
+        {
+          doc: data.sourceGoogleDocId,
+          attribution: data.attribution,
+          date: data.date,
+          title: data.customTitle || data.title,
+        },
+        "",
+        shareUrl,
+      );
+    }
+  } else if (data.localDocId) {
+    setActiveDocumentId(data.localDocId);
+    if (typeof window !== "undefined" && window.location.search) {
+      window.history.pushState({}, "", window.location.pathname);
+    }
   }
 }
 
@@ -470,7 +664,8 @@ function handleSavePng() {
           ?.toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/(^-|-$)/g, "");
-        const filename = slug ? `${slug}-wordcloud.png` : "wordcloud.png";
+        const baseName = vizMode.value === "bar" ? "barchart" : "wordcloud";
+        const filename = slug ? `${slug}-${baseName}.png` : `${baseName}.png`;
         downloadLink.download = filename;
         document.body.appendChild(downloadLink);
         downloadLink.click();
@@ -511,10 +706,11 @@ function handleKeyDown(event: KeyboardEvent) {
     isModalOpen: isAboutOpen.value,
   };
 
-  if (shouldReshuffleOnKeyDown(event, context)) {
+  if (vizMode.value === "cloud" && shouldReshuffleOnKeyDown(event, context)) {
     event.preventDefault();
     handleReshuffle();
   } else if (
+    vizMode.value === "cloud" &&
     (event.key === " " || event.key === "Spacebar" || event.code === "Space") &&
     !event.ctrlKey &&
     !event.metaKey &&
@@ -646,6 +842,43 @@ onMounted(() => {
       return;
     }
   }
+  const activeDocId = getActiveDocumentId();
+  if (activeDocId) {
+    const activeDoc = getRecentDocumentById(activeDocId);
+    if (activeDoc) {
+      if (activeDoc.sourceType === "text" || activeDoc.text) {
+        const data = parsePastedText(
+          activeDoc.text || "",
+          activeDoc.title,
+          activeDoc.attribution,
+          activeDoc.date,
+        );
+        data.rawText = activeDoc.text || "";
+        data.localDocId = activeDoc.id;
+        data.sourceType = "text";
+        docData.value = data;
+        currentPage.value = "view";
+        selectedSection.value = "all";
+        selectedWord.value = null;
+      } else {
+        loading.value = true;
+        loadingMessage.value = "Loading document...";
+        fetchAndParseGoogleDoc(activeDoc.id, activeDoc.title, activeDoc.attribution, activeDoc.date)
+          .then((data) => {
+            docData.value = data;
+            currentPage.value = "view";
+            selectedSection.value = "all";
+            selectedWord.value = null;
+          })
+          .catch(() => {
+            currentPage.value = "home";
+          })
+          .finally(() => {
+            loading.value = false;
+          });
+      }
+    }
+  }
 
   if (!initialDocData) {
     fetch("/api/sections")
@@ -763,6 +996,7 @@ onUnmounted(() => {
       <HomeView
         :sample-loading="loading"
         @create="handleCreateDoc"
+        @edit="handleEditDoc"
         @load-sample="handleLoadSample"
         @go-create="currentPage = 'create'"
       />
@@ -772,6 +1006,7 @@ onUnmounted(() => {
       <LoadRecentView
         :sample-loading="loading"
         @create="handleCreateDoc"
+        @edit="handleEditDoc"
         @load-sample="handleLoadSample"
         @go-create="currentPage = 'create'"
       />
@@ -796,6 +1031,7 @@ onUnmounted(() => {
         :initial-custom-title="editInitialValues.customTitle"
         :initial-attribution="editInitialValues.attribution"
         :initial-date="editInitialValues.date"
+        :initial-local-doc-id="editInitialValues.localDocId"
         :is-edit="true"
         @create="handleCreateDoc"
         @cancel="currentPage = 'view'"
@@ -860,7 +1096,11 @@ onUnmounted(() => {
           <button
             type="button"
             :class="['header-action-btn', 'share-btn', copyStatus === 'copied' ? 'copied' : '']"
-            title="Copy share link to clipboard"
+            :title="
+              actionGoogleDocId
+                ? 'Copy share link to clipboard'
+                : 'Only Google Doc word clouds can be shared via link'
+            "
             :disabled="!actionGoogleDocId"
             @click="handleShare"
           >
@@ -918,8 +1158,40 @@ onUnmounted(() => {
               No words found.
             </div>
             <template v-else>
-              <div ref="stageRef" class="wordcloud-stage">
+              <div class="stage-view-header">
+                <div class="stage-view-toggle" role="tablist" aria-label="Visualization view">
+                  <button
+                    type="button"
+                    role="tab"
+                    :aria-selected="vizMode === 'cloud'"
+                    :class="['stage-view-btn', vizMode === 'cloud' ? 'active' : '']"
+                    title="Word Cloud view"
+                    @click="setVizMode('cloud')"
+                  >
+                    <Cloud :size="15" aria-hidden="true" />
+                    <span>Word Cloud</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    :aria-selected="vizMode === 'bar'"
+                    :class="['stage-view-btn', vizMode === 'bar' ? 'active' : '']"
+                    title="Bar Chart view"
+                    @click="setVizMode('bar')"
+                  >
+                    <BarChart3 :size="15" aria-hidden="true" />
+                    <span>Bar Chart</span>
+                  </button>
+                </div>
+              </div>
+
+              <div
+                ref="stageRef"
+                class="wordcloud-stage"
+                :class="{ 'is-bar-view': vizMode === 'bar' }"
+              >
                 <WordCloud
+                  v-if="vizMode === 'cloud'"
                   :words="activeWords"
                   :spiral-type="spiralType"
                   :with-rotation="withRotation"
@@ -927,8 +1199,13 @@ onUnmounted(() => {
                   :selected-word="selectedWord"
                   @word-click="handleWordClick"
                 />
+                <WordBarChart
+                  v-else
+                  :words="activeWords"
+                  :selected-word="selectedWord"
+                  @word-click="handleWordClick"
+                />
               </div>
-
               <div class="wordcloud-stats-widget" role="status" aria-live="polite">
                 <div class="wordcloud-stats-counts">
                   <span class="wordcloud-stats-item">
@@ -1013,7 +1290,7 @@ onUnmounted(() => {
               </button>
 
               <div v-show="controlsExpanded" id="controls-body" class="controls-body">
-                <div class="controls-options-row">
+                <div v-if="vizMode === 'cloud'" class="controls-options-row">
                   <div class="control-field">
                     <label for="spiral-select">Spiral type</label>
                     <select id="spiral-select" v-model="spiralType">
@@ -1041,9 +1318,102 @@ onUnmounted(() => {
                     </label>
                   </div>
                 </div>
+                <div class="controls-options-row">
+                  <div class="control-field">
+                    <label for="plurals-toggle">Plurals</label>
+                    <label class="rotation-toggle" for="plurals-toggle">
+                      <input
+                        id="plurals-toggle"
+                        v-model="mergePlurals"
+                        type="checkbox"
+                        role="switch"
+                        :aria-checked="mergePlurals"
+                        class="rotation-toggle-input"
+                      />
+                      <span class="rotation-toggle-track" aria-hidden="true">
+                        <span class="rotation-toggle-thumb" />
+                      </span>
+                      <span class="rotation-toggle-label">{{
+                        mergePlurals ? "Combine on" : "Combine off"
+                      }}</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="control-field max-words-field">
+                  <div class="max-words-header">
+                    <label for="max-words-slider" class="max-words-label">
+                      {{ vizMode === "bar" ? "Top words / phrases" : "Words / phrases" }}
+                    </label>
+                    <div class="max-words-count-display">
+                      <span class="max-words-badge">{{ maxWords }}</span>
+                      <span
+                        v-if="hasDocLimit"
+                        class="max-words-doc-limit-badge"
+                        :title="`Document contains ${docMaxWords} unique words in total`"
+                      >
+                        of {{ docMaxWords }} in doc
+                      </span>
+                      <span
+                        v-else-if="selectedSection !== 'all' && activeWords.length < maxWords"
+                        class="max-words-section-note"
+                        :title="`${activeWords.length} words available in this section`"
+                      >
+                        ({{ activeWords.length }} in section)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="max-words-slider-wrapper">
+                    <input
+                      id="max-words-slider"
+                      type="range"
+                      min="1"
+                      max="100"
+                      step="1"
+                      :value="maxWords"
+                      :disabled="loading || !docData || docMaxWords <= 1"
+                      class="max-words-slider"
+                      :style="sliderTrackStyle"
+                      :aria-valuemin="1"
+                      :aria-valuemax="docMaxWords"
+                      :aria-valuenow="maxWords"
+                      :aria-label="
+                        vizMode === 'bar'
+                          ? 'Number of top words and phrases'
+                          : 'Max number of words and phrases'
+                      "
+                      @input="handleSliderInput"
+                      @keydown="handleSliderKeydown"
+                    />
+
+                    <!-- Marker indicating document word count limit when fewer than 100 words in doc -->
+                    <div
+                      v-if="hasDocLimit"
+                      class="max-words-marker"
+                      :style="{ left: `calc(8px + (100% - 16px) * ${(docMaxWords - 1) / 99})` }"
+                      :title="`Document limit: ${docMaxWords} words`"
+                    >
+                      <div class="max-words-marker-notch" />
+                      <div class="max-words-marker-pip" />
+                    </div>
+                  </div>
+
+                  <div class="max-words-scale">
+                    <span class="max-words-scale-val">1</span>
+                    <span
+                      v-if="hasDocLimit && docMaxWords > 10 && docMaxWords < 90"
+                      class="max-words-scale-marker-tag"
+                      :style="{ left: `calc(8px + (100% - 16px) * ${(docMaxWords - 1) / 99})` }"
+                    >
+                      {{ docMaxWords }} doc max
+                    </span>
+                    <span class="max-words-scale-val">100</span>
+                  </div>
+                </div>
 
                 <div class="wordcloud-export-actions">
                   <button
+                    v-if="vizMode === 'cloud'"
                     type="button"
                     class="wordcloud-reshuffle-btn"
                     title="Reshuffle word cloud (Spacebar)"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { AlertCircle, ExternalLink, Loader2, Trash2 } from "lucide-vue-next";
+import { AlertCircle, ExternalLink, Loader2, Pencil, Trash2 } from "lucide-vue-next";
 import {
   getRecentDocuments,
   removeRecentDocument,
@@ -11,12 +11,13 @@ import {
   SAMPLE_DOC_ATTRIBUTION,
   SAMPLE_DOC_DATE,
 } from "../storage";
-import { fetchAndParseGoogleDoc } from "../sections";
+import { fetchAndParseGoogleDoc, parsePastedText } from "../sections";
 import type { ParsedDocumentData } from "../types";
 
 const props = withDefaults(
   defineProps<{
     onCreate?: (data: ParsedDocumentData) => void;
+    onEdit?: (data: ParsedDocumentData) => void;
     onLoadSample?: () => void;
     sampleLoading?: boolean;
   }>(),
@@ -27,6 +28,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: "create", data: ParsedDocumentData): void;
+  (e: "edit", data: ParsedDocumentData): void;
   (e: "loadSample"): void;
 }>();
 
@@ -34,11 +36,24 @@ const recentDocs = ref<RecentDocument[]>(getRecentDocuments());
 const loadingRecentId = ref<string | null>(null);
 const recentError = ref<string | null>(null);
 
-async function handleSelectDoc(doc: RecentDocument) {
-  recentError.value = null;
-  loadingRecentId.value = doc.id;
-  try {
-    const data = await fetchAndParseGoogleDoc(doc.id, doc.title, doc.attribution, doc.date);
+async function loadDocData(doc: RecentDocument): Promise<ParsedDocumentData> {
+  let data: ParsedDocumentData;
+  if (doc.sourceType === "text" || doc.text) {
+    data = parsePastedText(doc.text || "", doc.title, doc.attribution, doc.date);
+    data.rawText = doc.text || "";
+    data.localDocId = doc.id;
+    data.sourceType = "text";
+    const updated = saveRecentDocument({
+      id: doc.id,
+      title: data.customTitle || data.title,
+      attribution: data.attribution,
+      date: data.date,
+      sourceType: "text",
+      text: doc.text || "",
+    });
+    recentDocs.value = updated;
+  } else {
+    data = await fetchAndParseGoogleDoc(doc.id, doc.title, doc.attribution, doc.date);
     const updated = saveRecentDocument({
       id: doc.id,
       url: doc.url,
@@ -47,13 +62,37 @@ async function handleSelectDoc(doc: RecentDocument) {
       date: data.date,
     });
     recentDocs.value = updated;
+  }
+  return data;
+}
+
+async function handleSelectDoc(doc: RecentDocument) {
+  recentError.value = null;
+  loadingRecentId.value = doc.id;
+  try {
+    const data = await loadDocData(doc);
     if (props.onCreate) {
       props.onCreate(data);
     }
     emit("create", data);
   } catch (err) {
-    recentError.value =
-      err instanceof Error ? err.message : "Failed to load document from Google Docs.";
+    recentError.value = err instanceof Error ? err.message : "Failed to load document.";
+  } finally {
+    loadingRecentId.value = null;
+  }
+}
+
+async function handleEditDoc(doc: RecentDocument) {
+  recentError.value = null;
+  loadingRecentId.value = doc.id;
+  try {
+    const data = await loadDocData(doc);
+    if (props.onEdit) {
+      props.onEdit(data);
+    }
+    emit("edit", data);
+  } catch (err) {
+    recentError.value = err instanceof Error ? err.message : "Failed to load document for editing.";
   } finally {
     loadingRecentId.value = null;
   }
@@ -98,7 +137,10 @@ function handleLoadSample() {
           @click="handleSelectDoc(doc)"
         >
           <div class="recent-doc-main">
-            <span class="recent-doc-title">{{ doc.title }}</span>
+            <div class="recent-doc-title-row">
+              <span class="recent-doc-title">{{ doc.title }}</span>
+              <span v-if="doc.sourceType === 'text' || doc.text" class="text-badge">Text</span>
+            </div>
             <span v-if="doc.attribution || doc.date" class="recent-doc-meta">
               <span v-if="doc.attribution">{{ doc.attribution }}</span>
               <span v-if="doc.attribution && doc.date" class="meta-dot">•</span>
@@ -113,7 +155,18 @@ function handleLoadSample() {
           />
         </button>
         <div class="recent-doc-actions">
+          <button
+            type="button"
+            class="recent-doc-edit-btn"
+            title="Edit document"
+            :aria-label="`Edit ${doc.title}`"
+            :disabled="loadingRecentId === doc.id"
+            @click.stop="handleEditDoc(doc)"
+          >
+            <Pencil :size="14" aria-hidden="true" />
+          </button>
           <a
+            v-if="doc.url"
             :href="doc.url"
             target="_blank"
             rel="noopener noreferrer"

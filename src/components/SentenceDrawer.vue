@@ -31,7 +31,8 @@ defineProps<{
       </span>
       <h3 class="sentence-placeholder-title">Example Sentences</h3>
       <p class="sentence-placeholder-desc">
-        Click any word or phrase in the word cloud to view sentence fragments from this category.
+        Click any word or phrase in the word cloud or bar chart to view sentence fragments from this
+        category.
       </p>
     </div>
   </div>

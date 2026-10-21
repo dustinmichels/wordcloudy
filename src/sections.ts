@@ -2,6 +2,7 @@ import {
   countDocumentWords,
   getWordFrequencies,
   type DocumentWordStats,
+  type FrequencyOptions,
   type WordFrequency,
 } from "./stopwords.ts";
 
@@ -30,6 +31,9 @@ export interface ParsedDocumentData {
   stats?: DocumentWordStats;
   attribution?: string;
   date?: string;
+  rawText?: string;
+  localDocId?: string;
+  sourceType?: "gdoc" | "paste" | "text";
 }
 
 function slugify(text: string): string {
@@ -62,7 +66,6 @@ export function cleanMarkdownFormatting(text: string): string {
 export function extractSentences(markdown: string): string[] {
   const lines = markdown.split("\n");
   const sentences: string[] = [];
-
   for (const rawLine of lines) {
     const line = rawLine.trim();
     // Skip empty lines or markdown headings
@@ -116,12 +119,46 @@ function escapeTermPart(part: string): string {
  * Handles curly apostrophes plus hyphenated bigrams/trigrams (e.g. "desired-outcomes") against
  * either spaces or hyphens in text.
  */
-export function buildTermRegex(term: string, global = false): RegExp {
-  const escaped = term
-    .trim()
+export function buildTermRegex(term: string, global = false, exactMatch = false): RegExp {
+  const trimmed = term.trim();
+  if (trimmed.endsWith("/s") || trimmed.endsWith("(s)")) {
+    const base = trimmed.endsWith("/s") ? trimmed.slice(0, -2).trim() : trimmed.slice(0, -3).trim();
+    const baseEscaped = base
+      .split(/[-\s]+/)
+      .map(escapeTermPart)
+      .join("[\\s\\-–—]+");
+    const pattern = `${baseEscaped}s?`;
+    if (exactMatch) {
+      return new RegExp(`^\\s*${pattern}(?:['’]s?)?\\s*$`, global ? "gi" : "i");
+    }
+    return new RegExp(`\\b${pattern}(?:['’]s?)?\\b`, global ? "gi" : "i");
+  }
+
+  if (trimmed.includes("/")) {
+    const variants = trimmed
+      .split("/")
+      .map((v) =>
+        v
+          .trim()
+          .split(/[-\s]+/)
+          .map(escapeTermPart)
+          .join("[\\s\\-–—]+"),
+      )
+      .filter(Boolean);
+    const pattern = `(?:${variants.join("|")})`;
+    if (exactMatch) {
+      return new RegExp(`^\\s*${pattern}(?:['’]s?)?\\s*$`, global ? "gi" : "i");
+    }
+    return new RegExp(`\\b${pattern}(?:['’]s?)?\\b`, global ? "gi" : "i");
+  }
+
+  const escaped = trimmed
     .split(/[-\s]+/)
     .map(escapeTermPart)
     .join("[\\s\\-–—]+");
+  if (exactMatch) {
+    return new RegExp(`^\\s*${escaped}(?:['’]s?)?\\s*$`, global ? "gi" : "i");
+  }
   return new RegExp(`\\b${escaped}(?:['’]s?)?\\b`, global ? "gi" : "i");
 }
 
@@ -212,12 +249,13 @@ export function stripMarkdownHeadings(text: string): string {
  */
 export function getDocumentWordData(
   markdown: string,
-  topWordsLimit = 70,
+  topWordsLimit = 100,
   title?: string,
+  options: FrequencyOptions = {},
 ): ParsedDocumentData {
   const strippedMarkdown = stripMarkdownHeadings(markdown);
-  const allFrequencies = getWordFrequencies(strippedMarkdown).slice(0, topWordsLimit);
-  const overallStats = countDocumentWords(strippedMarkdown);
+  const allFrequencies = getWordFrequencies(strippedMarkdown, options).slice(0, topWordsLimit);
+  const overallStats = countDocumentWords(strippedMarkdown, options);
   let parsedSections = parseDocSections(markdown);
 
   if (parsedSections.length === 0 && markdown.trim().length > 0) {
@@ -240,9 +278,9 @@ export function getDocumentWordData(
     return {
       id: sec.id,
       title: sec.title,
-      words: getWordFrequencies(strippedSec).slice(0, topWordsLimit),
+      words: getWordFrequencies(strippedSec, options).slice(0, topWordsLimit),
       sentences: extractSentences(sec.content),
-      stats: countDocumentWords(strippedSec),
+      stats: countDocumentWords(strippedSec, options),
     };
   });
 
@@ -507,6 +545,7 @@ export function parsePastedText(
   customTitle?: string,
   attribution?: string,
   date?: string,
+  options: FrequencyOptions = {},
 ): ParsedDocumentData {
   const isCustomTitle = Boolean(customTitle && customTitle.trim());
   let title = customTitle?.trim();
@@ -522,7 +561,7 @@ export function parsePastedText(
     }
   }
 
-  const result = getDocumentWordData(content, 70, title);
+  const result = getDocumentWordData(content, 100, title, options);
   if (isCustomTitle) {
     result.customTitle = customTitle!.trim();
   }
@@ -532,6 +571,8 @@ export function parsePastedText(
   if (date?.trim()) {
     result.date = date.trim();
   }
+  result.rawText = text;
+  result.sourceType = "text";
   return result;
 }
 
@@ -579,7 +620,7 @@ export async function fetchAndParseGoogleDoc(
       const finalTitle = isCustomTitle
         ? customTitle!.trim()
         : parsed.title || getFirstDocumentLine(parsed.markdown);
-      const result = getDocumentWordData(parsed.markdown, 70, finalTitle);
+      const result = getDocumentWordData(parsed.markdown, 100, finalTitle);
       result.sourceGoogleDocId = docId;
       if (isCustomTitle) {
         result.customTitle = customTitle!.trim();
@@ -952,6 +993,46 @@ export function extractModeFromUrl(input: string): "gdoc" | "paste" | null {
   return null;
 }
 
+export function extractPluralsFromUrl(input: string): boolean | null {
+  if (!input) return null;
+  try {
+    const urlObj = new URL(input.trim(), "https://placeholder.local");
+    const param = urlObj.searchParams.get("plurals") || urlObj.searchParams.get("mergePlurals");
+    if (param !== null) {
+      return param === "1" || param === "true";
+    }
+    if (urlObj.hash) {
+      const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+      const hashVal = hashParams.get("plurals") || hashParams.get("mergePlurals");
+      if (hashVal !== null) {
+        return hashVal === "1" || hashVal === "true";
+      }
+    }
+  } catch {}
+  return null;
+}
+
+export function extractViewFromUrl(input: string): "cloud" | "bar" | null {
+  if (!input) return null;
+  try {
+    const urlObj = new URL(input.trim(), "https://placeholder.local");
+    const param = (
+      urlObj.searchParams.get("view") ||
+      urlObj.searchParams.get("chart") ||
+      ""
+    ).toLowerCase();
+    if (param === "bar" || param === "barchart") return "bar";
+    if (param === "cloud" || param === "wordcloud") return "cloud";
+    if (urlObj.hash) {
+      const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+      const hashVal = (hashParams.get("view") || hashParams.get("chart") || "").toLowerCase();
+      if (hashVal === "bar" || hashVal === "barchart") return "bar";
+      if (hashVal === "cloud" || hashVal === "wordcloud") return "cloud";
+    }
+  } catch {}
+  return null;
+}
+
 export interface EditFormValues {
   sourceMode: "gdoc" | "paste";
   gdocUrl: string;
@@ -959,6 +1040,7 @@ export interface EditFormValues {
   customTitle: string;
   attribution: string;
   date: string;
+  localDocId?: string;
 }
 
 /**
@@ -973,6 +1055,8 @@ export function getInitialEditValuesFromUrl(
     customTitle?: string;
     attribution?: string;
     date?: string;
+    rawText?: string;
+    localDocId?: string;
   } | null,
 ): EditFormValues {
   const modeParam = extractModeFromUrl(input);
@@ -1020,15 +1104,16 @@ export function getInitialEditValuesFromUrl(
     titleParam || (isSameDoc ? currentDoc?.customTitle || currentDoc?.title || "" : "");
   const attribution = attributionParam || (isSameDoc ? currentDoc?.attribution || "" : "");
   const date = dateParam || (isSameDoc ? currentDoc?.date || "" : "");
-  const pastedText = textParam || "";
+  const pastedText = textParam || currentDoc?.rawText || "";
 
   let sourceMode: "gdoc" | "paste" = "gdoc";
   if (modeParam) {
     sourceMode = modeParam;
   } else if (textParam && !docId && !gdocUrl) {
     sourceMode = "paste";
+  } else if (!currentDoc?.sourceGoogleDocId && (currentDoc?.rawText || currentDoc?.localDocId)) {
+    sourceMode = "paste";
   }
-
   return {
     sourceMode,
     gdocUrl,
@@ -1036,6 +1121,7 @@ export function getInitialEditValuesFromUrl(
     customTitle,
     attribution,
     date,
+    localDocId: currentDoc?.localDocId,
   };
 }
 

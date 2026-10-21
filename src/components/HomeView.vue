@@ -6,6 +6,7 @@ import type { ParsedDocumentData } from "../types";
 const props = withDefaults(
   defineProps<{
     onCreate?: (data: ParsedDocumentData) => void;
+    onEdit?: (data: ParsedDocumentData) => void;
     onLoadSample?: () => void;
     sampleLoading?: boolean;
     onGoCreate?: () => void;
@@ -17,15 +18,22 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: "create", data: ParsedDocumentData): void;
+  (e: "edit", data: ParsedDocumentData): void;
   (e: "loadSample"): void;
   (e: "goCreate"): void;
 }>();
-
 function handleCreate(data: ParsedDocumentData) {
   if (props.onCreate) {
     props.onCreate(data);
   }
   emit("create", data);
+}
+
+function handleEdit(data: ParsedDocumentData) {
+  if (props.onEdit) {
+    props.onEdit(data);
+  }
+  emit("edit", data);
 }
 
 function handleLoadSample() {
@@ -76,6 +84,7 @@ function handleGoCreate() {
       <RecentDocumentsList
         :sample-loading="sampleLoading"
         @create="handleCreate"
+        @edit="handleEdit"
         @load-sample="handleLoadSample"
       />
     </div>

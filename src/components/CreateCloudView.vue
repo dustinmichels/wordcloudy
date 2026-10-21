@@ -8,6 +8,7 @@ import {
   Info,
   Loader2,
   Type,
+  Upload,
   X,
 } from "lucide-vue-next";
 import {
@@ -34,6 +35,7 @@ export interface CreateCloudViewProps {
   initialCustomTitle?: string;
   initialAttribution?: string;
   initialDate?: string;
+  initialLocalDocId?: string;
   initialLoading?: boolean;
   initialErrorMessage?: string;
   isEdit?: boolean;
@@ -46,6 +48,7 @@ const props = withDefaults(defineProps<CreateCloudViewProps>(), {
   initialCustomTitle: "",
   initialAttribution: "",
   initialDate: "",
+  initialLocalDocId: undefined,
   initialLoading: false,
   initialErrorMessage: undefined,
   isEdit: false,
@@ -64,9 +67,13 @@ const pastedText = ref(props.initialPastedText);
 const customTitle = ref(props.initialCustomTitle);
 const attribution = ref(props.initialAttribution);
 const date = ref(props.initialDate);
+const localDocId = ref<string | undefined>(props.initialLocalDocId);
 const isLoading = ref(props.initialLoading);
 const errorMessage = ref<string | null>(props.initialErrorMessage ?? null);
 
+const fileInputRef = ref<HTMLInputElement | null>(null);
+const uploadedFileName = ref<string | null>(null);
+const isDragging = ref(false);
 const isUrlLoading = ref(false);
 const urlLoadSuccess = ref(Boolean(initialExternalLink));
 const urlExternalLink = ref<string | null>(initialExternalLink);
@@ -75,6 +82,70 @@ const preloadedData = ref<ParsedDocumentData | null>(null);
 const urlInputRef = ref<HTMLInputElement | null>(null);
 const hasUserEditedTitle = ref(Boolean(props.initialCustomTitle));
 let inFlightPromise: Promise<ParsedDocumentData> | null = null;
+watch(
+  () => props.initialLocalDocId,
+  (newId) => {
+    localDocId.value = newId;
+  },
+);
+watch(
+  () => props.initialPastedText,
+  (newText) => {
+    if (newText && !pastedText.value) {
+      pastedText.value = newText;
+    }
+  },
+);
+watch(
+  () => props.initialSourceMode,
+  (newMode) => {
+    if (newMode) {
+      sourceMode.value = newMode;
+    }
+  },
+);
+
+function processFile(file: File) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const content = e.target?.result;
+    if (typeof content === "string") {
+      pastedText.value = content;
+      uploadedFileName.value = file.name;
+      if (!customTitle.value.trim()) {
+        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+        customTitle.value = nameWithoutExt.replace(/[-_]+/g, " ");
+        hasUserEditedTitle.value = true;
+      }
+      errorMessage.value = null;
+    }
+  };
+  reader.onerror = () => {
+    errorMessage.value = "Failed to read the uploaded file.";
+  };
+  reader.readAsText(file);
+}
+
+function handleFileInputChange(event: Event) {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (file) {
+    processFile(file);
+  }
+  target.value = "";
+}
+
+function triggerFileInput() {
+  fileInputRef.value?.click();
+}
+
+function handleFileDrop(event: DragEvent) {
+  isDragging.value = false;
+  const file = event.dataTransfer?.files?.[0];
+  if (file) {
+    processFile(file);
+  }
+}
 const showDetails = computed(
   () => props.isEdit || sourceMode.value === "paste" || urlLoadSuccess.value,
 );
@@ -273,6 +344,20 @@ async function handleSubmit() {
         attribution.value || undefined,
         date.value || undefined,
       );
+      const docId =
+        localDocId.value?.trim() || `text-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      data.localDocId = docId;
+      data.rawText = pastedText.value;
+      data.sourceType = "text";
+
+      saveRecentDocument({
+        id: docId,
+        title: data.customTitle || data.title || "Untitled Text Document",
+        attribution: data.attribution,
+        date: data.date,
+        sourceType: "text",
+        text: pastedText.value,
+      });
       if (props.onCreate) props.onCreate(data);
       emit("create", data);
     } catch (err) {
@@ -328,7 +413,7 @@ function handleCancel() {
           "
         >
           <Type :size="16" aria-hidden="true" />
-          Paste Text / Markdown
+          Paste or Upload Text
         </button>
       </div>
 
@@ -467,7 +552,8 @@ function handleCancel() {
           <div class="create-callout create-callout-info" role="note">
             <Info class="create-callout-icon" :size="18" aria-hidden="true" />
             <span class="create-callout-text">
-              Only word clouds created from a google doc will be shareable
+              Word clouds from text or markdown are saved in your browser so you can return to
+              editing anytime. (Only Google Doc word clouds can be shared via link.)
             </span>
           </div>
           <div class="form-group">
@@ -511,20 +597,48 @@ function handleCancel() {
           </div>
 
           <div class="form-group">
-            <label htmlFor="paste-textarea">
-              Content (Text or Markdown) <span class="required-star">*</span>
-            </label>
-            <textarea
-              id="paste-textarea"
-              v-model="pastedText"
-              class="form-textarea"
-              :rows="9"
-              placeholder="Paste paragraphs or Markdown with ## Section headers..."
-              :disabled="isLoading"
-            />
+            <div class="form-label-row">
+              <label for="paste-textarea">
+                Content (Text or Markdown) <span class="required-star">*</span>
+              </label>
+              <button
+                type="button"
+                class="file-upload-btn"
+                :disabled="isLoading"
+                @click="triggerFileInput"
+              >
+                <Upload :size="14" aria-hidden="true" />
+                <span>Upload file (.md, .txt)</span>
+              </button>
+              <input
+                ref="fileInputRef"
+                type="file"
+                accept=".txt,.md,.markdown,text/plain,text/markdown"
+                style="display: none"
+                @change="handleFileInputChange"
+              />
+            </div>
+            <div
+              :class="['textarea-dropzone', isDragging ? 'is-dragging' : '']"
+              @dragover.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleFileDrop"
+            >
+              <textarea
+                id="paste-textarea"
+                v-model="pastedText"
+                class="form-textarea"
+                :rows="9"
+                placeholder="Paste paragraphs or Markdown with ## Section headers, or upload a .txt / .md file..."
+                :disabled="isLoading"
+              />
+            </div>
             <div class="form-helper">
               <span>
                 Markdown headings like <code>## Section</code> automatically group themes.
+                <span v-if="uploadedFileName" class="uploaded-file-indicator">
+                  • Loaded: <strong>{{ uploadedFileName }}</strong>
+                </span>
               </span>
               <button
                 type="button"

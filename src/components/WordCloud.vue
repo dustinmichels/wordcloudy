@@ -89,7 +89,7 @@ function computeFontScale(words: WordData[], currentW: number, currentH: number)
   // Smoothly interpolate font bounds based on word count:
   // For clouds with fewer words, scale up both min and max font sizes
   // so the cloud naturally fills the stage without appearing small and diminished.
-  const t = Math.max(0, Math.min(1, (70 - words.length) / 65));
+  const t = Math.max(0, Math.min(1, (100 - words.length) / 95));
 
   const baseMin = 14;
   const targetMin = Math.min(38, Math.floor(Math.min(currentW, currentH) / 11));

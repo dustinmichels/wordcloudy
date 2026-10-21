@@ -1,3 +1,5 @@
+import pluralize from "pluralize";
+
 export const DEFAULT_STOP_WORDS: Readonly<Record<string, true>> = {
   a: true,
   about: true,
@@ -234,8 +236,8 @@ export interface FrequencyOptions extends TokenizeOptions {
   includeTrigrams?: boolean;
   minTrigramCount?: number;
   allowInteriorStopWords?: boolean;
+  mergePlurals?: boolean;
 }
-
 export interface WordFrequency {
   text: string;
   value: number;
@@ -578,7 +580,87 @@ export function getWordFrequencies(text: string, options: FrequencyOptions = {})
     }
   }
 
-  return Object.entries(frequencies)
+  let result = Object.entries(frequencies)
+    .map(([text, value]) => ({ text, value }))
+    .sort((a, b) => b.value - a.value || a.text.localeCompare(b.text));
+
+  if (options.mergePlurals) {
+    result = mergePluralFrequencies(result);
+  }
+
+  return result;
+}
+
+/**
+ * Formats a canonical plural label:
+ * - If regular plural ending in +s (e.g. frog -> frogs): returns "frog/s"
+ * - If uninflected / identical (e.g. series -> series): returns "series"
+ * - Otherwise (e.g. blackberry -> blackberries): returns "blackberry/blackberries"
+ */
+export function formatPluralLabel(singular: string, plural: string): string {
+  if (plural === `${singular}s`) {
+    return `${singular}/s`;
+  }
+  if (plural === singular) {
+    return singular;
+  }
+  return `${singular}/${plural}`;
+}
+
+/**
+ * Builds a mapping from individual word forms to their merged plural label
+ * for any words where multiple inflected forms appear in the frequencies.
+ */
+export function getPluralLabelMap(frequencies: WordFrequency[]): Map<string, string> {
+  const groups = new Map<string, { singular: string; forms: Set<string> }>();
+
+  for (const { text } of frequencies) {
+    if (text.includes("-")) continue;
+    const lower = text.toLowerCase();
+    const singular = pluralize.singular(lower);
+    let group = groups.get(singular);
+    if (!group) {
+      group = { singular, forms: new Set() };
+      groups.set(singular, group);
+    }
+    group.forms.add(lower);
+  }
+
+  const map = new Map<string, string>();
+  for (const group of groups.values()) {
+    if (group.forms.size > 1) {
+      const plural = pluralize.plural(group.singular);
+      const label = formatPluralLabel(group.singular, plural);
+      for (const form of group.forms) {
+        map.set(form, label);
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * Combines plural and singular word frequencies under a unified label (e.g. "beet(s)" or "blackberry/blackberries").
+ * Can accept an optional precomputed labelMap (e.g. derived at the whole-document level).
+ */
+export function mergePluralFrequencies(
+  frequencies: WordFrequency[],
+  labelMap?: Map<string, string>,
+): WordFrequency[] {
+  const effectiveMap = labelMap ?? getPluralLabelMap(frequencies);
+  const merged = new Map<string, number>();
+
+  for (const { text, value } of frequencies) {
+    if (text.includes("-")) {
+      merged.set(text, (merged.get(text) ?? 0) + value);
+      continue;
+    }
+    const lower = text.toLowerCase();
+    const targetLabel = effectiveMap.get(lower) ?? text;
+    merged.set(targetLabel, (merged.get(targetLabel) ?? 0) + value);
+  }
+
+  return Array.from(merged.entries())
     .map(([text, value]) => ({ text, value }))
     .sort((a, b) => b.value - a.value || a.text.localeCompare(b.text));
 }
@@ -590,6 +672,7 @@ export function countDocumentWords(
   text: string,
   options: FrequencyOptions = {},
 ): DocumentWordStats {
+
   const { stopWords = DEFAULT_STOP_WORDS, additionalStopWords, ...tokenizeOpts } = options;
   const cleaned = cleanText(text);
   const totalTokens = cleaned.match(/[a-z0-9]+(?:'[a-z0-9]+)?/g) || [];
