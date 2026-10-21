@@ -9,12 +9,12 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { getDocumentWordData, parseGoogleDocHtml } from "./src/sections.ts";
+import { CLOUD_CANDIDATE_LIMIT, getDocumentWordData, parseGoogleDocHtml } from "./src/sections.ts";
 
 export default defineConfig(() => {
   const rawHtml = readFileSync("./samples/constituion/us-constitution.html", "utf-8");
   const { title, markdown } = parseGoogleDocHtml(rawHtml);
-  const docData = getDocumentWordData(markdown, 70, title);
+  const docData = getDocumentWordData(markdown, CLOUD_CANDIDATE_LIMIT, title);
   docData.sourceGoogleDocId = "1qFBWFmyFPxTn3cqXgMqXFX4zyzUWSzM2uCTp9PyXPtc";
   docData.attribution = "Independence Hall, Philadelphia";
   docData.date = "September 1787";

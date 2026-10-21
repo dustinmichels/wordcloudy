@@ -149,10 +149,10 @@ function formatPercent(value: number): string {
 const activeWords = computed<WordData[]>(() => {
   if (!docData.value) return [];
   if (selectedSection.value === "all") {
-    return docData.value.all.slice(0, 70);
+    return docData.value.all;
   }
   const section = docData.value.sections.find((s) => s.id === selectedSection.value);
-  return section ? section.words.slice(0, 70) : [];
+  return section ? section.words : [];
 });
 
 const activeStats = computed(() => {
@@ -1015,10 +1015,10 @@ onUnmounted(() => {
               <div v-show="controlsExpanded" id="controls-body" class="controls-body">
                 <div class="controls-options-row">
                   <div class="control-field">
-                    <label for="spiral-select">Spiral type</label>
+                    <label for="spiral-select">Placement style</label>
                     <select id="spiral-select" v-model="spiralType">
-                      <option value="archimedean">archimedean</option>
-                      <option value="rectangular">rectangular</option>
+                      <option value="archimedean">Organic</option>
+                      <option value="rectangular">Grid-like</option>
                     </select>
                   </div>
                   <div class="control-field">

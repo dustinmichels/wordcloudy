@@ -4,6 +4,7 @@ import { useElementSize } from "@vueuse/core";
 import cloud from "d3-cloud";
 import { scaleLog } from "d3-scale";
 import type { WordData, SpiralType } from "../types";
+import { CLOUD_CANDIDATE_LIMIT, CLOUD_MIN_WORDS, selectCloudWords } from "../sections";
 
 const props = defineProps<{
   words: WordData[];
@@ -23,12 +24,22 @@ const { width, height } = useElementSize(containerRef);
 const w = computed(() => Math.max(Math.floor(width.value) || 0, 300));
 const h = computed(() => Math.max(Math.floor(height.value) || 0, 300));
 
-const colors = ["#143059", "#2F6B9A", "#82a6c2"];
+// Colors cycle by placement order. The lightest shade only meets contrast at large sizes,
+// so smaller words alternate between the two darker shades.
+const LARGE_WORD_COLORS = ["#143059", "#2F6B9A", "#5b86ad"];
+const SMALL_WORD_COLORS = ["#143059", "#2F6B9A"];
+const LARGE_TEXT_PX = 24;
 
-function getRotationDegree() {
-  const rand = Math.random();
-  const degree = rand > 0.5 ? 60 : -60;
-  return rand * degree;
+const MIN_FONT_PX = 10;
+const STAGE_AREA_PER_WORD = 4000;
+const EDGE_MARGIN_RATIO = 0.02;
+const SHRINK_STEP = 0.93;
+const MIN_FONT_MULTIPLIER = 0.5;
+const ROTATED_SHARE = 0.2;
+
+function wordFill(rank: number, size: number): string {
+  const palette = size >= LARGE_TEXT_PX ? LARGE_WORD_COLORS : SMALL_WORD_COLORS;
+  return palette[rank % palette.length]!;
 }
 
 function createSeededRandom(seed: number) {
@@ -53,6 +64,7 @@ interface LayoutWord extends WordData {
   entering?: boolean;
   startX?: number;
   startY?: number;
+  fill?: string;
 }
 
 const cloudWords = ref<LayoutWord[]>([]);
@@ -80,33 +92,22 @@ function getMeasureContext(): CanvasRenderingContext2D | null {
   return measureCtx;
 }
 
+// Log scale from 10px up to a fifth of the stage's short side (36–100px).
 function computeFontScale(words: WordData[], currentW: number, currentH: number) {
-  if (!words || words.length === 0) return () => 16;
+  const maxFontSize = Math.min(100, Math.max(36, Math.floor(Math.min(currentW, currentH) / 5)));
+  if (!words || words.length === 0) return () => maxFontSize / 2;
   const values = words.map((d) => d.value);
-  const minVal = Math.min(...values);
+  const minVal = Math.max(1, Math.min(...values));
   const maxVal = Math.max(...values);
-
-  // Smoothly interpolate font bounds based on word count:
-  // For clouds with fewer words, scale up both min and max font sizes
-  // so the cloud naturally fills the stage without appearing small and diminished.
-  const t = Math.max(0, Math.min(1, (70 - words.length) / 65));
-
-  const baseMin = 14;
-  const targetMin = Math.min(38, Math.floor(Math.min(currentW, currentH) / 11));
-  const minFontSize = Math.round(baseMin + t * (targetMin - baseMin));
-
-  const baseMax = Math.min(80, Math.max(32, Math.floor(Math.min(currentW, currentH) / 6)));
-  const targetMax = Math.min(125, Math.floor(Math.min(currentW, currentH) / 3.2));
-  const maxFontSize = Math.max(minFontSize + 10, Math.round(baseMax + t * (targetMax - baseMax)));
-
   if (minVal === maxVal) {
-    const uniformSize = Math.round((minFontSize + maxFontSize) / 2);
+    // Equal counts: one size for every term, chosen so the set covers ~40% of the stage
+    // (Impact glyphs are roughly 0.55em wide).
+    const emArea = words.reduce((sum, d) => sum + d.text.length * 0.55, 0);
+    const size = Math.round(Math.sqrt((currentW * currentH * 0.4) / Math.max(1, emArea)));
+    const uniformSize = Math.max(MIN_FONT_PX, Math.min(maxFontSize, size));
     return () => uniformSize;
   }
-
-  const scale = scaleLog()
-    .domain([Math.max(1, minVal), Math.max(minVal + 1, maxVal)])
-    .range([minFontSize, maxFontSize]);
+  const scale = scaleLog().domain([minVal, maxVal]).range([MIN_FONT_PX, maxFontSize]);
   return (val: number) => scale(val);
 }
 
@@ -153,6 +154,32 @@ function measureClusterBounds(
   };
 }
 
+function runCloud(
+  words: WordData[],
+  fontScale: (val: number) => number,
+  fontMultiplier: number,
+  seed: number,
+  boardW: number,
+  boardH: number,
+): LayoutWord[] {
+  const rotationRandom = createSeededRandom(seed ^ 0x9e3779b9);
+  let output: LayoutWord[] = [];
+  cloud<LayoutWord>()
+    .size([boardW, boardH])
+    .words(words.map((d) => ({ ...d })) as LayoutWord[])
+    .padding(2)
+    .font("Impact")
+    .fontSize((d) => Math.max(MIN_FONT_PX, Math.round(fontScale(d.value) * fontMultiplier)))
+    .spiral(props.spiralType)
+    .rotate(props.withRotation ? () => (rotationRandom() < ROTATED_SHARE ? -90 : 0) : () => 0)
+    .random(createSeededRandom(seed))
+    .on("end", (outputWords: LayoutWord[]) => {
+      output = outputWords;
+    })
+    .start();
+  return output;
+}
+
 function generateLayout(words: WordData[], seed: number): LayoutWord[] {
   if (typeof window === "undefined" || typeof document === "undefined") return [];
   if (!words || words.length === 0) return [];
@@ -160,59 +187,40 @@ function generateLayout(words: WordData[], seed: number): LayoutWord[] {
   const currentH = h.value;
   if (currentW <= 0 || currentH <= 0) return [];
 
-  const fontScale = computeFontScale(words, currentW, currentH);
-  let attempt = 0;
-  let fontMultiplier = 1.0;
-  let placedWords: LayoutWord[] = [];
+  const limit = Math.min(
+    CLOUD_CANDIDATE_LIMIT,
+    Math.max(CLOUD_MIN_WORDS, Math.floor((currentW * currentH) / STAGE_AREA_PER_WORD)),
+  );
+  const candidates = selectCloudWords(words, limit);
+  const fontScale = computeFontScale(candidates, currentW, currentH);
+  const margin = Math.round(Math.min(currentW, currentH) * EDGE_MARGIN_RATIO);
+  const boardW = currentW - margin * 2;
+  const boardH = currentH - margin * 2;
 
-  while (attempt < 4) {
-    const wordsCopy = words.map((d) => ({ ...d }));
-    let output: LayoutWord[] = [];
-
-    const layout = cloud<LayoutWord>()
-      .size([currentW, currentH])
-      .words(wordsCopy as LayoutWord[])
-      .padding(2)
-      .font("Impact")
-      .fontSize((d) => Math.max(10, Math.round(fontScale(d.value) * fontMultiplier)))
-      .spiral(props.spiralType)
-      .rotate(props.withRotation ? getRotationDegree : () => 0)
-      .random(createSeededRandom(seed))
-      .on("end", (outputWords: LayoutWord[]) => {
-        output = outputWords;
-      });
-    layout.start();
-
-    if (output.length >= words.length) {
-      placedWords = output;
-      break;
-    }
-
-    // If not all words were placed, reduce font sizes and retry
-    attempt++;
-    fontMultiplier *= 0.85;
-    placedWords = output;
+  // d3-cloud silently skips words it cannot fit. Every repeated term (or every term, when none
+  // repeat) must land, so shrink in small steps until they do. Single-occurrence terms are
+  // placed last (d3-cloud sorts by size), so they never crowd out repeated ones.
+  const hasRepeated = candidates.some((c) => c.value > 1);
+  const isMissingRequired = (placedWords: LayoutWord[]) => {
+    const placed = new Set(placedWords.map((p) => p.text));
+    return candidates.some((c) => (!hasRepeated || c.value > 1) && !placed.has(c.text));
+  };
+  let fontMultiplier = 1;
+  let placedWords = runCloud(candidates, fontScale, fontMultiplier, seed, boardW, boardH);
+  while (isMissingRequired(placedWords) && fontMultiplier * SHRINK_STEP >= MIN_FONT_MULTIPLIER) {
+    fontMultiplier *= SHRINK_STEP;
+    placedWords = runCloud(candidates, fontScale, fontMultiplier, seed, boardW, boardH);
   }
 
-  // Scale and center the placed words to optimally fill available space
+  // Center the cluster on the stage without rescaling it.
   const bounds = measureClusterBounds(placedWords);
-  if (bounds && bounds.width > 0 && bounds.height > 0) {
-    const padding = Math.max(20, Math.min(36, Math.floor(Math.min(currentW, currentH) * 0.055)));
-    const targetW = currentW - padding * 2;
-    const targetH = currentH - padding * 2;
-
-    const fitScale = Math.min(targetW / bounds.width, targetH / bounds.height);
-    const maxAllowedSize = Math.floor(Math.min(currentW, currentH) * 0.45);
-    const maxCurrentSize = Math.max(...placedWords.map((w) => w.size || 16));
-    const sizeCapScale = maxCurrentSize > 0 ? maxAllowedSize / maxCurrentSize : fitScale;
-    const finalScale = Math.min(fitScale, sizeCapScale);
-
-    for (const w of placedWords) {
-      w.x = Math.round(((w.x ?? 0) - bounds.cx) * finalScale);
-      w.y = Math.round(((w.y ?? 0) - bounds.cy) * finalScale);
-      w.size = Math.max(10, Math.round((w.size || 16) * finalScale));
-    }
-  }
+  const dx = bounds ? Math.round(bounds.cx) : 0;
+  const dy = bounds ? Math.round(bounds.cy) : 0;
+  placedWords.forEach((word, rank) => {
+    word.x = (word.x ?? 0) - dx;
+    word.y = (word.y ?? 0) - dy;
+    word.fill = wordFill(rank, word.size ?? MIN_FONT_PX);
+  });
 
   return placedWords;
 }
@@ -294,6 +302,7 @@ watch(
             word.rotate = target.rotate;
             word.size = target.size;
             word.value = target.value;
+            word.fill = target.fill;
           }
         }
       }, moveDelay);
@@ -358,6 +367,7 @@ watch(
           rotate: target.rotate,
           size: target.size,
           value: target.value,
+          fill: target.fill,
         };
       });
 
@@ -387,15 +397,11 @@ function getTooltip(item: LayoutWord): string {
   <div ref="containerRef" class="wordcloud-wrapper" style="width: 100%; height: 100%">
     <svg :width="w" :height="h" class="wordcloud-svg" aria-label="Word cloud visualization">
       <g :transform="`translate(${w / 2}, ${h / 2})`">
-        <g v-for="(item, i) in cloudWords" :key="item.text">
+        <g v-for="item in cloudWords" :key="item.text">
           <title>{{ getTooltip(item) }}</title>
           <text
             :fill="
-              selectedWord === item.text
-                ? '#d97706'
-                : item.highlighted
-                  ? '#059669'
-                  : colors[i % colors.length]
+              selectedWord === item.text ? '#d97706' : item.highlighted ? '#059669' : item.fill
             "
             text-anchor="middle"
             :font-size="item.size"

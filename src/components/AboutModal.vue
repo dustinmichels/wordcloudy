@@ -89,9 +89,10 @@ onUnmounted(() => {
             </div>
             <p>
               Candidate unigrams, bigrams, and trigrams are pooled into a single frequency ranking
-              sorted descending by occurrence count. The top 70 terms are selected to populate the
-              cloud, allowing recurring multi-word phrases to compete directly with individual
-              words.
+              sorted descending by occurrence count, with ties kept in reading order. The cloud
+              shows up to 100 terms, fewer on small screens: repeated terms first, with one-off
+              terms making up at most a quarter of the cloud (more only when needed to reach 20
+              terms).
             </p>
           </div>
 

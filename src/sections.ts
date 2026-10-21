@@ -207,16 +207,43 @@ export function stripMarkdownHeadings(text: string): string {
     .join("\n");
 }
 
+/** Number of ranked terms kept per document/section as word cloud candidates. */
+export const CLOUD_CANDIDATE_LIMIT = 100;
+
+/** Smallest cloud worth drawing; single-occurrence terms top sparse clouds up to this size. */
+export const CLOUD_MIN_WORDS = 20;
+
+/**
+ * Picks the terms to draw from a ranked candidate list: repeated terms first (up to `limit`),
+ * then single-occurrence terms, which make up at most a quarter of the drawn cloud
+ * (one per three repeated terms). When that leaves fewer than `CLOUD_MIN_WORDS` terms,
+ * single-occurrence terms top the cloud up to that minimum.
+ */
+export function selectCloudWords<T extends { value: number }>(
+  words: readonly T[],
+  limit: number,
+): T[] {
+  const repeated = words.filter((w) => w.value > 1).slice(0, limit);
+  const quarterShare = Math.floor(repeated.length / 3);
+  const topUp = Math.min(limit, CLOUD_MIN_WORDS) - repeated.length;
+  const singletonSlots = Math.min(limit - repeated.length, Math.max(quarterShare, topUp));
+  if (singletonSlots <= 0) return repeated;
+  return repeated.concat(words.filter((w) => w.value <= 1).slice(0, singletonSlots));
+}
+
 /**
  * Computes word frequencies for the whole document (ALL) and each individual section.
+ * Section terms with equal section counts are ordered by whole-document count, then first appearance.
  */
 export function getDocumentWordData(
   markdown: string,
-  topWordsLimit = 70,
+  topWordsLimit = CLOUD_CANDIDATE_LIMIT,
   title?: string,
 ): ParsedDocumentData {
   const strippedMarkdown = stripMarkdownHeadings(markdown);
-  const allFrequencies = getWordFrequencies(strippedMarkdown).slice(0, topWordsLimit);
+  const documentFrequencies = getWordFrequencies(strippedMarkdown);
+  const documentCounts = new Map(documentFrequencies.map((w) => [w.text, w.value]));
+  const allFrequencies = documentFrequencies.slice(0, topWordsLimit);
   const overallStats = countDocumentWords(strippedMarkdown);
   let parsedSections = parseDocSections(markdown);
 
@@ -240,7 +267,13 @@ export function getDocumentWordData(
     return {
       id: sec.id,
       title: sec.title,
-      words: getWordFrequencies(strippedSec).slice(0, topWordsLimit),
+      words: getWordFrequencies(strippedSec)
+        .sort(
+          (a, b) =>
+            b.value - a.value ||
+            (documentCounts.get(b.text) ?? 0) - (documentCounts.get(a.text) ?? 0),
+        )
+        .slice(0, topWordsLimit),
       sentences: extractSentences(sec.content),
       stats: countDocumentWords(strippedSec),
     };
@@ -522,7 +555,7 @@ export function parsePastedText(
     }
   }
 
-  const result = getDocumentWordData(content, 70, title);
+  const result = getDocumentWordData(content, CLOUD_CANDIDATE_LIMIT, title);
   if (isCustomTitle) {
     result.customTitle = customTitle!.trim();
   }
@@ -579,7 +612,7 @@ export async function fetchAndParseGoogleDoc(
       const finalTitle = isCustomTitle
         ? customTitle!.trim()
         : parsed.title || getFirstDocumentLine(parsed.markdown);
-      const result = getDocumentWordData(parsed.markdown, 70, finalTitle);
+      const result = getDocumentWordData(parsed.markdown, CLOUD_CANDIDATE_LIMIT, finalTitle);
       result.sourceGoogleDocId = docId;
       if (isCustomTitle) {
         result.customTitle = customTitle!.trim();

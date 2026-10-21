@@ -269,6 +269,13 @@ export function cleanText(text: string): string {
 }
 
 /**
+ * Splits cleaned text at sentence and clause punctuation; phrases never span a boundary.
+ */
+function splitPhraseSegments(text: string): string[] {
+  return cleanText(text).split(/[.?!;:,/()\[\]"“”\n\r]+/);
+}
+
+/**
  * Builds a prototype-safe lookup table for stop words.
  */
 function buildStopWordLookup(
@@ -367,8 +374,7 @@ export function getCollocations(text: string, options: CollocationOptions = {}):
   } = options;
 
   const lookup = buildStopWordLookup(stopWords, additionalStopWords);
-  const cleaned = cleanText(text);
-  const segments = cleaned.split(/[.?!;:,/()\[\]"“”\n\r]+/);
+  const segments = splitPhraseSegments(text);
 
   const unigramCounts: Record<string, number> = Object.create(null);
   const bigramCounts: Record<string, number> = Object.create(null);
@@ -458,8 +464,7 @@ export function getBigramFrequencies(text: string, options: BigramOptions = {}):
   }
 
   const lookup = buildStopWordLookup(stopWords, additionalStopWords);
-  const cleaned = cleanText(text);
-  const segments = cleaned.split(/[.?!;:,/()\[\]"“”\n\r]+/);
+  const segments = splitPhraseSegments(text);
   const bigramCounts: Record<string, number> = Object.create(null);
 
   for (const seg of segments) {
@@ -495,8 +500,7 @@ export function getTrigramFrequencies(text: string, options: TrigramOptions = {}
   } = options;
 
   const lookup = buildStopWordLookup(stopWords, additionalStopWords);
-  const cleaned = cleanText(text);
-  const segments = cleaned.split(/[.?!;:,/()\[\]"“”\n\r]+/);
+  const segments = splitPhraseSegments(text);
   const trigramCounts: Record<string, number> = Object.create(null);
 
   for (const seg of segments) {
@@ -525,7 +529,8 @@ export function getTrigramFrequencies(text: string, options: TrigramOptions = {}
 }
 
 /**
- * Parses markdown text, strips stop words, and tallies frequency counts sorted descending.
+ * Parses markdown text, strips stop words, and tallies frequency counts sorted descending,
+ * with equal counts in order of first appearance.
  * Also includes bigrams and trigrams (with interior stop words allowed) by default.
  */
 export function getWordFrequencies(text: string, options: FrequencyOptions = {}): WordFrequency[] {
@@ -578,9 +583,37 @@ export function getWordFrequencies(text: string, options: FrequencyOptions = {})
     }
   }
 
+  // Equal counts keep reading order (first appearance), so cutoffs never favor A-words.
+  // Positions come from the same punctuation-bounded segments used to count phrases, so a phrase
+  // never "appears" across a sentence break. Joined proper nouns ("palo-alto") match the
+  // equivalent lowercase bigram/trigram span.
+  const firstSeen = new Map<string, number>();
+  const recordFirstSeen = (term: string, position: number) => {
+    if (frequencies[term] !== undefined && !firstSeen.has(term)) firstSeen.set(term, position);
+  };
+  let offset = 0;
+  for (const seg of splitPhraseSegments(text)) {
+    const segTokens = tokenize(seg, { ...tokenizeOpts, stopWords, additionalStopWords });
+    for (let i = 0; i < segTokens.length; i++) {
+      const unigram = segTokens[i]!;
+      recordFirstSeen(unigram, offset + i);
+      if (i + 1 >= segTokens.length) continue;
+      const bigram = `${unigram}-${segTokens[i + 1]}`;
+      recordFirstSeen(bigram, offset + i);
+      if (i + 2 < segTokens.length) recordFirstSeen(`${bigram}-${segTokens[i + 2]}`, offset + i);
+    }
+    offset += segTokens.length;
+  }
+
   return Object.entries(frequencies)
     .map(([text, value]) => ({ text, value }))
-    .sort((a, b) => b.value - a.value || a.text.localeCompare(b.text));
+    .sort(
+      (a, b) =>
+        b.value - a.value ||
+        (firstSeen.get(a.text) ?? Number.MAX_SAFE_INTEGER) -
+          (firstSeen.get(b.text) ?? Number.MAX_SAFE_INTEGER) ||
+        a.text.localeCompare(b.text),
+    );
 }
 
 /**

@@ -4,7 +4,7 @@ Interactive word-cloud and phrase-frequency explorer built with Bun, Vue 3, Vite
 
 ## Features
 
-- **Interactive cloud**: Logarithmic font scaling, Archimedean or rectangular layout, optional rotation, and per-section filtering.
+- **Interactive cloud**: Logarithmic font scaling, a word count sized to the screen (up to 100), organic or grid-like placement, optional seeded rotation, and per-section filtering.
 - **Context inspection**: Select a word, bigram, or trigram to see its frequency, document and cleaned-text percentages, and matching sentences with term highlighting.
 - **Google Docs and Sheets**: Accepts a public document or spreadsheet URL (or raw ID). Documents are parsed from HTML when available, with a text fallback; Sheets are read from CSV.
 - **Pasted text and Markdown**: Supports custom title, attribution, and date. Markdown headings become sections; deeper headings remain within their parent section.
@@ -57,7 +57,7 @@ Pasted-text clouds remain local to the current page and cannot be shared as sour
 ### `src/stopwords.ts`
 
 - `tokenize(text, options?)`: Normalizes and tokenizes text.
-- `getWordFrequencies(text, options?)`: Returns sorted unigram, bigram, and trigram frequencies; n-grams are enabled by default.
+- `getWordFrequencies(text, options?)`: Returns unigram, bigram, and trigram frequencies sorted by count, ties in order of first appearance; n-grams are enabled by default.
 - `getBigramFrequencies(text, options?)`: Returns recurring adjacent bigrams.
 - `getTrigramFrequencies(text, options?)`: Returns recurring trigrams with configurable interior-stop-word handling.
 - `getCollocations(text, options?)`: Returns bigrams with count, PMI, and NPMI.
@@ -65,7 +65,8 @@ Pasted-text clouds remain local to the current page and cannot be shared as sour
 
 ### `src/sections.ts`
 
-- `getDocumentWordData(markdown, topWordsLimit?, title?)`: Builds section, sentence, frequency, and word-count data. It selects the shallowest heading level containing multiple headings.
+- `getDocumentWordData(markdown, topWordsLimit?, title?)`: Builds section, sentence, frequency, and word-count data, keeping the top `CLOUD_CANDIDATE_LIMIT` (100) terms by default. Section ties are ordered by whole-document count. It selects the shallowest heading level containing multiple headings.
+- `selectCloudWords(words, limit)`: Picks the terms to draw: repeated terms first; single-occurrence terms make up at most a quarter of the drawn cloud, except when topping a sparse cloud up to 20 terms.
 - `parseGoogleDocHtml(html)`: Converts an exported Google Doc HTML document into Markdown and title metadata.
 - `parsePastedText(text, customTitle?, attribution?, date?)`: Generates document data from text or Markdown.
 - `fetchAndParseGoogleDoc(docIdOrUrl, customTitle?, attribution?, date?)`: Fetches and parses a public Google Doc or Sheet.

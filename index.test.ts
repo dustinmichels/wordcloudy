@@ -30,8 +30,25 @@ test("getWordFrequencies joins adjacent title-cased words into proper-noun entri
 
   expect(freqs).toEqual([
     { text: "palo-alto", value: 2 },
-    { text: "changes", value: 1 },
     { text: "grows", value: 1 },
+    { text: "changes", value: 1 },
+  ]);
+});
+
+test("getWordFrequencies orders equal counts by first appearance, including phrases", () => {
+  const text = "Zoning reform. Public transit helps. Apple orchards. Public transit grows. Zoning reform.";
+  // A phrase ranks at the position of its first word; same-position ties fall back to text.
+  expect(getWordFrequencies(text).map((f) => f.text)).toEqual([
+    "zoning",
+    "zoning-reform",
+    "reform",
+    "public",
+    "public-transit",
+    "transit",
+    "helps",
+    "apple",
+    "orchards",
+    "grows",
   ]);
 });
 
@@ -306,6 +323,7 @@ import {
   parseGoogleDocHtml,
   parsePastedText,
   stripMarkdownHeadings,
+  selectCloudWords,
   shouldReshuffleOnKeyDown,
 } from "./src/sections";
 import {
@@ -1404,4 +1422,50 @@ test("App.vue Reshuffle button includes mouseover shortcut indicator and ARIA ke
   expect(appSrc).toContain('title="Reshuffle word cloud (Spacebar)"');
   expect(appSrc).toContain('aria-keyshortcuts="Space"');
   expect(appSrc).toContain("shouldReshuffleOnKeyDown");
+});
+
+const term = (text: string, value: number) => ({ text, value });
+
+test("selectCloudWords keeps singletons to a quarter of the drawn cloud", () => {
+  const repeated = Array.from({ length: 12 }, (_, i) => term(`r${i}`, 2));
+  const singletons = Array.from({ length: 50 }, (_, i) => term(`s${i}`, 1));
+
+  // 30 repeated terms allow 10 singletons: 10 of 40 drawn.
+  const many = Array.from({ length: 30 }, (_, i) => term(`m${i}`, 3));
+  const picked = selectCloudWords([...many, ...singletons], 100);
+  expect(picked.slice(0, 30)).toEqual(many);
+  expect(picked.slice(30).map((w) => w.text)).toEqual(singletons.slice(0, 10).map((w) => w.text));
+
+  // Repeated terms alone can fill the budget.
+  expect(selectCloudWords([...repeated, ...singletons], 8)).toEqual(repeated.slice(0, 8));
+});
+
+test("selectCloudWords tops sparse clouds up to the minimum with singletons", () => {
+  const singletons = Array.from({ length: 50 }, (_, i) => term(`s${i}`, 1));
+  // 2 repeated terms: singletons fill to 20 rather than outnumbering a capped share.
+  expect(selectCloudWords([term("a", 2), term("b", 2), ...singletons], 100).length).toBe(20);
+  // No repeated terms: still a 20-term cloud.
+  expect(selectCloudWords(singletons, 100).length).toBe(20);
+  // The minimum never exceeds a smaller budget.
+  expect(selectCloudWords(singletons, 12).length).toBe(12);
+});
+
+test("getWordFrequencies does not date a phrase from a span across punctuation", () => {
+  // "Red. Car" comes first but is not the phrase; "blue bike" appears before "red car" does.
+  const text = "Red. Car tours. Blue bike rides. Red car rides. Blue bike tours. Red car.";
+  const order = getWordFrequencies(text).map((f) => f.text);
+  expect(order.indexOf("blue-bike")).toBeLessThan(order.indexOf("red-car"));
+});
+
+test("getDocumentWordData orders tied section terms by whole-document count", () => {
+  const markdown = [
+    "## First",
+    "Zoning matters. Zoning helps. Transit matters. Transit helps.",
+    "## Second",
+    "Transit works. Transit grows.",
+  ].join("\n");
+  const docData = getDocumentWordData(markdown);
+  const first = docData.sections.find((s) => s.title === "First")!;
+  // Both have 2 uses in "First"; transit (4 in the document) outranks zoning (2).
+  expect(first.words.slice(0, 2).map((w) => w.text)).toEqual(["transit", "zoning"]);
 });
