@@ -1053,6 +1053,56 @@ export function extractPreferPhrasesFromUrl(input: string): boolean | null {
   return null;
 }
 
+export function extractFlipAxisFromUrl(input: string): boolean | null {
+  if (!input) return null;
+  try {
+    const urlObj = new URL(input.trim(), "https://placeholder.local");
+    const param =
+      urlObj.searchParams.get("flip") ||
+      urlObj.searchParams.get("flipAxis") ||
+      urlObj.searchParams.get("flip-axis");
+    if (param !== null) {
+      return param === "1" || param === "true";
+    }
+    if (urlObj.hash) {
+      const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+      const hashVal =
+        hashParams.get("flip") || hashParams.get("flipAxis") || hashParams.get("flip-axis");
+      if (hashVal !== null) {
+        return hashVal === "1" || hashVal === "true";
+      }
+    }
+  } catch {}
+  return null;
+}
+
+export function extractFrequencyFromUrl(input: string): boolean | null {
+  if (!input) return null;
+  try {
+    const urlObj = new URL(input.trim(), "https://placeholder.local");
+    const param =
+      urlObj.searchParams.get("freq") ||
+      urlObj.searchParams.get("frequency") ||
+      urlObj.searchParams.get("showFrequency") ||
+      urlObj.searchParams.get("show-frequency");
+    if (param !== null) {
+      return param === "1" || param === "true";
+    }
+    if (urlObj.hash) {
+      const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+      const hashVal =
+        hashParams.get("freq") ||
+        hashParams.get("frequency") ||
+        hashParams.get("showFrequency") ||
+        hashParams.get("show-frequency");
+      if (hashVal !== null) {
+        return hashVal === "1" || hashVal === "true";
+      }
+    }
+  } catch {}
+  return null;
+}
+
 export function extractViewFromUrl(input: string): "cloud" | "bar" | "ignored" | null {
   if (!input) return null;
   try {

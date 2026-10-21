@@ -19,6 +19,9 @@ import {
 } from "./src/stopwords";
 import { extractIgnoredFromUrl } from "./src/sections";
 import { getIgnoredWordsForDoc, saveIgnoredWordsForDoc } from "./src/storage";
+import { defineChart, barY, ruleY, createChartScene } from "@tanstack/charts";
+import { scaleBand } from "@tanstack/charts/scales/band";
+import { scaleLinear } from "@tanstack/charts/scales/linear";
 
 test("tokenize cleans markdown and extracts tokens", () => {
   const text = "**Housing** is expensive! Check [this](https://example.com) -- now.";
@@ -533,6 +536,8 @@ import {
   extractDateFromUrl,
   extractGoogleDocId,
   extractModeFromUrl,
+  extractFlipAxisFromUrl,
+  extractFrequencyFromUrl,
   extractPluralsFromUrl,
   extractPreferPhrasesFromUrl,
   extractSentences,
@@ -1921,7 +1926,7 @@ test("WordBarChart handles bar and label clicks accurately without weird offsets
   expect(barChartSrc).toContain("handleContainerClick");
   expect(barChartSrc).toContain(":key=\"selectedWord ?? '__none'\"");
   // Ensures TanStack Charts's nearest-y @select does not conflict with DOM container click
-  expect(barChartSrc).not.toContain("@select=\"handleSelect\"");
+  expect(barChartSrc).not.toContain('@select="handleSelect"');
 });
 
 test("normalizeIgnoredWord lowercases, trims, and normalizes hyphens/whitespace", () => {
@@ -2022,4 +2027,168 @@ test("WordCloud and WordBarChart emit wordContextmenu event on right-click", asy
   const barSrc = await Bun.file("./src/components/WordBarChart.vue").text();
   expect(barSrc).toContain("wordContextmenu");
   expect(barSrc).toContain("handleContainerContextMenu");
+});
+
+test("extractFlipAxisFromUrl extracts flipAxis boolean from query and hash parameters", () => {
+  expect(extractFlipAxisFromUrl("https://example.com/?flip=1")).toBe(true);
+  expect(extractFlipAxisFromUrl("https://example.com/?flip=true")).toBe(true);
+  expect(extractFlipAxisFromUrl("https://example.com/?flipAxis=1")).toBe(true);
+  expect(extractFlipAxisFromUrl("https://example.com/?flip-axis=1")).toBe(true);
+  expect(extractFlipAxisFromUrl("https://example.com/?flip=0")).toBe(false);
+  expect(extractFlipAxisFromUrl("https://example.com/#flip=1")).toBe(true);
+  expect(extractFlipAxisFromUrl("https://example.com/#flipAxis=true")).toBe(true);
+  expect(extractFlipAxisFromUrl("https://example.com/#flip-axis=1")).toBe(true);
+  expect(extractFlipAxisFromUrl("https://example.com/")).toBe(null);
+});
+
+test("App.vue contains flip axis toggle on bar chart tab and passes flip-axis to WordBarChart", async () => {
+  const appSrc = await Bun.file("./src/App.vue").text();
+  expect(appSrc).toContain("flip-axis-toggle");
+  expect(appSrc).toContain("Flip axis");
+  expect(appSrc).toContain("flipBarAxis");
+  expect(appSrc).toContain("vizMode === 'bar'");
+  expect(appSrc).toContain(':flip-axis="flipBarAxis"');
+});
+
+test("WordBarChart component supports flipAxis and defaults x-axis label angle to 45 deg", async () => {
+  const barSrc = await Bun.file("./src/components/WordBarChart.vue").text();
+  expect(barSrc).toContain("flipAxis");
+  expect(barSrc).toContain("labelAngle");
+  expect(barSrc).toContain("45");
+  expect(barSrc).toContain("barY");
+  expect(barSrc).toContain("ruleY");
+  expect(barSrc).toContain("rotate: props.labelAngle ?? 45");
+  expect(barSrc).toContain("is-flipped");
+});
+
+test("WordBarChart logic produces rotated x-axis labels on flipAxis: true", () => {
+  const words = [
+    { text: "housing", value: 10 },
+    { text: "community", value: 6 },
+  ];
+
+  // Flipped chart definition (labels on X axis, angled 45 deg)
+  const flippedDef = defineChart({
+    marks: [ruleY([0]), barY(words, { x: "text", y: "value" })],
+    scales: {
+      x: {
+        scale: () => scaleBand().domain(words.map((w) => w.text)),
+        axis: {
+          tickLabels: { rotate: 45 },
+          ticks: { format: (val: string) => val.replace(/-/g, " ") },
+        },
+      },
+      y: {
+        scale: scaleLinear,
+        axis: { label: "Occurrences" },
+      },
+    },
+  });
+
+  const scene = createChartScene(flippedDef, { width: 500, height: 420 });
+  type SceneItem = {
+    kind?: string;
+    key?: string;
+    text?: string;
+    rotate?: number;
+    children?: SceneItem[];
+  };
+  const allLabels: SceneItem[] = [];
+  function collectLabels(nodes: readonly SceneItem[]) {
+    for (const node of nodes) {
+      if (node.kind === "label") allLabels.push(node);
+      if (node.children) collectLabels(node.children);
+    }
+  }
+  collectLabels(scene.nodes as unknown as readonly SceneItem[]);
+  const xLabels = allLabels.filter((l) => l.key?.startsWith("x-tick-label"));
+  expect(xLabels.length).toBe(2);
+  expect(xLabels[0].rotate).toBe(45);
+  expect(xLabels[0].text).toBe("housing");
+  expect(xLabels[1].rotate).toBe(45);
+  expect(xLabels[1].text).toBe("community");
+});
+
+test("extractFrequencyFromUrl extracts frequency boolean from query and hash parameters", () => {
+  expect(extractFrequencyFromUrl("https://example.com/?freq=1")).toBe(true);
+  expect(extractFrequencyFromUrl("https://example.com/?frequency=true")).toBe(true);
+  expect(extractFrequencyFromUrl("https://example.com/?showFrequency=1")).toBe(true);
+  expect(extractFrequencyFromUrl("https://example.com/?show-frequency=true")).toBe(true);
+  expect(extractFrequencyFromUrl("https://example.com/?freq=0")).toBe(false);
+  expect(extractFrequencyFromUrl("https://example.com/?frequency=false")).toBe(false);
+  expect(extractFrequencyFromUrl("https://example.com/#freq=1")).toBe(true);
+  expect(extractFrequencyFromUrl("https://example.com/#frequency=true")).toBe(true);
+  expect(extractFrequencyFromUrl("https://example.com/#show-frequency=1")).toBe(true);
+  expect(extractFrequencyFromUrl("https://example.com/")).toBe(null);
+});
+
+test("App.vue contains frequency toggle on bar chart tab and passes show-frequency to WordBarChart", async () => {
+  const appSrc = await Bun.file("./src/App.vue").text();
+  expect(appSrc).toContain("frequency-toggle");
+  expect(appSrc).toContain("Frequency");
+  expect(appSrc).toContain("Counts");
+  expect(appSrc).toContain("barShowFrequency");
+  expect(appSrc).toContain(':show-frequency="barShowFrequency"');
+  expect(appSrc).toContain(':total-words="barTotalWords"');
+  expect(appSrc).toContain("barchart-metric-toggle");
+});
+
+test("WordBarChart component supports showFrequency and frequency props and formats percentages", async () => {
+  const barSrc = await Bun.file("./src/components/WordBarChart.vue").text();
+  expect(barSrc).toContain("showFrequency");
+  expect(barSrc).toContain("frequency");
+  expect(barSrc).toContain("totalWords");
+  expect(barSrc).toContain("isFrequency");
+  expect(barSrc).toContain("formatFrequency");
+  expect(barSrc).toContain("Frequency (%)");
+  expect(barSrc).toContain("Occurrences");
+});
+
+test("WordBarChart logic produces percentage values and Frequency axis label on showFrequency: true", () => {
+  const words = [
+    { text: "housing", value: 10 },
+    { text: "community", value: 10 },
+  ];
+  const total = 100;
+  const rows = words.map((w) => ({
+    text: w.text,
+    value: w.value,
+    frequency: (w.value / total) * 100,
+  }));
+
+  const freqChartDef = defineChart({
+    marks: [
+      barY(rows, { x: "text", y: "frequency" }),
+    ],
+    scales: {
+      x: {
+        scale: () => scaleBand().domain(rows.map((r) => r.text)),
+      },
+      y: {
+        scale: scaleLinear,
+        axis: {
+          label: { text: "Frequency (%)" },
+          ticks: { format: (val: number) => `${val}%` },
+        },
+      },
+    },
+  });
+
+  const scene = createChartScene(freqChartDef, { width: 500, height: 420 });
+  type SceneItem = {
+    kind?: string;
+    key?: string;
+    text?: string;
+    children?: SceneItem[];
+  };
+  const allLabels: SceneItem[] = [];
+  function collectLabels(nodes: readonly SceneItem[]) {
+    for (const node of nodes) {
+      if (node.kind === "label") allLabels.push(node);
+      if (node.children) collectLabels(node.children);
+    }
+  }
+  collectLabels(scene.nodes as unknown as readonly SceneItem[]);
+  const yLabel = allLabels.find((l) => l.key === "y-label");
+  expect(yLabel?.text).toBe("Frequency (%)");
 });

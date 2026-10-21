@@ -38,6 +38,8 @@ import {
   decodeGoogleDocShareCode,
   extractAttributionFromUrl,
   extractDateFromUrl,
+  extractFlipAxisFromUrl,
+  extractFrequencyFromUrl,
   extractPluralsFromUrl,
   extractPreferPhrasesFromUrl,
   extractTitleFromUrl,
@@ -102,6 +104,12 @@ const preferPhrases = ref<boolean>(
     ? (extractPreferPhrasesFromUrl(window.location.href) ?? false)
     : false,
 );
+const flipBarAxis = ref<boolean>(
+  typeof window !== "undefined" ? (extractFlipAxisFromUrl(window.location.href) ?? false) : false,
+);
+const barShowFrequency = ref<boolean>(
+  typeof window !== "undefined" ? (extractFrequencyFromUrl(window.location.href) ?? false) : false,
+);
 const vizMode = ref<VizMode>(
   typeof window !== "undefined" ? (extractViewFromUrl(window.location.href) ?? "cloud") : "cloud",
 );
@@ -146,6 +154,12 @@ const markerPercent = computed<number>(() => {
   return Math.max(0, Math.min(100, ((docMaxWords.value - 1) / 99) * 100));
 });
 
+
+const barTotalWords = computed<number>(() => {
+  if (activeStats.value.totalWords > 0) return activeStats.value.totalWords;
+  if (activeStats.value.cleanedWords > 0) return activeStats.value.cleanedWords;
+  return activeWords.value.reduce((acc, w) => acc + w.value, 0);
+});
 const sliderTrackStyle = computed(() => {
   const currentPct = Math.max(0, Math.min(100, ((maxWords.value - 1) / 99) * 100));
   const limitPct = markerPercent.value;
@@ -764,18 +778,86 @@ function handleSavePng() {
   saving.value = true;
 
   try {
-    const rect = svgElement.getBoundingClientRect();
-    const width = rect.width || 800;
-    const height = rect.height || 520;
-    const pixelRatio = window.devicePixelRatio || 2;
+    // Determine base coordinate dimensions from viewBox or bounding rect
+    let baseWidth = 800;
+    let baseHeight = 520;
+
+    const viewBoxAttr = svgElement.getAttribute("viewBox");
+    if (viewBoxAttr) {
+      const parts = viewBoxAttr.trim().split(/\s+/).map(Number);
+      if (
+        parts.length === 4 &&
+        Number.isFinite(parts[2]) &&
+        Number.isFinite(parts[3]) &&
+        parts[2] > 0 &&
+        parts[3] > 0
+      ) {
+        baseWidth = parts[2];
+        baseHeight = parts[3];
+      }
+    } else {
+      const rect = svgElement.getBoundingClientRect();
+      baseWidth = Math.round(rect.width) || 800;
+      baseHeight = Math.round(rect.height) || 520;
+    }
+
+    // High-resolution scale: at least 2 for crisp vector rasterization regardless of screen DPI
+    const exportScale = Math.max(2, Math.round(window.devicePixelRatio || 2));
+    const exportWidth = Math.round(baseWidth * exportScale);
+    const exportHeight = Math.round(baseHeight * exportScale);
 
     const clone = svgElement.cloneNode(true) as SVGSVGElement;
     clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    clone.setAttribute("width", String(width));
-    clone.setAttribute("height", String(height));
-    if (!clone.getAttribute("viewBox")) {
-      clone.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    }
+    clone.setAttribute("viewBox", viewBoxAttr || `0 0 ${baseWidth} ${baseHeight}`);
+    // Set width & height on SVG to scaled raster dimensions so the browser's
+    // SVG rasterizer renders at full high-resolution vector sharpness
+    clone.setAttribute("width", String(exportWidth));
+    clone.setAttribute("height", String(exportHeight));
+
+    // Embed default font-family styling into cloned SVG for sandboxed SVG image rendering
+    const styleEl = document.createElement("style");
+    styleEl.textContent = `
+      text {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+    `;
+    clone.insertBefore(styleEl, clone.firstChild);
+
+    // Inline computed presentation styles from visible elements into clone to preserve styling
+    const origElements = svgElement.querySelectorAll("*");
+    const cloneElements = clone.querySelectorAll("*");
+    origElements.forEach((origEl, idx) => {
+      const cloneEl = cloneElements[idx];
+      if (!cloneEl || !(cloneEl instanceof SVGElement)) return;
+      const computed = window.getComputedStyle(origEl);
+      const tag = origEl.tagName.toLowerCase();
+
+      if (tag === "text") {
+        if (!cloneEl.getAttribute("font-family")) {
+          cloneEl.setAttribute("font-family", computed.fontFamily);
+        }
+        if (!cloneEl.getAttribute("font-size")) {
+          cloneEl.setAttribute("font-size", computed.fontSize);
+        }
+        if (!cloneEl.getAttribute("font-weight")) {
+          cloneEl.setAttribute("font-weight", computed.fontWeight);
+        }
+        const fill = cloneEl.getAttribute("fill");
+        if (!fill || fill === "currentColor") {
+          cloneEl.setAttribute("fill", computed.fill || computed.color || "#334155");
+        }
+      } else if (tag === "rect" || tag === "line" || tag === "path") {
+        const fill = cloneEl.getAttribute("fill");
+        if (fill === "currentColor") {
+          cloneEl.setAttribute("fill", computed.fill || computed.color || "#2F6B9A");
+        }
+        const stroke = cloneEl.getAttribute("stroke");
+        if (stroke === "currentColor") {
+          cloneEl.setAttribute("stroke", computed.stroke || computed.color || "#cbd5e1");
+        }
+      }
+    });
 
     const svgData = new XMLSerializer().serializeToString(clone);
     const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgData);
@@ -784,19 +866,19 @@ function handleSavePng() {
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
-        canvas.width = width * pixelRatio;
-        canvas.height = height * pixelRatio;
+        canvas.width = exportWidth;
+        canvas.height = exportHeight;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
           saving.value = false;
           return;
         }
 
-        ctx.fillStyle = "#f8fafc";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = vizMode.value === "bar" ? "#ffffff" : "#f8fafc";
+        ctx.fillRect(0, 0, exportWidth, exportHeight);
 
-        ctx.scale(pixelRatio, pixelRatio);
-        ctx.drawImage(img, 0, 0, width, height);
+        // Draw 1:1 since the image was rasterized at exportWidth x exportHeight
+        ctx.drawImage(img, 0, 0, exportWidth, exportHeight);
 
         const pngUrl = canvas.toDataURL("image/png");
         const downloadLink = document.createElement("a");
@@ -1341,6 +1423,32 @@ onUnmounted(() => {
                     </span>
                   </button>
                 </div>
+                <div v-if="vizMode === 'bar'" class="stage-view-actions">
+                  <div
+                    class="barchart-metric-toggle"
+                    role="group"
+                    aria-label="Bar chart display metric"
+                  >
+                    <button
+                      type="button"
+                      :class="['barchart-metric-btn', !barShowFrequency ? 'active' : '']"
+                      :aria-pressed="!barShowFrequency"
+                      title="Show raw occurrence counts"
+                      @click="barShowFrequency = false"
+                    >
+                      Counts
+                    </button>
+                    <button
+                      type="button"
+                      :class="['barchart-metric-btn', barShowFrequency ? 'active' : '']"
+                      :aria-pressed="barShowFrequency"
+                      title="Show relative frequencies"
+                      @click="barShowFrequency = true"
+                    >
+                      Frequency
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div
@@ -1377,6 +1485,9 @@ onUnmounted(() => {
                   v-else-if="vizMode === 'bar'"
                   :words="activeWords"
                   :selected-word="selectedWord"
+                  :flip-axis="flipBarAxis"
+                  :show-frequency="barShowFrequency"
+                  :total-words="barTotalWords"
                   @word-click="handleWordClick"
                   @word-contextmenu="handleWordContextMenu"
                 />
@@ -1511,6 +1622,46 @@ onUnmounted(() => {
                     </label>
                   </div>
                 </div>
+                <div v-if="vizMode === 'bar'" class="controls-options-row">
+                  <div class="control-field">
+                    <label for="flip-axis-toggle">Flip axis</label>
+                    <label class="rotation-toggle" for="flip-axis-toggle">
+                      <input
+                        id="flip-axis-toggle"
+                        v-model="flipBarAxis"
+                        type="checkbox"
+                        role="switch"
+                        :aria-checked="flipBarAxis"
+                        class="rotation-toggle-input"
+                      />
+                      <span class="rotation-toggle-track" aria-hidden="true">
+                        <span class="rotation-toggle-thumb" />
+                      </span>
+                      <span class="rotation-toggle-label">{{
+                        flipBarAxis ? "Flip on" : "Flip off"
+                      }}</span>
+                    </label>
+                  </div>
+                  <div class="control-field">
+                    <label for="frequency-toggle">Frequency</label>
+                    <label class="rotation-toggle frequency-toggle" for="frequency-toggle">
+                      <input
+                        id="frequency-toggle"
+                        v-model="barShowFrequency"
+                        type="checkbox"
+                        role="switch"
+                        :aria-checked="barShowFrequency"
+                        class="rotation-toggle-input"
+                      />
+                      <span class="rotation-toggle-track" aria-hidden="true">
+                        <span class="rotation-toggle-thumb" />
+                      </span>
+                      <span class="rotation-toggle-label">{{
+                        barShowFrequency ? "Frequency" : "Counts"
+                      }}</span>
+                    </label>
+                  </div>
+                </div>
                 <div class="controls-options-row">
                   <div class="control-field">
                     <label for="plurals-toggle">Plurals</label>
@@ -1528,25 +1679,6 @@ onUnmounted(() => {
                       </span>
                       <span class="rotation-toggle-label">{{
                         mergePlurals ? "Combine on" : "Combine off"
-                      }}</span>
-                    </label>
-                  </div>
-                  <div class="control-field">
-                    <label for="prefer-phrases-toggle">Prefer phrases</label>
-                    <label class="rotation-toggle" for="prefer-phrases-toggle">
-                      <input
-                        id="prefer-phrases-toggle"
-                        v-model="preferPhrases"
-                        type="checkbox"
-                        role="switch"
-                        :aria-checked="preferPhrases"
-                        class="rotation-toggle-input"
-                      />
-                      <span class="rotation-toggle-track" aria-hidden="true">
-                        <span class="rotation-toggle-thumb" />
-                      </span>
-                      <span class="rotation-toggle-label">{{
-                        preferPhrases ? "Prefer on" : "Prefer off"
                       }}</span>
                     </label>
                   </div>

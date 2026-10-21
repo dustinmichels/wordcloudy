@@ -7,6 +7,7 @@ Explore storing compressed raw text directly in URL links (e.g. hash fragment `#
 ## 1. Concept
 
 Allow sharing of custom text / markdown documents directly in the URL:
+
 - Use native browser `CompressionStream('deflate-raw')` + Base64URL encoding.
 - Place payload in the URL hash fragment (`#text=...`) rather than query parameters (`?text=...`) so large strings are never sent across the network to servers/CDNs (avoiding HTTP 414 / 431 header limits).
 
@@ -15,6 +16,7 @@ Allow sharing of custom text / markdown documents directly in the URL:
 ## 2. Technical Design
 
 ### A. Compression & Decompression Utilities
+
 - **Algorithm**: `deflate-raw` via native `CompressionStream` and `DecompressionStream` (zero container overhead, supported in modern Chromium, Safari 16.4+, Firefox 113+).
 - **Encoding**: Base64URL (`-`, `_`, unpadded) to avoid percent-encoding inflation.
 - **Threshold Fallback**: For short text (< 80 chars), DEFLATE Huffman trees can expand the text; prefix with a version/mode tag (e.g., `c.` for compressed, `r.` for raw URI-encoded).
@@ -22,9 +24,7 @@ Allow sharing of custom text / markdown documents directly in the URL:
 ```typescript
 // Proposed helpers
 export async function compressTextToUrlSafe(text: string): Promise<string> {
-  const stream = new Blob([text])
-    .stream()
-    .pipeThrough(new CompressionStream("deflate-raw"));
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream("deflate-raw"));
   const buffer = await new Response(stream).arrayBuffer();
   const bytes = new Uint8Array(buffer);
 
@@ -32,10 +32,7 @@ export async function compressTextToUrlSafe(text: string): Promise<string> {
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 export async function decompressTextFromUrlSafe(base64url: string): Promise<string> {
@@ -47,14 +44,13 @@ export async function decompressTextFromUrlSafe(base64url: string): Promise<stri
     bytes[i] = binary.charCodeAt(i);
   }
 
-  const stream = new Blob([bytes])
-    .stream()
-    .pipeThrough(new DecompressionStream("deflate-raw"));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
   return await new Response(stream).text();
 }
 ```
 
 ### B. URL Schema
+
 - Store in hash fragment alongside existing metadata:
   ```
   https://example.com/wordcloudy/#title=Notes&attribution=Author&date=2026&text=c.<base64url>
