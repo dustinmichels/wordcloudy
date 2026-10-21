@@ -743,7 +743,15 @@ export function getShareableAppUrl(
   docIdOrUrl: string,
   baseUrlOrOptions?:
     | string
-    | { baseUrl?: string; attribution?: string; date?: string; title?: string },
+    | {
+        baseUrl?: string;
+        attribution?: string;
+        date?: string;
+        title?: string;
+        plurals?: boolean;
+        preferPhrases?: boolean;
+        phrases?: boolean;
+      },
   attribution?: string,
   date?: string,
   title?: string,
@@ -779,6 +787,14 @@ export function getShareableAppUrl(
   }
   if (d && d.trim()) {
     params.set("date", d.trim());
+  }
+  if (typeof baseUrlOrOptions === "object" && baseUrlOrOptions !== null) {
+    if (baseUrlOrOptions.preferPhrases || baseUrlOrOptions.phrases) {
+      params.set("phrases", "1");
+    }
+    if (baseUrlOrOptions.plurals) {
+      params.set("plurals", "1");
+    }
   }
   return `${base}?${params.toString()}`;
 }
@@ -1012,7 +1028,32 @@ export function extractPluralsFromUrl(input: string): boolean | null {
   return null;
 }
 
-export function extractViewFromUrl(input: string): "cloud" | "bar" | null {
+export function extractPreferPhrasesFromUrl(input: string): boolean | null {
+  if (!input) return null;
+  try {
+    const urlObj = new URL(input.trim(), "https://placeholder.local");
+    const param =
+      urlObj.searchParams.get("phrases") ||
+      urlObj.searchParams.get("preferPhrases") ||
+      urlObj.searchParams.get("prefer-phrases");
+    if (param !== null) {
+      return param === "1" || param === "true";
+    }
+    if (urlObj.hash) {
+      const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+      const hashVal =
+        hashParams.get("phrases") ||
+        hashParams.get("preferPhrases") ||
+        hashParams.get("prefer-phrases");
+      if (hashVal !== null) {
+        return hashVal === "1" || hashVal === "true";
+      }
+    }
+  } catch {}
+  return null;
+}
+
+export function extractViewFromUrl(input: string): "cloud" | "bar" | "ignored" | null {
   if (!input) return null;
   try {
     const urlObj = new URL(input.trim(), "https://placeholder.local");
@@ -1023,11 +1064,38 @@ export function extractViewFromUrl(input: string): "cloud" | "bar" | null {
     ).toLowerCase();
     if (param === "bar" || param === "barchart") return "bar";
     if (param === "cloud" || param === "wordcloud") return "cloud";
+    if (param === "ignored" || param === "ignore") return "ignored";
     if (urlObj.hash) {
       const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
       const hashVal = (hashParams.get("view") || hashParams.get("chart") || "").toLowerCase();
       if (hashVal === "bar" || hashVal === "barchart") return "bar";
       if (hashVal === "cloud" || hashVal === "wordcloud") return "cloud";
+      if (hashVal === "ignored" || hashVal === "ignore") return "ignored";
+    }
+  } catch {}
+  return null;
+}
+
+export function extractIgnoredFromUrl(input: string): string[] | null {
+  if (!input) return null;
+  try {
+    const urlObj = new URL(input.trim(), "https://placeholder.local");
+    const param = urlObj.searchParams.get("ignore") || urlObj.searchParams.get("ignored");
+    if (param) {
+      return param
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    if (urlObj.hash) {
+      const hashParams = new URLSearchParams(urlObj.hash.replace(/^#/, ""));
+      const hashVal = hashParams.get("ignore") || hashParams.get("ignored");
+      if (hashVal) {
+        return hashVal
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
     }
   } catch {}
   return null;

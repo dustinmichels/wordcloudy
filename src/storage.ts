@@ -200,3 +200,34 @@ export function clearRecentDocuments(): void {
     console.error("Failed to clear recent documents from localStorage:", err);
   }
 }
+
+export const IGNORED_WORDS_STORAGE_PREFIX = "wordcloudy_ignored_";
+
+export function getIgnoredWordsForDoc(docKey: string): string[] {
+  if (!docKey) return [];
+  try {
+    const storage = getStorage();
+    const raw = storage.getItem(`${IGNORED_WORDS_STORAGE_PREFIX}${docKey}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(
+          (item): item is string => typeof item === "string" && item.trim().length > 0,
+        );
+      }
+    }
+  } catch (err) {
+    console.error("Failed to read ignored words from localStorage:", err);
+  }
+  return [];
+}
+
+export function saveIgnoredWordsForDoc(docKey: string, words: string[]): void {
+  if (!docKey) return;
+  try {
+    const storage = getStorage();
+    storage.setItem(`${IGNORED_WORDS_STORAGE_PREFIX}${docKey}`, JSON.stringify(words));
+  } catch (err) {
+    console.error("Failed to save ignored words to localStorage:", err);
+  }
+}

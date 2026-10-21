@@ -6,6 +6,7 @@ export type WordData = WordFrequency;
 export type { DocumentWordStats, Section, SectionWordData, ParsedDocumentData, EditFormValues };
 
 export type SpiralType = "archimedean" | "rectangular";
+export type VizMode = "cloud" | "bar" | "ignored";
 
 export interface CloudWord {
   text: string;

@@ -6,6 +6,9 @@ const props = defineProps<{
   text: string;
   term: string;
 }>();
+const emit = defineEmits<{
+  (e: "termContextmenu", payload: { word: string; event: MouseEvent }): void;
+}>();
 
 const parts = computed(() => {
   if (!props.term) return [{ text: props.text, isMatch: false }];
@@ -38,7 +41,13 @@ const parts = computed(() => {
 
 <template>
   <template v-for="(part, i) in parts" :key="i">
-    <mark v-if="part.isMatch" class="highlighted-term">{{ part.text }}</mark>
+    <mark
+      v-if="part.isMatch"
+      class="highlighted-term"
+      @contextmenu.prevent="emit('termContextmenu', { word: props.term, event: $event })"
+    >
+      {{ part.text }}
+    </mark>
     <template v-else>{{ part.text }}</template>
   </template>
 </template>

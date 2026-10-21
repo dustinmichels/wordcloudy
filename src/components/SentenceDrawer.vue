@@ -7,6 +7,9 @@ defineProps<{
   selectedSection: string;
   sentences: Array<{ sectionTitle: string; text: string }>;
 }>();
+const emit = defineEmits<{
+  (e: "wordContextmenu", payload: { word: string; event: MouseEvent }): void;
+}>();
 </script>
 
 <template>
@@ -21,7 +24,13 @@ defineProps<{
           <span v-if="selectedSection === 'all'" class="sentence-category-tag">
             {{ match.sectionTitle }}
           </span>
-          <p class="sentence-text">“<HighlightedText :text="match.text" :term="selectedWord" />”</p>
+          <p class="sentence-text">
+            “<HighlightedText
+              :text="match.text"
+              :term="selectedWord"
+              @term-contextmenu="emit('wordContextmenu', $event)"
+            />”
+          </p>
         </li>
       </ul>
     </template>

@@ -9,8 +9,16 @@ import {
   formatPluralLabel,
   getPluralLabelMap,
   mergePluralFrequencies,
+  applyPreferPhrases,
+  preferPhraseFrequencies,
   DEFAULT_STOP_WORDS,
+  normalizeIgnoredWord,
+  getWordVariants,
+  isWordIgnored,
+  filterIgnoredWords,
 } from "./src/stopwords";
+import { extractIgnoredFromUrl } from "./src/sections";
+import { getIgnoredWordsForDoc, saveIgnoredWordsForDoc } from "./src/storage";
 
 test("tokenize cleans markdown and extracts tokens", () => {
   const text = "**Housing** is expensive! Check [this](https://example.com) -- now.";
@@ -289,8 +297,9 @@ test("getWordFrequencies respects includeTrigrams: false", () => {
 });
 
 test("formatPluralLabel correctly formats regular and irregular plurals", () => {
-  expect(formatPluralLabel("frog", "frogs")).toBe("frog/s");
-  expect(formatPluralLabel("beet", "beets")).toBe("beet/s");
+  expect(formatPluralLabel("dog", "dogs")).toBe("dog(s)");
+  expect(formatPluralLabel("frog", "frogs")).toBe("frog(s)");
+  expect(formatPluralLabel("beet", "beets")).toBe("beet(s)");
   expect(formatPluralLabel("blackberry", "blackberries")).toBe("blackberry/blackberries");
   expect(formatPluralLabel("child", "children")).toBe("child/children");
   expect(formatPluralLabel("series", "series")).toBe("series");
@@ -305,8 +314,8 @@ test("getPluralLabelMap maps words only when multiple inflected forms appear", (
     { text: "blackberries", value: 4 },
   ];
   const map = getPluralLabelMap(frequencies);
-  expect(map.get("beet")).toBe("beet/s");
-  expect(map.get("beets")).toBe("beet/s");
+  expect(map.get("beet")).toBe("beet(s)");
+  expect(map.get("beets")).toBe("beet(s)");
   expect(map.get("blackberry")).toBe("blackberry/blackberries");
   expect(map.get("blackberries")).toBe("blackberry/blackberries");
   expect(map.get("carrot")).toBeUndefined();
@@ -325,7 +334,7 @@ test("mergePluralFrequencies combines counts of regular and irregular plurals", 
   expect(merged).toEqual([
     { text: "housing", value: 10 },
     { text: "city-planning", value: 6 },
-    { text: "beet/s", value: 5 },
+    { text: "beet(s)", value: 5 },
     { text: "blackberry/blackberries", value: 5 },
   ]);
 });
@@ -340,8 +349,8 @@ test("mergePluralFrequencies supports a precomputed labelMap across sections", (
   const section1 = [{ text: "beet", value: 2 }];
   const section2 = [{ text: "beets", value: 3 }];
 
-  expect(mergePluralFrequencies(section1, labelMap)).toEqual([{ text: "beet/s", value: 2 }]);
-  expect(mergePluralFrequencies(section2, labelMap)).toEqual([{ text: "beet/s", value: 3 }]);
+  expect(mergePluralFrequencies(section1, labelMap)).toEqual([{ text: "beet(s)", value: 2 }]);
+  expect(mergePluralFrequencies(section2, labelMap)).toEqual([{ text: "beet(s)", value: 3 }]);
 });
 
 test("getWordFrequencies with mergePlurals: true combines plural words", () => {
@@ -352,10 +361,10 @@ test("getWordFrequencies with mergePlurals: true combines plural words", () => {
     includeTrigrams: false,
     mergePlurals: true,
   });
-  const beetEntry = freqs.find((f) => f.text === "beet/s");
+  const beetEntry = freqs.find((f) => f.text === "beet(s)");
   const blackberryEntry = freqs.find((f) => f.text === "blackberry/blackberries");
 
-  expect(beetEntry).toEqual({ text: "beet/s", value: 3 });
+  expect(beetEntry).toEqual({ text: "beet(s)", value: 3 });
   expect(blackberryEntry).toEqual({ text: "blackberry/blackberries", value: 2 });
 });
 
@@ -368,17 +377,21 @@ test("extractPluralsFromUrl detects query and hash params", () => {
 });
 
 test("buildTermRegex correctly matches /s, (s), and / merged plural terms", () => {
+  const dogRx = buildTermRegex("dog(s)", true);
+  const textDog = "A good dog met two dogs. The dog's tail wagged.";
+  const matchesDog = [...textDog.matchAll(dogRx)].map((m) => m[0]);
+  expect(matchesDog).toEqual(["dog", "dogs", "dog's"]);
+
   const frogRx = buildTermRegex("frog/s", true);
   const text0 =
     "A green frog saw two frogs. It was not a toad, s is a letter, and frog's skin was wet.";
   const matches0 = [...text0.matchAll(frogRx)].map((m) => m[0]);
   expect(matches0).toEqual(["frog", "frogs", "frog's"]);
 
-  const beetRx = buildTermRegex("beet/s", true);
+  const beetRx = buildTermRegex("beet(s)", true);
   const text1 = "We have beet, beets, beet's taste, and beets’ fresh leaves. Not beetroot.";
   const matches1 = [...text1.matchAll(beetRx)].map((m) => m[0]);
   expect(matches1).toEqual(["beet", "beets", "beet's", "beets"]);
-
   const berryRx = buildTermRegex("blackberry/blackberries", true);
   const text2 = "A ripe blackberry and several blackberries were eaten. Not blackberrying.";
   const matches2 = [...text2.matchAll(berryRx)].map((m) => m[0]);
@@ -394,9 +407,122 @@ More beets grew here.`;
     includeTrigrams: false,
     mergePlurals: true,
   });
-  const allBeet = data.all.find((w) => w.text === "beet/s");
+  const allBeet = data.all.find((w) => w.text === "beet(s)");
   expect(allBeet).toBeDefined();
   expect(allBeet?.value).toBe(2);
+});
+
+test("applyPreferPhrases emphasizes bigrams over constituent words and prevents double counting", () => {
+  // "fruit salad" appears 5 times, "salad" appears 7 times (2 standalone), "fruit" appears 5 times (all in phrase)
+  const raw = [
+    { text: "salad", value: 7 },
+    { text: "fruit-salad", value: 5 },
+    { text: "fruit", value: 5 },
+  ];
+  const result = applyPreferPhrases(raw);
+
+  // "fruit-salad" is emphasized at 5
+  // "salad" count is reduced from 7 to 2 (7 - 5)
+  // "fruit" count drops to 0 (5 - 5) and is excluded
+  expect(result).toEqual([
+    { text: "fruit-salad", value: 5 },
+    { text: "salad", value: 2 },
+  ]);
+});
+
+test("applyPreferPhrases emphasizes trigrams and deducts from constituent content words", () => {
+  // "cost of housing" occurs 4 times; "of" is stop word; "housing" total 9, "cost" total 4
+  const raw = [
+    { text: "housing", value: 9 },
+    { text: "cost-of-housing", value: 4 },
+    { text: "cost", value: 4 },
+  ];
+  const result = applyPreferPhrases(raw);
+
+  expect(result).toEqual([
+    { text: "housing", value: 5 },
+    { text: "cost-of-housing", value: 4 },
+  ]);
+});
+
+test("applyPreferPhrases handles multiple phrases sharing a constituent word", () => {
+  const raw = [
+    { text: "salad", value: 8 },
+    { text: "fruit-salad", value: 3 },
+    { text: "potato-salad", value: 2 },
+    { text: "fruit", value: 3 },
+    { text: "potato", value: 2 },
+  ];
+  const result = applyPreferPhrases(raw);
+
+  // salad: 8 - (3 + 2) = 3
+  // fruit: 3 - 3 = 0 (omitted)
+  // potato: 2 - 2 = 0 (omitted)
+  expect(result).toEqual([
+    { text: "fruit-salad", value: 3 },
+    { text: "salad", value: 3 },
+    { text: "potato-salad", value: 2 },
+  ]);
+});
+
+test("applyPreferPhrases handles overlapping trigrams and bigrams without over-deducting", () => {
+  // "fresh fruit salad" occurred 2 times
+  // "fruit salad" occurred 5 times (2 inside the trigram + 3 standalone)
+  // "salad" occurred 7 times (5 in fruit salad + 2 standalone)
+  // "fruit" occurred 5 times (all in phrases)
+  // "fresh" occurred 2 times (all in trigram)
+  const raw = [
+    { text: "salad", value: 7 },
+    { text: "fruit", value: 5 },
+    { text: "fresh", value: 2 },
+    { text: "fresh-fruit-salad", value: 2 },
+    { text: "fruit-salad", value: 5 },
+  ];
+  const result = applyPreferPhrases(raw);
+
+  // fruit-salad stays 5
+  // fresh-fruit-salad stays 2
+  // salad reduced by 5 (not 2 + 5 = 7) -> 7 - 5 = 2
+  // fruit drops to 0 (5 - 5 = 0)
+  // fresh drops to 0 (2 - 2 = 0)
+  expect(result).toEqual([
+    { text: "fruit-salad", value: 5 },
+    { text: "fresh-fruit-salad", value: 2 },
+    { text: "salad", value: 2 },
+  ]);
+});
+
+test("getWordFrequencies with preferPhrases: true emphasizes phrases over words in text", () => {
+  const text =
+    "We made fruit salad. We made fruit salad. We made fruit salad. Salad is good. Salad is fresh.";
+  const freqs = getWordFrequencies(text, { preferPhrases: true });
+
+  const fruitSalad = freqs.find((f) => f.text === "fruit-salad");
+  const salad = freqs.find((f) => f.text === "salad");
+  const fruit = freqs.find((f) => f.text === "fruit");
+
+  expect(fruitSalad).toEqual({ text: "fruit-salad", value: 3 });
+  // salad was 5 originally (3 in fruit salad + 2 standalone); now reduced to 2
+  expect(salad).toEqual({ text: "salad", value: 2 });
+  // fruit only occurred in fruit-salad, so count is 0 and omitted
+  expect(fruit).toBeUndefined();
+});
+
+test("extractPreferPhrasesFromUrl parses query and hash parameters", () => {
+  expect(extractPreferPhrasesFromUrl("https://example.com/?phrases=1")).toBe(true);
+  expect(extractPreferPhrasesFromUrl("https://example.com/?preferPhrases=true")).toBe(true);
+  expect(extractPreferPhrasesFromUrl("https://example.com/?prefer-phrases=1")).toBe(true);
+  expect(extractPreferPhrasesFromUrl("https://example.com/#phrases=1")).toBe(true);
+  expect(extractPreferPhrasesFromUrl("https://example.com/?phrases=0")).toBe(false);
+  expect(extractPreferPhrasesFromUrl("https://example.com/")).toBe(null);
+});
+
+test("getShareableAppUrl includes phrases param when preferPhrases option is enabled", () => {
+  const url = getShareableAppUrl("1phzU_iirDnbVz0wNLLpB1tQu-v0ylUnhfuDGpfuleRA", {
+    baseUrl: "https://example.com/app",
+    preferPhrases: true,
+  });
+  expect(url).toContain("phrases=1");
 });
 import {
   buildTermRegex,
@@ -408,6 +534,7 @@ import {
   extractGoogleDocId,
   extractModeFromUrl,
   extractPluralsFromUrl,
+  extractPreferPhrasesFromUrl,
   extractSentences,
   extractTextFromUrl,
   extractTitleFromUrl,
@@ -1727,9 +1854,13 @@ test("extractViewFromUrl detects bar and cloud view from query and hash params",
   expect(extractViewFromUrl("https://example.com/?view=barchart")).toBe("bar");
   expect(extractViewFromUrl("https://example.com/?view=cloud")).toBe("cloud");
   expect(extractViewFromUrl("https://example.com/?chart=wordcloud")).toBe("cloud");
+  expect(extractViewFromUrl("https://example.com/?view=ignored")).toBe("ignored");
+  expect(extractViewFromUrl("https://example.com/?view=ignore")).toBe("ignored");
+  expect(extractViewFromUrl("https://example.com/?chart=ignored")).toBe("ignored");
   expect(extractViewFromUrl("https://example.com/#view=bar")).toBe("bar");
   expect(extractViewFromUrl("https://example.com/#chart=bar")).toBe("bar");
   expect(extractViewFromUrl("https://example.com/#view=cloud")).toBe("cloud");
+  expect(extractViewFromUrl("https://example.com/#view=ignored")).toBe("ignored");
   expect(extractViewFromUrl("https://example.com/?doc=abc")).toBe(null);
   expect(extractViewFromUrl("https://example.com/")).toBe(null);
 });
@@ -1780,4 +1911,115 @@ test("WordBarChart component imports @tanstack/charts and @tanstack/charts/vue",
   expect(barChartSrc).toContain("barX");
   expect(barChartSrc).toContain("scaleBand");
   expect(barChartSrc).toContain("scaleLinear");
+});
+
+test("WordBarChart handles bar and label clicks accurately without weird offsets", async () => {
+  const barChartSrc = await Bun.file("./src/components/WordBarChart.vue").text();
+  expect(barChartSrc).toContain("containerRef");
+  expect(barChartSrc).toContain("getWordFromTarget");
+  expect(barChartSrc).toContain("extractWordFromKey");
+  expect(barChartSrc).toContain("handleContainerClick");
+  expect(barChartSrc).toContain(":key=\"selectedWord ?? '__none'\"");
+  // Ensures TanStack Charts's nearest-y @select does not conflict with DOM container click
+  expect(barChartSrc).not.toContain("@select=\"handleSelect\"");
+});
+
+test("normalizeIgnoredWord lowercases, trims, and normalizes hyphens/whitespace", () => {
+  expect(normalizeIgnoredWord("  Housing  ")).toBe("housing");
+  expect(normalizeIgnoredWord("affordable-housing")).toBe("affordable housing");
+  expect(normalizeIgnoredWord("Affordable   Housing")).toBe("affordable housing");
+});
+
+test("getWordVariants generates singular, plural, hyphenated, and slash-plural variants", () => {
+  const houseVariants = getWordVariants("house");
+  expect(houseVariants.has("house")).toBe(true);
+  expect(houseVariants.has("houses")).toBe(true);
+
+  const pluralLabelVariants = getWordVariants("frog(s)");
+  expect(pluralLabelVariants.has("frog")).toBe(true);
+  expect(pluralLabelVariants.has("frogs")).toBe(true);
+  expect(pluralLabelVariants.has("frog(s)")).toBe(true);
+
+  const dogLabelVariants = getWordVariants("dog(s)");
+  expect(dogLabelVariants.has("dog")).toBe(true);
+  expect(dogLabelVariants.has("dogs")).toBe(true);
+  expect(dogLabelVariants.has("dog(s)")).toBe(true);
+
+  const legacySlashVariants = getWordVariants("frog/s");
+  expect(legacySlashVariants.has("frog")).toBe(true);
+  expect(legacySlashVariants.has("frogs")).toBe(true);
+
+  const phraseVariants = getWordVariants("affordable-housing");
+  expect(phraseVariants.has("affordable-housing")).toBe(true);
+  expect(phraseVariants.has("affordable housing")).toBe(true);
+});
+
+test("isWordIgnored matches direct words, inflected plurals, and phrases", () => {
+  const ignored = ["housing", "palo-alto", "frog(s)", "dog/s"];
+  expect(isWordIgnored("housing", ignored)).toBe(true);
+  expect(isWordIgnored("Housing", ignored)).toBe(true);
+  expect(isWordIgnored("housings", ignored)).toBe(true);
+  expect(isWordIgnored("palo-alto", ignored)).toBe(true);
+  expect(isWordIgnored("palo alto", ignored)).toBe(true);
+  expect(isWordIgnored("frog", ignored)).toBe(true);
+  expect(isWordIgnored("frogs", ignored)).toBe(true);
+  expect(isWordIgnored("frog(s)", ignored)).toBe(true);
+  expect(isWordIgnored("dog", ignored)).toBe(true);
+  expect(isWordIgnored("dogs", ignored)).toBe(true);
+  expect(isWordIgnored("dog(s)", ignored)).toBe(true);
+  expect(isWordIgnored("community", ignored)).toBe(false);
+});
+test("filterIgnoredWords filters out all ignored words and preserves others", () => {
+  const words = [
+    { text: "housing", value: 10 },
+    { text: "community", value: 8 },
+    { text: "affordable-housing", value: 6 },
+    { text: "people", value: 5 },
+  ];
+
+  const filtered = filterIgnoredWords(words, ["housing", "affordable-housing"]);
+  expect(filtered.map((w) => w.text)).toEqual(["community", "people"]);
+  expect(filtered.find((w) => w.text === "housing")).toBeUndefined();
+});
+
+test("extractIgnoredFromUrl parses comma-separated ignored words from query and hash", () => {
+  expect(extractIgnoredFromUrl("https://example.com/?ignore=housing,community")).toEqual([
+    "housing",
+    "community",
+  ]);
+  expect(extractIgnoredFromUrl("https://example.com/?ignored=rent,landlord")).toEqual([
+    "rent",
+    "landlord",
+  ]);
+  expect(extractIgnoredFromUrl("https://example.com/#ignore=zoning")).toEqual(["zoning"]);
+  expect(extractIgnoredFromUrl("https://example.com/?doc=123")).toBe(null);
+});
+
+test("storage helpers save and retrieve ignored words per doc", () => {
+  const testKey = "test_doc_123";
+  saveIgnoredWordsForDoc(testKey, ["housing", "community"]);
+  const retrieved = getIgnoredWordsForDoc(testKey);
+  expect(retrieved).toEqual(["housing", "community"]);
+});
+
+test("App.vue contains Ignored tab, WordContextMenu, and IgnoredWordsView", async () => {
+  const appSrc = await Bun.file("./src/App.vue").text();
+  expect(appSrc).toContain("IgnoredWordsView");
+  expect(appSrc).toContain("WordContextMenu");
+  expect(appSrc).toContain("setVizMode('ignored')");
+  expect(appSrc).toContain("<span>Ignored</span>");
+  expect(appSrc).toContain("handleWordContextMenu");
+  expect(appSrc).toContain("handleIgnoreWord");
+  expect(appSrc).toContain("handleUnignoreWord");
+  expect(appSrc).toContain("ignoredWords");
+});
+
+test("WordCloud and WordBarChart emit wordContextmenu event on right-click", async () => {
+  const cloudSrc = await Bun.file("./src/components/WordCloud.vue").text();
+  expect(cloudSrc).toContain("wordContextmenu");
+  expect(cloudSrc).toContain("@contextmenu.prevent");
+
+  const barSrc = await Bun.file("./src/components/WordBarChart.vue").text();
+  expect(barSrc).toContain("wordContextmenu");
+  expect(barSrc).toContain("handleContainerContextMenu");
 });

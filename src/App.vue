@@ -11,6 +11,7 @@ import {
   Download,
   ExternalLink,
   Eye,
+  EyeOff,
   FolderOpen,
   Info,
   Loader2,
@@ -29,6 +30,8 @@ import {
   getRecentDocumentById,
   getActiveDocumentId,
   setActiveDocumentId,
+  getIgnoredWordsForDoc,
+  saveIgnoredWordsForDoc,
 } from "./storage";
 import {
   buildTermRegex,
@@ -36,8 +39,10 @@ import {
   extractAttributionFromUrl,
   extractDateFromUrl,
   extractPluralsFromUrl,
+  extractPreferPhrasesFromUrl,
   extractTitleFromUrl,
   extractViewFromUrl,
+  extractIgnoredFromUrl,
   fetchAndParseGoogleDoc,
   parsePastedText,
   getInitialEditValuesFromUrl,
@@ -45,8 +50,14 @@ import {
   linkifyAttribution,
   shouldReshuffleOnKeyDown,
 } from "./sections";
-import { getPluralLabelMap, mergePluralFrequencies } from "./stopwords";
-import type { ParsedDocumentData, SpiralType, WordData } from "./types";
+import {
+  applyPreferPhrases,
+  getPluralLabelMap,
+  mergePluralFrequencies,
+  filterIgnoredWords,
+  isWordIgnored,
+} from "./stopwords";
+import type { ParsedDocumentData, SpiralType, WordData, VizMode } from "./types";
 import HomeView from "./components/HomeView.vue";
 import LoadRecentView from "./components/LoadRecentView.vue";
 import CreateCloudView from "./components/CreateCloudView.vue";
@@ -54,6 +65,8 @@ import WordCloud from "./components/WordCloud.vue";
 import SentenceDrawer from "./components/SentenceDrawer.vue";
 import AboutModal from "./components/AboutModal.vue";
 import WordBarChart from "./components/WordBarChart.vue";
+import WordContextMenu from "./components/WordContextMenu.vue";
+import IgnoredWordsView from "./components/IgnoredWordsView.vue";
 
 declare const __DOCUMENT_DATA__: ParsedDocumentData | undefined;
 
@@ -84,7 +97,12 @@ const withRotation = ref<boolean>(false);
 const mergePlurals = ref<boolean>(
   typeof window !== "undefined" ? (extractPluralsFromUrl(window.location.href) ?? false) : false,
 );
-const vizMode = ref<"cloud" | "bar">(
+const preferPhrases = ref<boolean>(
+  typeof window !== "undefined"
+    ? (extractPreferPhrasesFromUrl(window.location.href) ?? false)
+    : false,
+);
+const vizMode = ref<VizMode>(
   typeof window !== "undefined" ? (extractViewFromUrl(window.location.href) ?? "cloud") : "cloud",
 );
 const cloudMaxWords = ref<number>(70);
@@ -105,7 +123,7 @@ const maxWords = computed<number>({
   },
 });
 
-function setVizMode(mode: "cloud" | "bar") {
+function setVizMode(mode: VizMode) {
   vizMode.value = mode;
 }
 
@@ -197,8 +215,16 @@ const loadingMessage = ref<string>("Loading word cloud...");
 const saving = ref<boolean>(false);
 const isAboutOpen = ref<boolean>(false);
 const copyStatus = ref<"idle" | "copied">("idle");
-const toast = ref<{ message: string; type: "success" | "error" } | null>(null);
+const toast = ref<{ message: string; type: "success" | "error" | "info" } | null>(null);
 let toastTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function showToast(message: string, type: "success" | "error" | "info" = "success") {
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toast.value = { message, type };
+  toastTimeout = setTimeout(() => {
+    toast.value = null;
+  }, 2500);
+}
 const sharedDocError = ref<string | null>(null);
 const stageRef = ref<HTMLDivElement | null>(null);
 const layoutSeed = ref<number>(0);
@@ -264,15 +290,67 @@ function formatPercent(value: number): string {
 
 const docPluralLabelMap = computed(() => {
   if (!docData.value || !mergePlurals.value) return null;
-  return getPluralLabelMap(docData.value.all);
+  const baseWords = preferPhrases.value ? applyPreferPhrases(docData.value.all) : docData.value.all;
+  return getPluralLabelMap(baseWords);
+});
+
+function getProcessedWords(rawWords: WordData[]): WordData[] {
+  let words = rawWords;
+  if (preferPhrases.value) {
+    words = applyPreferPhrases(words);
+  }
+  if (mergePlurals.value) {
+    words = mergePluralFrequencies(words, docPluralLabelMap.value ?? undefined);
+  }
+  return words;
+}
+const ignoredWords = ref<string[]>([]);
+
+function getCurrentDocKey(): string {
+  if (actionGoogleDocId.value) return actionGoogleDocId.value;
+  if (docData.value?.sourceGoogleDocId) return docData.value.sourceGoogleDocId;
+  if (docData.value?.title) {
+    return `doc_${docData.value.title
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")}`;
+  }
+  return "default";
+}
+
+function loadIgnoredWordsForCurrentDoc() {
+  const urlIgnored =
+    typeof window !== "undefined" ? extractIgnoredFromUrl(window.location.href) : null;
+  const key = getCurrentDocKey();
+  const saved = getIgnoredWordsForDoc(key);
+  if (urlIgnored && urlIgnored.length > 0) {
+    const combined = Array.from(new Set([...urlIgnored, ...saved]));
+    ignoredWords.value = combined;
+  } else {
+    ignoredWords.value = saved;
+  }
+}
+
+function saveCurrentDocIgnoredWords() {
+  const key = getCurrentDocKey();
+  saveIgnoredWordsForDoc(key, ignoredWords.value);
+}
+
+watch(
+  () => [docData.value?.sourceGoogleDocId, docData.value?.title],
+  () => {
+    loadIgnoredWordsForCurrentDoc();
+  },
+  { immediate: true },
+);
+
+const allProcessedDocWords = computed<WordData[]>(() => {
+  if (!docData.value) return [];
+  return getProcessedWords(docData.value.all);
 });
 
 const mergedAllWords = computed<WordData[]>(() => {
-  if (!docData.value) return [];
-  if (mergePlurals.value) {
-    return mergePluralFrequencies(docData.value.all, docPluralLabelMap.value ?? undefined);
-  }
-  return docData.value.all;
+  return filterIgnoredWords(allProcessedDocWords.value, ignoredWords.value);
 });
 
 const activeWordFrequencies = computed<WordData[]>(() => {
@@ -282,12 +360,85 @@ const activeWordFrequencies = computed<WordData[]>(() => {
   }
   const section = docData.value.sections.find((s) => s.id === selectedSection.value);
   if (!section) return [];
-  if (mergePlurals.value) {
-    return mergePluralFrequencies(section.words, docPluralLabelMap.value ?? undefined);
-  }
-  return section.words;
+  const processed = getProcessedWords(section.words);
+  return filterIgnoredWords(processed, ignoredWords.value);
 });
 
+const contextMenuState = ref<{
+  isOpen: boolean;
+  x: number;
+  y: number;
+  word: string | null;
+}>({
+  isOpen: false,
+  x: 0,
+  y: 0,
+  word: null,
+});
+
+const isContextMenuWordIgnored = computed(() => {
+  if (!contextMenuState.value.word) return false;
+  return isWordIgnored(contextMenuState.value.word, ignoredWords.value);
+});
+
+const contextMenuOccurrenceCount = computed(() => {
+  if (!contextMenuState.value.word || !docData.value) return null;
+  const wLower = contextMenuState.value.word.toLowerCase().trim();
+  const match = allProcessedDocWords.value.find((w) => {
+    const l = w.text.toLowerCase().trim();
+    return l === wLower || l.replace(/-/g, " ") === wLower.replace(/-/g, " ");
+  });
+  return match ? match.value : null;
+});
+
+function handleWordContextMenu(payload: { word: string; event: MouseEvent }) {
+  payload.event.preventDefault();
+  payload.event.stopPropagation();
+  contextMenuState.value = {
+    isOpen: true,
+    x: payload.event.clientX,
+    y: payload.event.clientY,
+    word: payload.word,
+  };
+}
+
+function handleIgnoreWord(word: string) {
+  const trimmed = word.trim();
+  if (!trimmed) return;
+  if (!isWordIgnored(trimmed, ignoredWords.value)) {
+    ignoredWords.value = [...ignoredWords.value, trimmed];
+    saveCurrentDocIgnoredWords();
+    if (selectedWord.value && isWordIgnored(selectedWord.value, [trimmed])) {
+      selectedWord.value = null;
+    }
+    showToast(`“${trimmed.replace(/-/g, " ")}” added to ignored words.`, "info");
+  }
+  contextMenuState.value.isOpen = false;
+}
+
+function handleUnignoreWord(word: string) {
+  const trimmed = word.trim();
+  if (!trimmed) return;
+  const lower = trimmed.toLowerCase();
+  ignoredWords.value = ignoredWords.value.filter(
+    (w) =>
+      w.toLowerCase() !== lower && !isWordIgnored(w, [trimmed]) && !isWordIgnored(trimmed, [w]),
+  );
+  saveCurrentDocIgnoredWords();
+  showToast(`“${trimmed.replace(/-/g, " ")}” restored.`, "info");
+  contextMenuState.value.isOpen = false;
+}
+
+function handleClearAllIgnored() {
+  ignoredWords.value = [];
+  saveCurrentDocIgnoredWords();
+  showToast("All ignored words restored.", "info");
+}
+
+function handleViewSentencesFromMenu(word: string) {
+  handleWordClick(word);
+  contextMenuState.value.isOpen = false;
+}
 const activeWords = computed<WordData[]>(() => {
   const limit = maxWords.value;
   return activeWordFrequencies.value.slice(0, limit);
@@ -392,15 +543,11 @@ function handleReshuffle() {
 function handleSectionChange(newSection: string) {
   selectedSection.value = newSection;
   if (selectedWord.value && docData.value) {
-    const wordsInNewSection =
+    const rawWords =
       newSection === "all"
-        ? mergedAllWords.value
-        : mergePlurals.value
-          ? mergePluralFrequencies(
-              docData.value.sections.find((s) => s.id === newSection)?.words ?? [],
-              docPluralLabelMap.value ?? undefined,
-            )
-          : (docData.value.sections.find((s) => s.id === newSection)?.words ?? []);
+        ? docData.value.all
+        : (docData.value.sections.find((s) => s.id === newSection)?.words ?? []);
+    const wordsInNewSection = getProcessedWords(rawWords);
     const exists = wordsInNewSection.some((w) => w.text === selectedWord.value);
     if (!exists) {
       selectedWord.value = null;
@@ -587,21 +734,15 @@ async function handleShare() {
     }
   }
 
-  if (toastTimeout) clearTimeout(toastTimeout);
-
   if (success) {
     copyStatus.value = "copied";
-    toast.value = { message: "Link copied to clipboard!", type: "success" };
-    toastTimeout = setTimeout(() => {
+    showToast("Link copied to clipboard!", "success");
+    setTimeout(() => {
       copyStatus.value = "idle";
-      toast.value = null;
     }, 2500);
   } else {
     copyStatus.value = "idle";
-    toast.value = { message: "Failed to copy link", type: "error" };
-    toastTimeout = setTimeout(() => {
-      toast.value = null;
-    }, 2500);
+    showToast("Failed to copy link", "error");
   }
 }
 
@@ -1154,7 +1295,10 @@ onUnmounted(() => {
                 Parsing document content, cleaning stop words, and generating word cloud...
               </span>
             </div>
-            <div v-else-if="activeWords.length === 0" class="wordcloud-message">
+            <div
+              v-else-if="!docData || (totalDocWords === 0 && ignoredWords.length === 0)"
+              class="wordcloud-message"
+            >
               No words found.
             </div>
             <template v-else>
@@ -1182,28 +1326,68 @@ onUnmounted(() => {
                     <BarChart3 :size="15" aria-hidden="true" />
                     <span>Bar Chart</span>
                   </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    :aria-selected="vizMode === 'ignored'"
+                    :class="['stage-view-btn', vizMode === 'ignored' ? 'active' : '']"
+                    title="Ignored words view"
+                    @click="setVizMode('ignored')"
+                  >
+                    <EyeOff :size="15" aria-hidden="true" />
+                    <span>Ignored</span>
+                    <span v-if="ignoredWords.length > 0" class="stage-view-badge">
+                      {{ ignoredWords.length }}
+                    </span>
+                  </button>
                 </div>
               </div>
 
               <div
                 ref="stageRef"
                 class="wordcloud-stage"
-                :class="{ 'is-bar-view': vizMode === 'bar' }"
+                :class="{
+                  'is-bar-view': vizMode === 'bar',
+                  'is-ignored-view': vizMode === 'ignored',
+                }"
               >
+                <div
+                  v-if="vizMode === 'cloud' && activeWords.length === 0"
+                  class="wordcloud-message"
+                >
+                  All words are currently hidden or ignored.
+                </div>
                 <WordCloud
-                  v-if="vizMode === 'cloud'"
+                  v-else-if="vizMode === 'cloud'"
                   :words="activeWords"
                   :spiral-type="spiralType"
                   :with-rotation="withRotation"
                   :layout-seed="layoutSeed"
                   :selected-word="selectedWord"
                   @word-click="handleWordClick"
+                  @word-contextmenu="handleWordContextMenu"
                 />
+                <div
+                  v-else-if="vizMode === 'bar' && activeWords.length === 0"
+                  class="wordcloud-message"
+                >
+                  All words are currently hidden or ignored.
+                </div>
                 <WordBarChart
-                  v-else
+                  v-else-if="vizMode === 'bar'"
                   :words="activeWords"
                   :selected-word="selectedWord"
                   @word-click="handleWordClick"
+                  @word-contextmenu="handleWordContextMenu"
+                />
+                <IgnoredWordsView
+                  v-else-if="vizMode === 'ignored'"
+                  :ignored-words="ignoredWords"
+                  :doc-words="allProcessedDocWords"
+                  @unignore="handleUnignoreWord"
+                  @ignore="handleIgnoreWord"
+                  @clear-all="handleClearAllIgnored"
+                  @word-contextmenu="handleWordContextMenu"
                 />
               </div>
               <div class="wordcloud-stats-widget" role="status" aria-live="polite">
@@ -1216,12 +1400,21 @@ onUnmounted(() => {
                   <span class="wordcloud-stats-item">
                     <strong>{{ activeStats.cleanedWords.toLocaleString() }}</strong> after cleaning
                   </span>
+                  <template v-if="ignoredWords.length > 0">
+                    <span class="wordcloud-stats-divider">|</span>
+                    <span class="wordcloud-stats-item">
+                      <strong>{{ ignoredWords.length }}</strong> ignored
+                    </span>
+                  </template>
                 </div>
                 <div v-if="selectedWord && selectedWordStats" class="wordcloud-stats-selected">
                   <span class="wordcloud-stats-divider">|</span>
                   <span
                     class="wordcloud-stats-badge"
-                    :title="`${selectedWordStats.count.toLocaleString()} occurrences`"
+                    :title="`${selectedWordStats.count.toLocaleString()} occurrences (right-click to ignore)`"
+                    @contextmenu.prevent="
+                      handleWordContextMenu({ word: selectedWord, event: $event })
+                    "
                   >
                     {{ selectedWord.replace(/-/g, " ") }}
                   </span>
@@ -1338,6 +1531,25 @@ onUnmounted(() => {
                       }}</span>
                     </label>
                   </div>
+                  <div class="control-field">
+                    <label for="prefer-phrases-toggle">Prefer phrases</label>
+                    <label class="rotation-toggle" for="prefer-phrases-toggle">
+                      <input
+                        id="prefer-phrases-toggle"
+                        v-model="preferPhrases"
+                        type="checkbox"
+                        role="switch"
+                        :aria-checked="preferPhrases"
+                        class="rotation-toggle-input"
+                      />
+                      <span class="rotation-toggle-track" aria-hidden="true">
+                        <span class="rotation-toggle-thumb" />
+                      </span>
+                      <span class="rotation-toggle-label">{{
+                        preferPhrases ? "Prefer on" : "Prefer off"
+                      }}</span>
+                    </label>
+                  </div>
                 </div>
                 <div class="control-field max-words-field">
                   <div class="max-words-header">
@@ -1425,6 +1637,7 @@ onUnmounted(() => {
                     Reshuffle
                   </button>
                   <button
+                    v-if="vizMode !== 'ignored'"
                     type="button"
                     class="save-btn"
                     :disabled="saving || loading || activeWords.length === 0"
@@ -1447,6 +1660,7 @@ onUnmounted(() => {
               :selected-word="selectedWord"
               :selected-section="selectedSection"
               :sentences="matchingSentences"
+              @word-contextmenu="handleWordContextMenu"
             />
           </div>
         </div>
@@ -1515,12 +1729,32 @@ onUnmounted(() => {
     <!-- About Modal -->
     <AboutModal v-if="isAboutOpen" @close="isAboutOpen = false" />
 
+    <!-- Word Context Menu -->
+    <WordContextMenu
+      :is-open="contextMenuState.isOpen"
+      :x="contextMenuState.x"
+      :y="contextMenuState.y"
+      :word="contextMenuState.word"
+      :is-ignored="isContextMenuWordIgnored"
+      :occurrence-count="contextMenuOccurrenceCount"
+      @ignore="handleIgnoreWord"
+      @unignore="handleUnignoreWord"
+      @view-sentences="handleViewSentencesFromMenu"
+      @close="contextMenuState.isOpen = false"
+    />
+
     <!-- Toast Notification -->
     <div v-if="toast" :class="['wordcloud-toast', toast.type]" role="status" aria-live="polite">
       <Check
         v-if="toast.type === 'success'"
         :size="16"
         class="toast-icon toast-icon-success"
+        aria-hidden="true"
+      />
+      <Info
+        v-else-if="toast.type === 'info'"
+        :size="16"
+        class="toast-icon toast-icon-info"
         aria-hidden="true"
       />
       <AlertCircle v-else :size="16" class="toast-icon toast-icon-error" aria-hidden="true" />

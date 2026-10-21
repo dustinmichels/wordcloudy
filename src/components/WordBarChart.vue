@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { defineChart, barX, ruleX, text } from "@tanstack/charts";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
@@ -14,14 +14,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "wordClick", word: string): void;
+  (e: "wordContextmenu", payload: { word: string; event: MouseEvent }): void;
 }>();
+
+const containerRef = ref<HTMLElement | null>(null);
 
 const chartHeight = computed(() => {
   const count = props.words.length;
   if (count === 0) return 380;
   return Math.max(380, count * 36 + 60);
 });
-
 const isSelected = (wordText: string) => {
   if (!props.selectedWord) return false;
   const target = props.selectedWord.toLowerCase();
@@ -100,38 +102,54 @@ const chartDefinition = computed(() => {
     },
   });
 });
-
-function handleSelect(point: any) {
-  if (point?.datum?.text) {
-    emit("wordClick", point.datum.text);
+function extractWordFromKey(key: string): string | null {
+  if (!key) return null;
+  const lastColon = key.lastIndexOf(":");
+  if (lastColon >= 0) {
+    const candidate = key.slice(lastColon + 1);
+    const match = props.words.find((w) => w.text === candidate);
+    if (match) return match.text;
   }
+  for (const w of props.words) {
+    if (key.endsWith(`:${w.text}`)) {
+      return w.text;
+    }
+  }
+  return null;
 }
 
-function handleContainerClick(event: MouseEvent) {
-  const target = event.target as HTMLElement | SVGElement | null;
-  if (!target) return;
+function getWordFromTarget(target: HTMLElement | SVGElement | null): string | null {
+  if (!target) return null;
 
   // 1. Check if clicked on a rect (bar)
   const rectEl = target.closest("rect");
   if (rectEl) {
     const key = rectEl.getAttribute("data-ts-key") || "";
-    for (const w of props.words) {
-      if (key.endsWith(`:${w.text}`) || key.includes(`:${w.text}`)) {
-        emit("wordClick", w.text);
-        return;
-      }
-    }
+    const fromKey = extractWordFromKey(key);
+    if (fromKey) return fromKey;
+
     const allRects = Array.from(rectEl.parentElement?.querySelectorAll("rect") || []);
     const idx = allRects.indexOf(rectEl);
     if (idx >= 0 && idx < props.words.length) {
-      emit("wordClick", props.words[idx].text);
-      return;
+      return props.words[idx].text;
     }
   }
 
   // 2. Check if clicked on a text element (y-axis label or bar value)
   const textEl = target.closest("text");
   if (textEl && textEl.textContent) {
+    const key = textEl.getAttribute("data-ts-key") || "";
+
+    // Ignore x-axis labels and tick marks (e.g. "0", "2", "Occurrences")
+    if (key.startsWith("x-") || key.includes("x-tick") || key.includes("x-label")) {
+      return null;
+    }
+
+    // Check data-ts-key first (matches count labels "text-2:...:<word>" and y-tick labels)
+    const fromKey = extractWordFromKey(key);
+    if (fromKey) return fromKey;
+
+    // Check textContent (matches y-axis tick labels)
     const textContent = textEl.textContent.trim();
     const match = props.words.find((w) => {
       const wLower = w.text.toLowerCase();
@@ -143,8 +161,41 @@ function handleContainerClick(event: MouseEvent) {
       );
     });
     if (match) {
-      emit("wordClick", match.text);
+      return match.text;
     }
+
+    // Fallback: If it's a bar value count text without a matching key, find the rect on the same horizontal row
+    const container = containerRef.value;
+    if (container && !textEl.closest(".ts-chart__axes")) {
+      const textBbox = textEl.getBoundingClientRect();
+      const textMidY = (textBbox.top + textBbox.bottom) / 2;
+      const allRects = Array.from(container.querySelectorAll("rect"));
+      for (let i = 0; i < allRects.length; i++) {
+        const rBox = allRects[i].getBoundingClientRect();
+        if (Math.abs((rBox.top + rBox.bottom) / 2 - textMidY) < 18) {
+          if (i < props.words.length) {
+            return props.words[i].text;
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function handleContainerClick(event: MouseEvent) {
+  const word = getWordFromTarget(event.target as HTMLElement | SVGElement | null);
+  if (word) {
+    emit("wordClick", word);
+  }
+}
+
+function handleContainerContextMenu(event: MouseEvent) {
+  const word = getWordFromTarget(event.target as HTMLElement | SVGElement | null);
+  if (word) {
+    event.preventDefault();
+    emit("wordContextmenu", { word, event });
   }
 }
 </script>
@@ -155,14 +206,15 @@ function handleContainerClick(event: MouseEvent) {
     role="region"
     aria-label="Bar chart of word and phrase frequencies"
     @click="handleContainerClick"
+    @contextmenu="handleContainerContextMenu"
   >
     <div class="barchart-inner" :style="{ minHeight: `${chartHeight}px` }">
       <Chart
+        :key="selectedWord ?? '__none'"
         :definition="chartDefinition"
         :height="chartHeight"
         aria-label="Word and phrase frequency bar chart"
         class="barchart-surface"
-        @select="handleSelect"
       />
     </div>
   </div>
@@ -198,7 +250,8 @@ function handleContainerClick(event: MouseEvent) {
   filter: brightness(1.1);
 }
 
-:deep(.ts-chart__axes text) {
+:deep(text[data-ts-key^="y-tick-label"]),
+:deep(.ts-chart__axes text:not([data-ts-key^="x-"])) {
   cursor: pointer;
   font-family: inherit;
   font-size: 13px;
@@ -206,9 +259,18 @@ function handleContainerClick(event: MouseEvent) {
   transition: fill 0.15s ease;
 }
 
-:deep(.ts-chart__axes text:hover) {
+:deep(text[data-ts-key^="y-tick-label"]:hover),
+:deep(.ts-chart__axes text:not([data-ts-key^="x-"]):hover) {
   fill: #d97706;
   font-weight: 600;
+}
+
+:deep(text[data-ts-key^="x-tick-label"]),
+:deep(text[data-ts-key="x-label"]) {
+  cursor: default;
+  font-family: inherit;
+  font-size: 12px;
+  fill: #64748b;
 }
 
 :deep(.ts-chart__text text) {

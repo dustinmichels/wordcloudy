@@ -15,6 +15,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "wordClick", word: string): void;
+  (e: "wordContextmenu", payload: { word: string; event: MouseEvent }): void;
 }>();
 
 const containerRef = ref<HTMLElement | null>(null);
@@ -425,6 +426,9 @@ function getTooltip(item: LayoutWord): string {
               item.vanished ? 'cloud-word-vanish' : '',
             ]"
             @click="!item.vanished && emit('wordClick', item.text ?? '')"
+            @contextmenu.prevent="
+              !item.vanished && emit('wordContextmenu', { word: item.text ?? '', event: $event })
+            "
           >
             {{ item.text }}
           </text>

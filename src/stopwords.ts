@@ -237,6 +237,7 @@ export interface FrequencyOptions extends TokenizeOptions {
   minTrigramCount?: number;
   allowInteriorStopWords?: boolean;
   mergePlurals?: boolean;
+  preferPhrases?: boolean;
 }
 export interface WordFrequency {
   text: string;
@@ -584,6 +585,10 @@ export function getWordFrequencies(text: string, options: FrequencyOptions = {})
     .map(([text, value]) => ({ text, value }))
     .sort((a, b) => b.value - a.value || a.text.localeCompare(b.text));
 
+  if (options.preferPhrases) {
+    result = applyPreferPhrases(result);
+  }
+
   if (options.mergePlurals) {
     result = mergePluralFrequencies(result);
   }
@@ -591,15 +596,142 @@ export function getWordFrequencies(text: string, options: FrequencyOptions = {})
   return result;
 }
 
+function isContiguousSubphrase(subParts: string[], fullParts: string[]): boolean {
+  if (subParts.length >= fullParts.length) return false;
+  for (let i = 0; i <= fullParts.length - subParts.length; i++) {
+    let match = true;
+    for (let j = 0; j < subParts.length; j++) {
+      if (fullParts[i + j] !== subParts[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) return true;
+  }
+  return false;
+}
+
+function tokenMatchesUnigram(token: string, ugText: string, allUgTexts: Set<string>): boolean {
+  const tok = token.toLowerCase();
+  const u = ugText.toLowerCase();
+
+  // 1. Direct exact match
+  if (tok === u) return true;
+
+  // If another unigram in the list matches this exact token, prefer the exact unigram
+  if (allUgTexts.has(tok)) return false;
+
+  // 2. Merged plural label e.g. "salad(s)", "salad/s", "blackberry/blackberries"
+  if (u.endsWith("(s)")) {
+    const base = u.slice(0, -3);
+    if (tok === base || tok === `${base}s`) return true;
+  }
+  if (u.includes("/")) {
+    if (u.endsWith("/s")) {
+      const base = u.slice(0, -2);
+      if (tok === base || tok === `${base}s`) return true;
+    }
+    const variants = u.split("/");
+    for (const v of variants) {
+      if (tok === v || pluralize.singular(tok) === pluralize.singular(v)) return true;
+    }
+  }
+
+  // 3. Singular / plural fallback when exact token is not present in unigrams
+  if (pluralize.singular(tok) === pluralize.singular(u)) return true;
+
+  return false;
+}
+
+/**
+ * Reduces the frequency count of constituent unigrams by the counts of the
+ * bigrams and trigrams they appear in, preventing double-counting and emphasizing phrases.
+ */
+export function applyPreferPhrases(frequencies: WordFrequency[]): WordFrequency[] {
+  const phrases: { text: string; value: number; parts: string[] }[] = [];
+  const unigrams: { text: string; value: number }[] = [];
+
+  for (const item of frequencies) {
+    if (item.text.includes("-")) {
+      const parts = item.text.split("-").filter(Boolean);
+      if (parts.length >= 2) {
+        phrases.push({ text: item.text, value: item.value, parts });
+      } else {
+        unigrams.push({ text: item.text, value: item.value });
+      }
+    } else {
+      unigrams.push({ text: item.text, value: item.value });
+    }
+  }
+
+  if (phrases.length === 0 || unigrams.length === 0) {
+    return frequencies.slice();
+  }
+
+  const allUgTexts = new Set(unigrams.map((u) => u.text.toLowerCase()));
+  const trigrams = phrases.filter((p) => p.parts.length >= 3);
+  const bigrams = phrases.filter((p) => p.parts.length === 2);
+
+  const bigramIndependentOccurrences = new Map<string, number>();
+  for (const bg of bigrams) {
+    let overlap = 0;
+    for (const tg of trigrams) {
+      if (isContiguousSubphrase(bg.parts, tg.parts)) {
+        overlap += tg.value;
+      }
+    }
+    const independent = Math.max(0, bg.value - overlap);
+    bigramIndependentOccurrences.set(bg.text, independent);
+  }
+
+  const remainingUnigrams: WordFrequency[] = [];
+  for (const ug of unigrams) {
+    let deduction = 0;
+
+    for (const tg of trigrams) {
+      const countInTg = tg.parts.filter((part) =>
+        tokenMatchesUnigram(part, ug.text, allUgTexts),
+      ).length;
+      if (countInTg > 0) {
+        deduction += countInTg * tg.value;
+      }
+    }
+
+    for (const bg of bigrams) {
+      const countInBg = bg.parts.filter((part) =>
+        tokenMatchesUnigram(part, ug.text, allUgTexts),
+      ).length;
+      if (countInBg > 0) {
+        const independent = bigramIndependentOccurrences.get(bg.text) ?? bg.value;
+        deduction += countInBg * independent;
+      }
+    }
+
+    const remainingValue = ug.value - deduction;
+    if (remainingValue > 0) {
+      remainingUnigrams.push({
+        text: ug.text,
+        value: remainingValue,
+      });
+    }
+  }
+
+  const result = [...remainingUnigrams, ...phrases.map((p) => ({ text: p.text, value: p.value }))];
+
+  return result.sort((a, b) => b.value - a.value || a.text.localeCompare(b.text));
+}
+
+export const preferPhraseFrequencies = applyPreferPhrases;
+
 /**
  * Formats a canonical plural label:
- * - If regular plural ending in +s (e.g. frog -> frogs): returns "frog/s"
+ * - If regular plural ending in +s (e.g. frog -> frogs): returns "frog(s)"
  * - If uninflected / identical (e.g. series -> series): returns "series"
  * - Otherwise (e.g. blackberry -> blackberries): returns "blackberry/blackberries"
  */
 export function formatPluralLabel(singular: string, plural: string): string {
   if (plural === `${singular}s`) {
-    return `${singular}/s`;
+    return `${singular}(s)`;
   }
   if (plural === singular) {
     return singular;
@@ -672,7 +804,6 @@ export function countDocumentWords(
   text: string,
   options: FrequencyOptions = {},
 ): DocumentWordStats {
-
   const { stopWords = DEFAULT_STOP_WORDS, additionalStopWords, ...tokenizeOpts } = options;
   const cleaned = cleanText(text);
   const totalTokens = cleaned.match(/[a-z0-9]+(?:'[a-z0-9]+)?/g) || [];
@@ -688,4 +819,110 @@ export function countDocumentWords(
     totalWords: totalTokens.length,
     cleanedWords,
   };
+}
+
+/**
+ * Normalizes a word or phrase for ignored word matching.
+ */
+export function normalizeIgnoredWord(word: string): string {
+  return word
+    .toLowerCase()
+    .trim()
+    .replace(/[-\s]+/g, " ");
+}
+
+/**
+ * Returns all plausible variants of a word or phrase (singular, plural, hyphenated, space-separated, plural label parts).
+ */
+export function getWordVariants(word: string): Set<string> {
+  const variants = new Set<string>();
+  const trimmed = word.trim().toLowerCase();
+  if (!trimmed) return variants;
+
+  const norm = normalizeIgnoredWord(trimmed);
+  variants.add(norm);
+  variants.add(norm.replace(/\s+/g, "-"));
+  variants.add(trimmed);
+
+  if (trimmed.endsWith("(s)")) {
+    const base = trimmed.slice(0, -3).trim();
+    if (base) {
+      const p1 = normalizeIgnoredWord(base);
+      variants.add(p1);
+      variants.add(normalizeIgnoredWord(`${base}s`));
+    }
+  } else if (trimmed.includes("/")) {
+    const [part1, part2] = trimmed.split("/");
+    if (part1 && part2) {
+      const p1 = normalizeIgnoredWord(part1);
+      variants.add(p1);
+      if (part2 === "s") {
+        variants.add(normalizeIgnoredWord(`${part1}s`));
+      } else {
+        variants.add(normalizeIgnoredWord(part2));
+      }
+    }
+  } else if (!norm.includes(" ")) {
+    try {
+      const singular = pluralize.singular(norm);
+      const plural = pluralize.plural(norm);
+      if (singular) {
+        variants.add(singular);
+      }
+      if (plural) {
+        variants.add(plural);
+      }
+    } catch {}
+  }
+
+  return variants;
+}
+
+/**
+ * Checks whether a word text matches any word in the ignored words list.
+ */
+export function isWordIgnored(wordText: string, ignoredWords: Iterable<string>): boolean {
+  if (!wordText) return false;
+  const targetVariants = getWordVariants(wordText);
+  if (targetVariants.size === 0) return false;
+
+  for (const ignored of ignoredWords) {
+    if (!ignored) continue;
+    const ignoredVariants = getWordVariants(ignored);
+    for (const v of targetVariants) {
+      if (ignoredVariants.has(v)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Filters out any word frequencies that match the ignored words.
+ */
+export function filterIgnoredWords(
+  words: WordFrequency[],
+  ignoredWords: Iterable<string>,
+): WordFrequency[] {
+  const ignoredList = Array.from(ignoredWords).filter((w) => Boolean(w && w.trim()));
+  if (ignoredList.length === 0) return words;
+
+  const ignoredVariantsSet = new Set<string>();
+  for (const item of ignoredList) {
+    for (const v of getWordVariants(item)) {
+      ignoredVariantsSet.add(v);
+    }
+  }
+
+  return words.filter((w) => {
+    const variants = getWordVariants(w.text);
+    for (const v of variants) {
+      if (ignoredVariantsSet.has(v)) {
+        return false;
+      }
+    }
+    return true;
+  });
 }
